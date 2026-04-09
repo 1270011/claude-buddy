@@ -38,7 +38,7 @@ I opened Claude Code that morning, typed `/buddy`, and got `Unknown skill: buddy
 
 ```bash
 # Clone
-git clone https://github.com/user/claude-buddy.git
+git clone https://github.com/1270011/claude-buddy
 cd claude-buddy
 
 # Install dependencies
