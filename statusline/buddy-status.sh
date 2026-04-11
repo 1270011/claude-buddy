@@ -45,9 +45,9 @@ if [ -n "$MSYSTEM" ] || [ -n "$WINDIR" ] || [ -n "$SYSTEMROOT" ]; then
     # Strip any non-ASCII so the renderer doesn't reject the whole line.
     if [ -n "$BUBBLE" ]; then
         BUBBLE=$(printf '%s' "$BUBBLE" | LC_ALL=C tr -cd '\11\40-\176')
-        printf '%s: %s\n' "$NAME" "$BUBBLE"
+        printf '%s: (%s)\n' "$NAME" "$BUBBLE"
     else
-        printf '%s\n' "$NAME"
+        printf '%s: ()\n' "$NAME"
     fi
     exit 0
 fi
