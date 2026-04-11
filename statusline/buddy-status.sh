@@ -24,27 +24,39 @@ NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 
 REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
 
+# ─── Shared reaction freshness check ─────────────────────────────────────────
+# Reads reactionTTL from ~/.claude-buddy/config.json; 0 means "permanent".
+# Sets FRESH_REACTION to the reaction text if fresh, otherwise empty.
+FRESH_REACTION=""
+REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
+REACTION_TTL=0
+CONFIG_FILE="$HOME/.claude-buddy/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
+    case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
+fi
+if [ -n "$REACTION" ] && [ "$REACTION" != "null" ]; then
+    if [ "$REACTION_TTL" -eq 0 ]; then
+        FRESH_REACTION="$REACTION"
+    elif [ -f "$REACTION_FILE" ]; then
+        TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
+        if [ "$TS" != "0" ]; then
+            NOW=$(date +%s)
+            AGE=$(( NOW - TS / 1000 ))
+            [ "$AGE" -lt "$REACTION_TTL" ] && FRESH_REACTION="$REACTION"
+        fi
+    fi
+fi
+
 # ─── Windows fallback ────────────────────────────────────────────────────────
 # Claude Code's status line on Windows strips leading whitespace, rejects a
 # range of Unicode codepoints, and mangles multi-line ASCII art in ways we
 # can't work around from a shell script. Render a minimal single-line
-# "Name: *reaction*" so the companion's voice still comes through.
+# "Name: (reaction)" so the companion's voice still comes through.
 if [ -n "$MSYSTEM" ] || [ -n "$WINDIR" ] || [ -n "$SYSTEMROOT" ]; then
-    BUBBLE=""
-    if [ -n "$REACTION" ] && [ "$REACTION" != "null" ]; then
-        REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
-        if [ -f "$REACTION_FILE" ]; then
-            TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
-            if [ "$TS" != "0" ]; then
-                NOW=$(date +%s)
-                AGE=$(( NOW - TS / 1000 ))
-                [ "$AGE" -lt 20 ] && BUBBLE="$REACTION"
-            fi
-        fi
-    fi
-    # Strip any non-ASCII so the renderer doesn't reject the whole line.
-    if [ -n "$BUBBLE" ]; then
-        BUBBLE=$(printf '%s' "$BUBBLE" | LC_ALL=C tr -cd '\11\40-\176')
+    if [ -n "$FRESH_REACTION" ]; then
+        # Strip any non-ASCII so the renderer doesn't reject the whole line.
+        BUBBLE=$(printf '%s' "$FRESH_REACTION" | LC_ALL=C tr -cd '\11\40-\176')
         printf '%s: (%s)\n' "$NAME" "$BUBBLE"
     else
         printf '%s: ()\n' "$NAME"
@@ -240,29 +252,10 @@ case "$HAT" in
   tinyduck)  HAT_LINE="  ,>" ;;
 esac
 
-# ─── Reaction bubble (with TTL check) ────────────────────────────────────────
+# ─── Reaction bubble ─────────────────────────────────────────────────────────
+# FRESH_REACTION was computed above (shared with the Windows fallback).
 BUBBLE=""
-REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
-REACTION_TTL=0
-CONFIG_FILE="$HOME/.claude-buddy/config.json"
-if [ -f "$CONFIG_FILE" ]; then
-    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
-    case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
-fi
-if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
-    FRESH=0
-    if [ "$REACTION_TTL" -eq 0 ]; then
-        FRESH=1
-    elif [ -f "$REACTION_FILE" ]; then
-        TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
-        if [ "$TS" != "0" ]; then
-            NOW=$(date +%s)
-            AGE=$(( NOW - TS / 1000 ))
-            [ "$AGE" -lt "$REACTION_TTL" ] && FRESH=1
-        fi
-    fi
-    [ "$FRESH" -eq 1 ] && BUBBLE="\"${REACTION}\""
-fi
+[ -n "$FRESH_REACTION" ] && BUBBLE="\"${FRESH_REACTION}\""
 
 # ─── Build art lines ─────────────────────────────────────────────────────────
 ART_LINES=("$L1" "$L2" "$L3")
