@@ -19,8 +19,10 @@ if (!key) {
   claude-buddy settings
   ─────────────────────
   Comment cooldown:  ${cfg.commentCooldown}s    (0 = no throttling, default 30)
+  Reaction TTL:      ${cfg.reactionTTL}s    (0 = permanent, default 0)
 
   Change:  bun run settings cooldown <seconds>
+           bun run settings ttl <seconds>
 `);
   process.exit(0);
 }
@@ -43,6 +45,24 @@ if (key === "cooldown") {
   process.exit(0);
 }
 
+if (key === "ttl") {
+  if (value === undefined) {
+    const cfg = loadConfig();
+    console.log(`Reaction TTL: ${cfg.reactionTTL}s`);
+    process.exit(0);
+  }
+
+  const n = parseInt(value, 10);
+  if (isNaN(n) || n < 0 || n > 300) {
+    console.error("Error: ttl must be 0-300 (seconds, 0 = permanent)");
+    process.exit(1);
+  }
+
+  const cfg = saveConfig({ reactionTTL: n });
+  console.log(`Updated: reaction TTL → ${cfg.reactionTTL}s${n === 0 ? " (permanent)" : ""}`);
+  process.exit(0);
+}
+
 console.error(`Unknown setting: ${key}`);
-console.error("Available: cooldown");
+console.error("Available: cooldown, ttl");
 process.exit(1);

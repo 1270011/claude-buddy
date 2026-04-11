@@ -23,8 +23,8 @@ STATE="$BUDDY_STATE_DIR/status.json"
 COMPANION="$BUDDY_STATE_DIR/companion.json"
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$_SID.json"
 RESIZE_FLAG="$BUDDY_STATE_DIR/popup-resize.$_SID"
-REACTION_TTL=20  # seconds
 CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
+REACTION_TTL=0
 
 # Bubble style: "classic" (pipes/dashes like status line) or "round" (parens/tildes)
 BUBBLE_STYLE="classic"
@@ -37,6 +37,8 @@ if [ -f "$CONFIG_FILE" ]; then
   case "$_bp" in top|left) BUBBLE_POSITION="$_bp" ;; esac
   _sr=$(jq -r 'if .showRarity == false then "false" else "true" end' "$CONFIG_FILE" 2>/dev/null || echo "true")
   [ "$_sr" = "false" ] && SHOW_RARITY=0
+  _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
+  case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
 fi
 
 # Track whether we're currently showing a reaction bubble.
@@ -76,6 +78,8 @@ rarity_stars() {
 
 reaction_fresh() {
   [ -f "$REACTION_FILE" ] || return 1
+  # TTL=0 means permanent (always fresh)
+  [ "$REACTION_TTL" -eq 0 ] && return 0
   local ts now age
   ts=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
   [ "$ts" = "0" ] && return 1

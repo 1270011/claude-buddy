@@ -25,7 +25,7 @@ import {
 import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
-import { renderCompanionCard } from "./art.ts";
+import { renderCompanionCardMarkdown } from "./art.ts";
 
 function getInstructions(): string {
   const companion = loadCompanion();
@@ -100,7 +100,10 @@ server.tool(
     const reaction = loadReaction();
     const reactionText = reaction?.reaction ?? `*${companion.name} watches your code quietly*`;
 
-    const card = renderCompanionCard(
+    // Use markdown rendering for the MCP tool response — Claude Code's UI
+    // doesn't render raw ANSI escape codes, so we return pure markdown with
+    // unicode rarity dots instead of RGB-colored borders.
+    const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
       companion.personality,
@@ -141,8 +144,9 @@ server.tool(
   async () => {
     const companion = ensureCompanion();
 
-    // Stats-only card (no personality, no reaction — just the numbers)
-    const card = renderCompanionCard(
+    // Stats-only card (no personality, no reaction — just the numbers).
+    // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
+    const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
       "",  // no personality in stats view
@@ -367,7 +371,8 @@ server.tool(
     saveActiveSlot(targetSlot);
     writeStatusState(companion, `*${companion.name} arrives*`);
 
-    const card = renderCompanionCard(
+    // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
+    const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
       companion.personality,

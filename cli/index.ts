@@ -82,6 +82,7 @@ Buddy:
 Settings:
   settings          Show current settings
   settings cooldown <n>  Set comment cooldown (0-300 seconds)
+  settings ttl <n>       Set reaction display duration (0-300s, 0 = permanent)
 
 Diagnostics:
   doctor            Run diagnostic report (paste output in bug reports)

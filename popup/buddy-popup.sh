@@ -81,7 +81,7 @@ exec perl -e '
     # F12 (\e[24~) = close popup and enter scroll mode
     if ($buf =~ /\e\[24~/) {
       my $buddy_dir = $ENV{BUDDY_DIR} || "$ENV{HOME}/.claude-buddy";
-      my $sid = $ENV{BUDDY_SID} || "default";
+      my $sid = $ENV{BUDDY_SID} // "default";
       open(my $fh, ">", "$buddy_dir/popup-scroll.$sid");
       close($fh) if $fh;
       exit 0;

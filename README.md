@@ -244,7 +244,7 @@ claude-buddy/
 | `bun run doctor` | Full diagnostic report |
 | `bun run verify` | Verify buddy generation matches expected output |
 | `bun run backup` | Snapshot / restore state |
-| `bun run settings` | View / change buddy settings (TUI settings coming soon) |
+| `bun run settings` | View / change buddy settings — cooldown, TTL (TUI coming soon) |
 | `bun run disable` | Temporarily deactivate buddy |
 | `bun run enable` | Re-enable buddy |
 | `bun run help` | Full CLI reference |

@@ -276,6 +276,90 @@ export function renderCompanionCard(
   return lines.join("\n");
 }
 
+// ─── Markdown-native render (for MCP tool responses) ───────────────────────
+//
+// Claude Code's UI doesn't render raw ANSI escape codes properly — it strips
+// the ESC byte but leaves "[38;2;...m" as literal text, making the output
+// unreadable. This renderer produces pure markdown with unicode rarity dots
+// instead of ANSI colors, so it renders cleanly in any MCP client UI.
+
+const RARITY_DOT: Record<Rarity, string> = {
+  common:    "\u26AA",  // ⚪ white circle
+  uncommon:  "\uD83D\uDFE2",  // 🟢 green circle
+  rare:      "\uD83D\uDD35",  // 🔵 blue circle
+  epic:      "\uD83D\uDFE3",  // 🟣 purple circle
+  legendary: "\uD83D\uDFE1",  // 🟡 yellow circle
+};
+
+export function renderCompanionCardMarkdown(
+  bones: BuddyBones,
+  name: string,
+  personality: string,
+  reaction?: string,
+  frame: number = 0,
+): string {
+  const dot = RARITY_DOT[bones.rarity];
+  const stars = RARITY_STARS[bones.rarity];
+  const shiny = bones.shiny ? " \u2728" : "";
+  const art = getArtFrame(bones.species, bones.eye, frame);
+
+  // Hat: replace first empty art line
+  const hatLine = HAT_ART[bones.hat];
+  if (hatLine && !art[0].trim()) {
+    art[0] = hatLine;
+  }
+
+  // Strip empty lines from art for cleaner rendering
+  const artLines = art.filter((l) => l.trim().length > 0);
+
+  const STAT_NAMES: StatName[] = ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"];
+  const statRows = STAT_NAMES.map((stat) => {
+    const val = bones.stats[stat];
+    const filled = Math.round(val / 10);
+    const bar = "\u2588".repeat(filled) + "\u2591".repeat(10 - filled);
+    const marker = stat === bones.peak ? " \u25B2" : stat === bones.dump ? " \u25BC" : "";
+    const label = `**${stat.slice(0, 3)}**${stat.slice(3)}`;
+    return `| ${label} | ${val}${marker} | \`${bar}\` |`;
+  }).join("\n");
+
+  const parts: string[] = [];
+
+  // Header: rarity dot, name, species+rarity, stars, shiny
+  parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
+  parts.push("");
+
+  // ASCII art in a code block (preserves monospaced formatting)
+  parts.push("```");
+  parts.push(artLines.join("\n"));
+  parts.push("```");
+  parts.push("");
+
+  // Identity line
+  parts.push(`**Identity:** eye \`${bones.eye}\` · hat \`${bones.hat}\``);
+  parts.push("");
+
+  // Stats table
+  parts.push("| Stat | Value | Bar |");
+  parts.push("|---|---|---|");
+  parts.push(statRows);
+  parts.push("");
+
+  // Reaction (if any) — reactions often already contain asterisks
+  // for actions like "*blinks slowly*", so render them verbatim to avoid
+  // accidentally turning italics into bold.
+  if (reaction) {
+    parts.push(`\ud83d\udcac ${reaction}`);
+    parts.push("");
+  }
+
+  // Personality as blockquote
+  if (personality) {
+    parts.push(`> ${personality}`);
+  }
+
+  return parts.join("\n");
+}
+
 // ─── Compact status line render ─────────────────────────────────────────────
 
 export function renderStatusLine(
