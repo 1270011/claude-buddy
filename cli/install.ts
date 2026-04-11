@@ -27,6 +27,11 @@ const SETTINGS_FILE = join(CLAUDE_DIR, "settings.json");
 const BUDDY_DIR = join(CLAUDE_DIR, "skills", "buddy");
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 
+// Paths written to settings.json / ~/.claude.json are later fed to Git Bash on
+// Windows, which eats lone backslashes as escape characters. Use forward slashes
+// for anything that leaves this process as config.
+const toPosix = (p: string) => p.replace(/\\/g, "/");
+
 function banner() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
@@ -108,7 +113,7 @@ function saveSettings(settings: Record<string, any>) {
 // ─── Step 1: Register MCP server (in ~/.claude.json) ────────────────────────
 
 function installMcp() {
-  const serverPath = join(PROJECT_ROOT, "server", "index.ts");
+  const serverPath = toPosix(join(PROJECT_ROOT, "server", "index.ts"));
   const claudeJsonPath = join(homedir(), ".claude.json");
 
   let claudeJson: Record<string, any> = {};
@@ -121,7 +126,7 @@ function installMcp() {
   claudeJson.mcpServers["claude-buddy"] = {
     command: "bun",
     args: [serverPath],
-    cwd: PROJECT_ROOT,
+    cwd: toPosix(PROJECT_ROOT),
   };
 
   writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2));
@@ -140,7 +145,7 @@ function installSkill() {
 // ─── Step 3: Configure status line (with animation refresh) ─────────────────
 
 function installStatusLine(settings: Record<string, any>) {
-  const statusScript = join(PROJECT_ROOT, "statusline", "buddy-status.sh");
+  const statusScript = toPosix(join(PROJECT_ROOT, "statusline", "buddy-status.sh"));
 
   settings.statusLine = {
     type: "command",
@@ -168,7 +173,7 @@ function detectTmux(): boolean {
 }
 
 function installPopupHooks(settings: Record<string, any>) {
-  const popupManager = join(PROJECT_ROOT, "popup", "popup-manager.sh");
+  const popupManager = toPosix(join(PROJECT_ROOT, "popup", "popup-manager.sh"));
 
   if (!settings.hooks) settings.hooks = {};
 
@@ -196,9 +201,9 @@ function installPopupHooks(settings: Record<string, any>) {
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
 
 function installHooks(settings: Record<string, any>) {
-  const reactHook    = join(PROJECT_ROOT, "hooks", "react.sh");
-  const commentHook  = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
-  const nameHook     = join(PROJECT_ROOT, "hooks", "name-react.sh");
+  const reactHook    = toPosix(join(PROJECT_ROOT, "hooks", "react.sh"));
+  const commentHook  = toPosix(join(PROJECT_ROOT, "hooks", "buddy-comment.sh"));
+  const nameHook     = toPosix(join(PROJECT_ROOT, "hooks", "name-react.sh"));
 
   if (!settings.hooks) settings.hooks = {};
 
