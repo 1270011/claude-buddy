@@ -22,10 +22,39 @@ MUTED=$(jq -r '.muted // false' "$STATE" 2>/dev/null)
 NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 [ -z "$NAME" ] && exit 0
 
+REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
+
+# ─── Windows fallback ────────────────────────────────────────────────────────
+# Claude Code's status line on Windows strips leading whitespace, rejects a
+# range of Unicode codepoints, and mangles multi-line ASCII art in ways we
+# can't work around from a shell script. Render a minimal single-line
+# "Name: *reaction*" so the companion's voice still comes through.
+if [ -n "$MSYSTEM" ] || [ -n "$WINDIR" ] || [ -n "$SYSTEMROOT" ]; then
+    BUBBLE=""
+    if [ -n "$REACTION" ] && [ "$REACTION" != "null" ]; then
+        REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
+        if [ -f "$REACTION_FILE" ]; then
+            TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
+            if [ "$TS" != "0" ]; then
+                NOW=$(date +%s)
+                AGE=$(( NOW - TS / 1000 ))
+                [ "$AGE" -lt 20 ] && BUBBLE="$REACTION"
+            fi
+        fi
+    fi
+    # Strip any non-ASCII so the renderer doesn't reject the whole line.
+    if [ -n "$BUBBLE" ]; then
+        BUBBLE=$(printf '%s' "$BUBBLE" | LC_ALL=C tr -cd '\11\40-\176')
+        printf '%s: %s\n' "$NAME" "$BUBBLE"
+    else
+        printf '%s\n' "$NAME"
+    fi
+    exit 0
+fi
+
 SPECIES=$(jq -r '.species // ""' "$STATE" 2>/dev/null)
 HAT=$(jq -r '.hat // "none"' "$STATE" 2>/dev/null)
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
-REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
 # eye is written to status.json by writeStatusState (v2+); fall back to "°"
 E=$(jq -r '.eye // "°"' "$STATE" 2>/dev/null)
 
