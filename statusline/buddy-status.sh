@@ -72,6 +72,8 @@ for _ in 1 2 3 4 5; do
     fi
 done
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=${COLUMNS:-0}
+# Git Bash on Windows: /proc fd walking above doesn't work, but tput does.
+[ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=$(tput cols 2>/dev/null || echo 0)
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=125
 
 # ─── Species art: 3 frames each (F0, F1, F2) ────────────────────────────────
