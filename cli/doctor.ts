@@ -15,7 +15,9 @@ import { homedir } from "os";
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 const HOME = homedir();
-const STATUS_SCRIPT = join(PROJECT_ROOT, "statusline", "buddy-status.sh");
+// Forward slashes so the path survives being piped into Git Bash on Windows
+// (bash strips lone backslashes as escape characters).
+const STATUS_SCRIPT = join(PROJECT_ROOT, "statusline", "buddy-status.sh").replace(/\\/g, "/");
 
 const RED = "\x1b[31m";
 const GREEN = "\x1b[32m";
