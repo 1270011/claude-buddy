@@ -98,6 +98,10 @@ function bgForCell(cell: any): string {
 }
 
 const SCROLLBAR_WIDTH = 2;
+// Reserved gap between Claude's content and the scrollbar — so word-select
+// stops at the gap instead of copying scrollbar characters.
+const SCROLLBAR_GAP = 1;
+const SCROLLBAR_RESERVED = SCROLLBAR_WIDTH + SCROLLBAR_GAP;
 
 function renderScrollbar(term: any, startRow: number, codeRows: number, col: number): string {
   const buf = term.buffer.active;
@@ -468,7 +472,7 @@ const args = rawArgs.slice(1);
 // This gives us true scrollback isolation — the real terminal's main buffer
 // is not polluted by Claude's output.
 const xterm = new Terminal({
-  cols: cols,
+  cols: cols - SCROLLBAR_RESERVED,
   rows: code,
   scrollback: 5000,
   allowProposedApi: true,
@@ -481,7 +485,7 @@ xterm.loadAddon(serializeAddon);
 
 const pty = ptySpawn(cmd, args, {
   name: "xterm-256color",
-  cols: cols,
+  cols: cols - SCROLLBAR_RESERVED,
   rows: code,
   cwd: process.cwd(),
   env: { ...process.env, BUDDY_SHELL: "1" } as Record<string, string>,
@@ -491,25 +495,25 @@ const pty = ptySpawn(cmd, args, {
 // we accumulate and render at most every ~16ms (60 fps).
 let renderPending = false;
 
-// Arrow-key queue for wheel-scroll detection
+// Safety-net queue for single-arrow chunks. Node can split a wheel burst
+// across data events, so a lone arrow might actually be part of a wheel
+// tick. We hold single arrows for 30ms — if more arrive, scroll; if the
+// timer expires alone, treat as a real keypress.
 let arrowQueue: string[] = [];
 let arrowFlushTimer: ReturnType<typeof setTimeout> | null = null;
 
 function flushArrowQueue() {
-  const queue = arrowQueue;
+  const q = arrowQueue;
   arrowQueue = [];
   arrowFlushTimer = null;
-  if (queue.length === 0) return;
-
-  if (queue.length >= 2) {
-    // Wheel scroll — consume, don't forward
-    const ups = queue.filter(q => q === "\x1b[A").length;
-    const downs = queue.filter(q => q === "\x1b[B").length;
+  if (q.length === 0) return;
+  if (q.length >= 2) {
+    const ups = q.filter(a => a === "\x1b[A").length;
+    const downs = q.filter(a => a === "\x1b[B").length;
     xterm.scrollLines((downs - ups) * 2);
     scheduleRender();
   } else {
-    // Single arrow after timeout — forward to PTY as keyboard input
-    for (const q of queue) pty.write(q);
+    for (const a of q) pty.write(a);
   }
 }
 // Track what we last told the real terminal so we only send updates on change
@@ -523,18 +527,17 @@ function scheduleRender() {
     renderPending = false;
     if (pauseOutput) return;
     const { cols: c, code: h } = layout();
+    const innerCols = c - SCROLLBAR_RESERVED;
     const buf = xterm.buffer.active;
     const isAtBottom = buf.viewportY === buf.baseY;
 
-    // Combine: hide cursor, render viewport, position cursor, show cursor.
-    // One atomic write = no flicker, no phantom cursors along the way.
     const parts: string[] = [];
-    parts.push(`${CSI}?25l`);                                     // hide
-    parts.push(renderXtermViewport(xterm, 1, h, c));              // draw
-    parts.push(renderScrollbar(xterm, 1, h, c));                  // scrollbar
+    parts.push(`${CSI}?25l`);
+    parts.push(renderXtermViewport(xterm, 1, h, innerCols));
+    parts.push(renderScrollbar(xterm, 1, h, c));
     if (isAtBottom) {
-      parts.push(moveTo(buf.cursorY + 1, buf.cursorX + 1));       // reposition
-      parts.push(`${CSI}?25h`);                                   // show
+      parts.push(moveTo(buf.cursorY + 1, buf.cursorX + 1));
+      parts.push(`${CSI}?25h`);
     }
     process.stdout.write(parts.join(""));
   }, 16);
@@ -554,31 +557,27 @@ process.stdout.write(`${CSI}?1007h`);
 process.stdin.on("data", (data: Buffer) => {
   const s = data.toString();
 
-  // Wheel-scroll detection. Mouse wheel (with alt-scroll mode 1007) sends
-  // arrow sequences that are INDISTINGUISHABLE from keyboard arrow keys.
-  // We use two heuristics:
-  //   1. If a chunk contains MULTIPLE arrow sequences → definitely wheel
-  //   2. If a chunk is ONE arrow → queue it, wait 30ms; if more come, it's
-  //      a wheel burst; if timer expires alone, it's a real keypress.
+  // Wheel-scroll detection.
+  //   - 2+ arrows in one chunk → definitely wheel (most common case)
+  //   - 1 arrow → ambiguous; queue for 30ms to catch burst split across chunks
   if (!panelFocus && panelMode !== "settings-full") {
     const ups = (s.match(/\x1b\[A/g) || []).length;
     const downs = (s.match(/\x1b\[B/g) || []).length;
     const arrowCount = ups + downs;
-
-    // Only arrows, no other data in this chunk?
     const stripped = s.replace(/\x1b\[[AB]/g, "");
     const isPureArrows = stripped.length === 0 && arrowCount > 0;
 
     if (isPureArrows) {
       if (arrowCount >= 2) {
-        // Multi-arrow chunk → definitely wheel
+        // Merge with anything queued (all wheel)
         if (arrowFlushTimer) { clearTimeout(arrowFlushTimer); arrowFlushTimer = null; }
-        arrowQueue = []; // clear any queued singles, wheel takes priority
-        xterm.scrollLines((downs - ups) * 2);
+        const qUps = arrowQueue.filter(a => a === "\x1b[A").length + ups;
+        const qDowns = arrowQueue.filter(a => a === "\x1b[B").length + downs;
+        arrowQueue = [];
+        xterm.scrollLines((qDowns - qUps) * 2);
         scheduleRender();
         return;
       }
-      // Single arrow — queue it, wait to see if more follow
       arrowQueue.push(s);
       if (arrowFlushTimer) clearTimeout(arrowFlushTimer);
       arrowFlushTimer = setTimeout(flushArrowQueue, 30);
@@ -695,9 +694,12 @@ function enterFullSettings() {
   panelMode = "settings-full";
   settingsCursor = 0;
   panelMessage = "";
-  // Enter alt screen ONLY for settings — no scrollback pollution while settings open
-  process.stdout.write(`${CSI}?1049h`);
+  // We're ALREADY in alt screen (wrapper entered it at startup).
+  // Just reset scroll region, clear the whole screen, and draw settings.
+  // Don't send another \x1b[?1049h — it's a no-op when stacked and the
+  // matching ?1049l would exit the wrapper's alt screen entirely.
   process.stdout.write(`${CSI}r`);
+  process.stdout.write(`${CSI}2J${moveTo(1, 1)}`);
   process.stdout.write(`${CSI}?25l`);
   renderFullSettings();
 }
@@ -705,14 +707,15 @@ function enterFullSettings() {
 function exitFullSettings() {
   panelMode = "menu";
   panelMessage = "";
-  // Leave alt screen — Claude's view is restored automatically by the terminal
-  process.stdout.write(`${CSI}?1049l`);
-  process.stdout.write(`${CSI}?25h`);
   pauseOutput = false;
-  const { code } = layout();
-  process.stdout.write(setScrollRegion(1, code));
+  const { cols: c, code: h } = layout();
+  const innerCols = c - SCROLLBAR_RESERVED;
+  process.stdout.write(`${CSI}2J`);
+  process.stdout.write(setScrollRegion(1, h));
+  process.stdout.write(renderXtermViewport(xterm, 1, h, innerCols));
+  process.stdout.write(renderScrollbar(xterm, 1, h, c));
   setupPanel();
-  pty.write("\x0c");
+  process.stdout.write(`${CSI}?25h`);
 }
 
 // Resize: clear xterm completely (no history preservation — like tmux).
@@ -720,18 +723,20 @@ function exitFullSettings() {
 // history across resize, but avoids ghost echoes.
 process.stdout.on("resize", () => {
   const l = layout();
+  const innerCols = l.cols - SCROLLBAR_RESERVED;
   xterm.reset();
-  xterm.resize(l.cols, l.code);
-  pty.resize(l.cols, l.code);
+  xterm.resize(innerCols, l.code);
+  pty.resize(innerCols, l.code);
   process.stdout.write(`${CSI}2J`);
-  process.stdout.write(renderXtermViewport(xterm, 1, l.code, l.cols));
+  process.stdout.write(renderXtermViewport(xterm, 1, l.code, innerCols));
   setupPanel();
-  // Ask Claude to redraw cleanly into the empty buffer
   pty.write("\x0c");
 });
 
-// Periodic panel refresh (repairs gradual damage)
+// Periodic panel refresh (repairs gradual damage). Skipped while
+// fullscreen settings are open — the panel doesn't exist there.
 const timer = setInterval(() => {
+  if (panelMode === "settings-full") return;
   process.stdout.write(`${ESC}7`);
   setupPanel();
   process.stdout.write(`${ESC}8`);
