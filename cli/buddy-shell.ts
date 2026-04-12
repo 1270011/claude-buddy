@@ -87,6 +87,46 @@ function loadStats(): Record<string, any> | null {
 
 // ─── Render panel + set scroll region ───────────────────────────────────────
 
+// ─── Interactive panel state ────────────────────────────────────────────────
+
+type PanelMode = "menu" | "settings-full";
+let panelFocus = false;
+let panelMode: PanelMode = "menu";
+let menuCursor = 0;
+let settingsCursor = 0;
+let pauseOutput = false; // when true, swallow PTY output (Claude is "hidden")
+const MENU_ITEMS = ["Settings", "Pet buddy", "Say hi"];
+let panelMessage = "";
+
+// Settings definitions (key, label, cycle function on Enter)
+import { readFileSync as readFs, writeFileSync as writeFs, existsSync as existsFs, mkdirSync as mkdirFs } from "fs";
+const CONFIG_FILE = join(STATE_DIR, "config.json");
+
+interface Settings {
+  commentCooldown: number;
+  reactionTTL: number;
+  bubbleStyle: string;
+  bubblePosition: string;
+  showRarity: boolean;
+}
+
+function loadSettings(): Settings {
+  const defaults: Settings = { commentCooldown: 30, reactionTTL: 0, bubbleStyle: "classic", bubblePosition: "top", showRarity: true };
+  try { return { ...defaults, ...JSON.parse(readFs(CONFIG_FILE, "utf8")) }; } catch { return defaults; }
+}
+function saveSettings(cfg: Settings) {
+  if (!existsFs(STATE_DIR)) mkdirFs(STATE_DIR, { recursive: true });
+  writeFs(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+}
+
+const SETTINGS_LIST = [
+  { key: "commentCooldown" as const, label: "Comment Cooldown", cycle: (v: Settings) => { v.commentCooldown = (v.commentCooldown + 10) % 120; } },
+  { key: "reactionTTL" as const, label: "Reaction TTL", cycle: (v: Settings) => { v.reactionTTL = (v.reactionTTL + 10) % 60; } },
+  { key: "bubbleStyle" as const, label: "Bubble Style", cycle: (v: Settings) => { v.bubbleStyle = v.bubbleStyle === "classic" ? "round" : "classic"; } },
+  { key: "bubblePosition" as const, label: "Bubble Position", cycle: (v: Settings) => { v.bubblePosition = v.bubblePosition === "top" ? "left" : "top"; } },
+  { key: "showRarity" as const, label: "Show Rarity", cycle: (v: Settings) => { v.showRarity = !v.showRarity; } },
+];
+
 function setupPanel() {
   const { cols, code, panel } = layout();
   const s = loadStatus();
@@ -102,9 +142,15 @@ function setupPanel() {
     out.push(moveTo(code + 1 + i, 1) + clearLine);
   }
 
-  // Separator line
-  out.push(moveTo(code + 1, 1) +
-    `${CYAN}─ buddy ${"─".repeat(Math.max(0, cols - 9))}${NC}`);
+  // Separator line with focus hint
+  {
+    const clrLine = panelFocus ? `${CSI}33m` : CYAN;
+    const label = panelFocus ? " buddy [FOCUS] " : " buddy  ";
+    const hint = panelFocus ? " esc back " : " Ctrl+Space / F2 to open ";
+    const used = label.length + hint.length + 2;
+    out.push(moveTo(code + 1, 1) +
+      `${clrLine}─${label}${DIM}${hint}${NC}${clrLine}${"─".repeat(Math.max(0, cols - used))}${NC}`);
+  }
 
   if (!s) {
     out.push(moveTo(code + 2, 1) +
@@ -163,7 +209,8 @@ function setupPanel() {
     bubbleLines.push(`╰${"─".repeat(bw + 2)}╯`);
   }
   const bubbleW = bubbleLines.length > 0 ? bubbleLines[0].length : 0;
-  const bubbleCol = Math.max(1, artStart - Math.floor(bubbleW / 2));
+  // Position bubble upper-left of the buddy (right edge slightly overlaps buddy's left side)
+  const bubbleCol = Math.max(1, artStart + 2 - bubbleW);
 
   // ── Right column: name + stats (far right) ──
   const statW = 20;
@@ -230,18 +277,27 @@ function setupPanel() {
     // Background: sky or ground
     out.push(renderBgRow(row, i * 3 + 1, isLastRow));
 
+    // Interactive menu (top-left of panel)
+    if (panelMode === "menu" && i < MENU_ITEMS.length) {
+      const isCursor = panelFocus && i === menuCursor;
+      const prefix = isCursor ? `${CSI}33m▸ ` : "  ";
+      const text = MENU_ITEMS[i];
+      const colorOn = panelFocus ? (isCursor ? `${CSI}33m${BOLD}` : `${CSI}37m`) : DIM;
+      out.push(moveTo(row, 2) + `${colorOn}${prefix}${text}${NC}`);
+    }
+
+    // Panel message (bottom row if there's a message)
+    if (i === contentRows - 1 && panelMessage) {
+      out.push(moveTo(row, 2) + `${GREEN}✓ ${panelMessage}${NC}`);
+    }
+
     // Structure from biome (right of buddy, on the ground)
     const structIdx = i - structOffset;
     if (structIdx >= 0 && structIdx < structureLines.length && structureStart + 16 < rightStart) {
       out.push(moveTo(row, structureStart) + structureLines[structIdx]);
     }
 
-    // Speech bubble (above buddy)
-    if (i < bubbleLines.length && bubbleCol > 0) {
-      out.push(moveTo(row, bubbleCol) + `${clr}${bubbleLines[i]}${NC}`);
-    }
-
-    // Buddy art (feet on ground)
+    // Buddy art (feet on ground) — rendered BEFORE the bubble
     const artIdx = i - artOffset;
     if (artIdx >= 0 && artIdx < artLines.length) {
       out.push(moveTo(row, artStart) + `${clr}${BOLD}${artLines[artIdx]}${NC}`);
@@ -250,6 +306,11 @@ function setupPanel() {
     // Stats (far right)
     if (i < rightLines.length) {
       out.push(moveTo(row, rightStart) + rightLines[i]);
+    }
+
+    // Speech bubble (rendered LAST — highest z-index, always on top)
+    if (i < bubbleLines.length && bubbleCol > 0) {
+      out.push(moveTo(row, bubbleCol) + `${clr}${bubbleLines[i]}${NC}`);
     }
   }
 
@@ -276,8 +337,8 @@ const { cols, code } = layout();
 process.stdin.setRawMode(true);
 process.stdin.resume();
 
-// Initial setup: clear code area, render panel
-// Clear each line in the code area individually
+// Stay in main buffer so mouse-wheel scrolling works (like normal Claude Code).
+// Trade-off: resize redraws pollute scrollback, same as normal Claude Code.
 for (let i = 1; i <= code; i++) {
   process.stdout.write(moveTo(i, 1) + clearLine);
 }
@@ -299,23 +360,149 @@ const pty = ptySpawn(cmd, args, {
   env: { ...process.env, BUDDY_SHELL: "1" } as Record<string, string>,
 });
 
-// PTY output → terminal, repair panel if damaged
+// PTY output → terminal, repair panel if damaged (suppressed during fullscreen settings)
 pty.onData((data: string) => {
-  // Forward output
+  if (pauseOutput) return;  // hide Claude while fullscreen settings are open
   process.stdout.write(data);
-
-  // If output contained destructive sequences, repair immediately
   if (containsDestructive(data)) {
-    process.stdout.write(`${ESC}7`);  // save cursor
-    setupPanel();                      // re-set scroll region + re-render panel
-    process.stdout.write(`${ESC}8`);  // restore cursor
+    process.stdout.write(`${ESC}7`);
+    setupPanel();
+    process.stdout.write(`${ESC}8`);
   }
 });
 
-// Keyboard → PTY
+// Keyboard → PTY or panel (Ctrl+B toggles panel focus)
 process.stdin.on("data", (data: Buffer) => {
-  pty.write(data.toString());
+  const s = data.toString();
+
+  // Ctrl+Space (\x00) or F2 (\x1bOQ or \x1b[12~) — toggle panel focus
+  if (s === "\x00" || s === "\x1bOQ" || s === "\x1b[12~") {
+    panelFocus = !panelFocus;
+    panelMessage = "";
+    refreshPanel();
+    return;
+  }
+
+  // Fullscreen settings mode: navigate settings, Esc exits back to Claude
+  if (panelMode === "settings-full") {
+    if (s === "\x1b[A") { settingsCursor = Math.max(0, settingsCursor - 1); renderFullSettings(); return; }
+    if (s === "\x1b[B") { settingsCursor = Math.min(SETTINGS_LIST.length - 1, settingsCursor + 1); renderFullSettings(); return; }
+    if (s === "\r" || s === "\n") {
+      const cfg = loadSettings();
+      const def = SETTINGS_LIST[settingsCursor];
+      def.cycle(cfg);
+      saveSettings(cfg);
+      panelMessage = `${def.label} → ${cfg[def.key]}`;
+      renderFullSettings();
+      return;
+    }
+    if (s === "\x1b") { exitFullSettings(); return; }
+    return;  // swallow all other keys in fullscreen
+  }
+
+  // Panel focus mode (small menu at bottom)
+  if (panelFocus) {
+    if (s === "\x1b[A") { menuCursor = Math.max(0, menuCursor - 1); refreshPanel(); return; }
+    if (s === "\x1b[B") { menuCursor = Math.min(MENU_ITEMS.length - 1, menuCursor + 1); refreshPanel(); return; }
+    if (s === "\r" || s === "\n") {
+      if (menuCursor === 0) {
+        panelFocus = false; // leave focus mode since fullscreen takes over
+        enterFullSettings();
+      } else if (menuCursor === 1) {
+        panelMessage = "*purrs*";
+        refreshPanel();
+      } else if (menuCursor === 2) {
+        panelMessage = "Hi from the buddy!";
+        refreshPanel();
+      }
+      return;
+    }
+    if (s === "\x1b") { panelFocus = false; panelMessage = ""; refreshPanel(); return; }
+    return;
+  }
+
+  // Normal mode: forward everything to PTY
+  pty.write(s);
 });
+
+function refreshPanel() {
+  process.stdout.write(`${ESC}7`);
+  setupPanel();
+  process.stdout.write(`${ESC}8`);
+}
+
+// Render settings taking over the full terminal
+function renderFullSettings() {
+  const { cols, rows } = layout();
+  const cfg = loadSettings();
+  const out: string[] = [];
+
+  // Clear entire screen
+  out.push(`${CSI}2J${moveTo(1, 1)}`);
+
+  // Title bar
+  const title = " ⚙  claude-buddy — Settings ";
+  const titleFill = "─".repeat(Math.max(0, cols - title.length - 2));
+  out.push(`${CYAN}${BOLD}─${title}${NC}${CYAN}${titleFill}─${NC}\n`);
+  out.push("\n");
+
+  // Render each setting as a box-like line
+  const listStart = 4;
+  for (let i = 0; i < SETTINGS_LIST.length; i++) {
+    const def = SETTINGS_LIST[i];
+    const isCursor = i === settingsCursor;
+    const val = String(cfg[def.key]);
+    const border = isCursor ? `${CSI}33m` : GRAY;
+    const textClr = isCursor ? `${CSI}33m${BOLD}` : `${CSI}37m`;
+    const row = listStart + i * 3;
+
+    out.push(moveTo(row, 4) +
+      `${border}╭${"─".repeat(cols - 10)}╮${NC}`);
+    out.push(moveTo(row + 1, 4) +
+      `${border}│${NC} ${textClr}${isCursor ? "▸ " : "  "}${def.label.padEnd(24)}${NC}` +
+      `${CSI}36m${BOLD}${val.padEnd(cols - 38)}${NC}${border}│${NC}`);
+    out.push(moveTo(row + 2, 4) +
+      `${border}╰${"─".repeat(cols - 10)}╯${NC}`);
+  }
+
+  // Message
+  if (panelMessage) {
+    const msgRow = listStart + SETTINGS_LIST.length * 3 + 1;
+    out.push(moveTo(msgRow, 4) + `${GREEN}✓ ${panelMessage}${NC}`);
+  }
+
+  // Footer help bar
+  const help = " ↑↓ navigate  enter change  esc back to claude ";
+  out.push(moveTo(rows, 1) +
+    `${CYAN}─${DIM}${help}${NC}${CYAN}${"─".repeat(Math.max(0, cols - help.length - 1))}${NC}`);
+
+  process.stdout.write(out.join(""));
+}
+
+function enterFullSettings() {
+  pauseOutput = true;
+  panelMode = "settings-full";
+  settingsCursor = 0;
+  panelMessage = "";
+  // Enter alt screen ONLY for settings — no scrollback pollution while settings open
+  process.stdout.write(`${CSI}?1049h`);
+  process.stdout.write(`${CSI}r`);
+  process.stdout.write(`${CSI}?25l`);
+  renderFullSettings();
+}
+
+function exitFullSettings() {
+  panelMode = "menu";
+  panelMessage = "";
+  // Leave alt screen — Claude's view is restored automatically by the terminal
+  process.stdout.write(`${CSI}?1049l`);
+  process.stdout.write(`${CSI}?25h`);
+  pauseOutput = false;
+  const { code } = layout();
+  process.stdout.write(setScrollRegion(1, code));
+  setupPanel();
+  pty.write("\x0c");
+}
 
 // Resize
 process.stdout.on("resize", () => {
@@ -336,12 +523,12 @@ const timer = setInterval(() => {
 // Cleanup
 pty.onExit(({ exitCode }) => {
   clearInterval(timer);
-  // Reset scroll region and clear panel
-  process.stdout.write(`${CSI}r`);
+  process.stdout.write(`${CSI}r`);           // reset scroll region
   const l = layout();
   for (let i = 0; i < l.panel; i++) {
     process.stdout.write(moveTo(l.code + 1 + i, 1) + clearLine);
   }
+  process.stdout.write(moveTo(l.code + 1, 1));
   process.stdout.write(`${CSI}?25h`);
   try { process.stdin.setRawMode(false); } catch {}
   process.stdin.pause();
