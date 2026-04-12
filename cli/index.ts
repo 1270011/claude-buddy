@@ -8,6 +8,7 @@
  *   npx claude-buddy show         Show current buddy
  *   npx claude-buddy pick         Interactive two-pane buddy picker (saved + search)
  *   npx claude-buddy hunt         Search for a specific buddy (non-interactive)
+ *   npx claude-buddy upgrade     Pull latest + reinstall
  *   npx claude-buddy uninstall    Remove all integrations
  *   npx claude-buddy verify       Verify what buddy your ID produces
  */
@@ -49,6 +50,9 @@ switch (command) {
   case "disable":
     await import("./disable.ts");
     break;
+  case "upgrade":
+    await import("./upgrade.ts");
+    break;
   case "enable":
     await import("./install.ts");
     break;
@@ -69,6 +73,7 @@ claude-buddy — permanent coding companion for Claude Code
 
 Setup:
   install-buddy     Set up MCP server, skill, hooks, and status line
+  upgrade           Pull latest version and reinstall integrations
   enable            Same as install-buddy (re-enable after disable)
   disable           Temporarily deactivate buddy (data preserved)
   uninstall         Remove all claude-buddy integrations
@@ -78,6 +83,8 @@ Buddy:
   pick              Interactive two-pane buddy picker (browse saved + search)
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
+
+  upgrade           Pull latest version + reinstall (add --check to just check)
 
 Settings:
   settings          Show current settings

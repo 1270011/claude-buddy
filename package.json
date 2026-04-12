@@ -18,6 +18,7 @@
         "settings": "bun run cli/settings.ts",
         "disable": "bun run cli/disable.ts",
         "enable": "bun run cli/install.ts",
+        "upgrade": "bun run cli/upgrade.ts",
         "uninstall": "bun run cli/uninstall.ts",
         "help": "bun run cli/index.ts help",
         "test": "bun test",
