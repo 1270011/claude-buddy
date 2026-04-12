@@ -49,6 +49,8 @@
     "license": "MIT",
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.12.1",
+        "@xterm/addon-serialize": "^0.14.0",
+        "@xterm/headless": "^6.0.0",
         "node-pty": "^1.1.0"
     },
     "devDependencies": {

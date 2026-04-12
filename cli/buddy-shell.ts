@@ -18,6 +18,10 @@ import { homedir } from "os";
 import { getArtFrame, HAT_ART } from "../server/art.ts";
 import type { Species, Eye, Hat } from "../server/engine.ts";
 import { getBiome, listBiomes } from "./biomes.ts";
+import xtermPkg from "@xterm/headless";
+import serializePkg from "@xterm/addon-serialize";
+const { Terminal } = xtermPkg as any;
+const { SerializeAddon } = serializePkg as any;
 
 if (!process.stdin.isTTY && !process.argv.includes("--biomes")) {
   console.error("buddy-shell requires an interactive terminal (TTY)");
@@ -61,8 +65,112 @@ const RARITY_CLR: Record<string, string> = {
   epic: MAGENTA, legendary: YELLOW,
 };
 
-
 const STATE_DIR = join(homedir(), ".claude-buddy");
+
+// ─── xterm cell → ANSI renderer ─────────────────────────────────────────────
+//
+// Converts a single cell's color modes (default/palette/rgb) into the
+// corresponding ANSI escape sequence. Tracks previous attributes so we
+// only emit escape codes when something changes (massive perf win).
+
+function fgForCell(cell: any): string {
+  if (cell.isFgDefault()) return "39";
+  if (cell.isFgRGB()) {
+    const color = cell.getFgColor();
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    return `38;2;${r};${g};${b}`;
+  }
+  // Palette (16 or 256)
+  return `38;5;${cell.getFgColor()}`;
+}
+function bgForCell(cell: any): string {
+  if (cell.isBgDefault()) return "49";
+  if (cell.isBgRGB()) {
+    const color = cell.getBgColor();
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    return `48;2;${r};${g};${b}`;
+  }
+  return `48;5;${cell.getBgColor()}`;
+}
+
+const SCROLLBAR_WIDTH = 2;
+
+function renderScrollbar(term: any, startRow: number, codeRows: number, col: number): string {
+  const buf = term.buffer.active;
+  if (buf.baseY === 0) return "";
+
+  const ratio = buf.viewportY / buf.baseY;
+  const totalLines = buf.length;
+  const thumbSize = Math.max(1, Math.floor((codeRows * codeRows) / totalLines));
+  const thumbTop = Math.round(ratio * (codeRows - thumbSize));
+
+  const out: string[] = [];
+  for (let i = 0; i < codeRows; i++) {
+    const isThumb = i >= thumbTop && i < thumbTop + thumbSize;
+    const seg = isThumb ? `${CSI}36m██${CSI}0m` : `${CSI}90m╎╎${CSI}0m`;
+    out.push(moveTo(startRow + i, col - SCROLLBAR_WIDTH + 1) + seg);
+  }
+  return out.join("");
+}
+
+function renderXtermViewport(term: any, startRow: number, codeRows: number, cols: number): string {
+  const buf = term.buffer.active;
+  const viewportTop = buf.viewportY;
+  const out: string[] = [];
+
+  for (let vy = 0; vy < codeRows; vy++) {
+    const bufY = viewportTop + vy;
+    const line = buf.getLine(bufY);
+    out.push(moveTo(startRow + vy, 1));
+    out.push(`${CSI}0m`);
+
+    if (!line) {
+      out.push(" ".repeat(cols));
+      continue;
+    }
+
+    let lastAttrs = "";
+    let rendered = 0;
+
+    for (let x = 0; x < Math.min(line.length, cols); x++) {
+      const cell = line.getCell(x);
+      if (!cell) { out.push(" "); rendered++; continue; }
+
+      const parts: string[] = ["0"];
+      if (cell.isBold()) parts.push("1");
+      if (cell.isDim()) parts.push("2");
+      if (cell.isItalic()) parts.push("3");
+      if (cell.isUnderline()) parts.push("4");
+      if (cell.isInverse()) parts.push("7");
+      parts.push(fgForCell(cell));
+      parts.push(bgForCell(cell));
+      const attrs = parts.join(";");
+
+      if (attrs !== lastAttrs) {
+        out.push(`${CSI}${attrs}m`);
+        lastAttrs = attrs;
+      }
+
+      const chars = cell.getChars();
+      const width = cell.getWidth();
+      if (width === 0) continue; // second half of a wide char
+      out.push(chars || " ");
+      rendered += width || 1;
+    }
+
+    // Pad remainder of row with spaces (reset first so bg doesn't bleed)
+    if (rendered < cols) {
+      out.push(`${CSI}0m`);
+      out.push(" ".repeat(cols - rendered));
+    }
+  }
+
+  return out.join("");
+}
 
 function layout() {
   const cols = process.stdout.columns || 80;
@@ -337,13 +445,15 @@ const { cols, code } = layout();
 process.stdin.setRawMode(true);
 process.stdin.resume();
 
-// Stay in main buffer so mouse-wheel scrolling works (like normal Claude Code).
-// Trade-off: resize redraws pollute scrollback, same as normal Claude Code.
-for (let i = 1; i <= code; i++) {
-  process.stdout.write(moveTo(i, 1) + clearLine);
-}
+// Enter alternate screen buffer. Since xterm-headless manages Claude's scrollback
+// internally and we intercept mouse wheel to scroll xterm, we don't need the
+// terminal's native scrollback. Alt screen gives us:
+//   - No native scrollbar confusion (nothing to show in main buffer)
+//   - No resize pollution (alt buffer has no scrollback)
+//   - Clean exit (terminal's pre-wrapper content is restored, like vim/htop)
+process.stdout.write(`${CSI}?1049h`);
+process.stdout.write(`${CSI}2J${moveTo(1, 1)}`);
 setupPanel();
-process.stdout.write(moveTo(1, 1));
 
 // Spawn PTY (filter out --biome args)
 const rawArgs = process.argv.slice(2).filter((a, i, arr) =>
@@ -351,6 +461,23 @@ const rawArgs = process.argv.slice(2).filter((a, i, arr) =>
 );
 const cmd = rawArgs[0] || "claude";
 const args = rawArgs.slice(1);
+
+// Create a virtual xterm terminal for Claude. We feed Claude's PTY output
+// into xterm, which parses ANSI and maintains its own cell buffer + scrollback.
+// Then we render the visible viewport into the top area of the real terminal.
+// This gives us true scrollback isolation — the real terminal's main buffer
+// is not polluted by Claude's output.
+const xterm = new Terminal({
+  cols: cols,
+  rows: code,
+  scrollback: 5000,
+  allowProposedApi: true,
+});
+
+// Serialize addon lets us save/restore the buffer as an ANSI string.
+// Used on resize: save → clear → resize → restore → Claude's redraw goes on top.
+const serializeAddon = new SerializeAddon();
+xterm.loadAddon(serializeAddon);
 
 const pty = ptySpawn(cmd, args, {
   name: "xterm-256color",
@@ -360,20 +487,104 @@ const pty = ptySpawn(cmd, args, {
   env: { ...process.env, BUDDY_SHELL: "1" } as Record<string, string>,
 });
 
-// PTY output → terminal, repair panel if damaged (suppressed during fullscreen settings)
-pty.onData((data: string) => {
-  if (pauseOutput) return;  // hide Claude while fullscreen settings are open
-  process.stdout.write(data);
-  if (containsDestructive(data)) {
-    process.stdout.write(`${ESC}7`);
-    setupPanel();
-    process.stdout.write(`${ESC}8`);
+// Coalesced renderer — we don't re-render on every tiny PTY chunk,
+// we accumulate and render at most every ~16ms (60 fps).
+let renderPending = false;
+
+// Arrow-key queue for wheel-scroll detection
+let arrowQueue: string[] = [];
+let arrowFlushTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flushArrowQueue() {
+  const queue = arrowQueue;
+  arrowQueue = [];
+  arrowFlushTimer = null;
+  if (queue.length === 0) return;
+
+  if (queue.length >= 2) {
+    // Wheel scroll — consume, don't forward
+    const ups = queue.filter(q => q === "\x1b[A").length;
+    const downs = queue.filter(q => q === "\x1b[B").length;
+    xterm.scrollLines((downs - ups) * 2);
+    scheduleRender();
+  } else {
+    // Single arrow after timeout — forward to PTY as keyboard input
+    for (const q of queue) pty.write(q);
   }
+}
+// Track what we last told the real terminal so we only send updates on change
+let lastCursorX = -1, lastCursorY = -1;
+let lastCursorVisible = true;
+
+function scheduleRender() {
+  if (renderPending) return;
+  renderPending = true;
+  setTimeout(() => {
+    renderPending = false;
+    if (pauseOutput) return;
+    const { cols: c, code: h } = layout();
+    const buf = xterm.buffer.active;
+    const isAtBottom = buf.viewportY === buf.baseY;
+
+    // Combine: hide cursor, render viewport, position cursor, show cursor.
+    // One atomic write = no flicker, no phantom cursors along the way.
+    const parts: string[] = [];
+    parts.push(`${CSI}?25l`);                                     // hide
+    parts.push(renderXtermViewport(xterm, 1, h, c));              // draw
+    parts.push(renderScrollbar(xterm, 1, h, c));                  // scrollbar
+    if (isAtBottom) {
+      parts.push(moveTo(buf.cursorY + 1, buf.cursorX + 1));       // reposition
+      parts.push(`${CSI}?25h`);                                   // show
+    }
+    process.stdout.write(parts.join(""));
+  }, 16);
+}
+
+pty.onData((data: string) => {
+  xterm.write(data);
+  if (!pauseOutput) scheduleRender();
 });
 
-// Keyboard → PTY or panel (Ctrl+B toggles panel focus)
+// Enable alternate scroll mode (1007) — terminal converts wheel to arrow
+// keys in alt screen, so we can detect them as key events. No mouse tracking
+// means native selection (click, double-click, shift-extend) works normally.
+process.stdout.write(`${CSI}?1007h`);
+
+// Keyboard → PTY or panel
 process.stdin.on("data", (data: Buffer) => {
   const s = data.toString();
+
+  // Wheel-scroll detection. Mouse wheel (with alt-scroll mode 1007) sends
+  // arrow sequences that are INDISTINGUISHABLE from keyboard arrow keys.
+  // We use two heuristics:
+  //   1. If a chunk contains MULTIPLE arrow sequences → definitely wheel
+  //   2. If a chunk is ONE arrow → queue it, wait 30ms; if more come, it's
+  //      a wheel burst; if timer expires alone, it's a real keypress.
+  if (!panelFocus && panelMode !== "settings-full") {
+    const ups = (s.match(/\x1b\[A/g) || []).length;
+    const downs = (s.match(/\x1b\[B/g) || []).length;
+    const arrowCount = ups + downs;
+
+    // Only arrows, no other data in this chunk?
+    const stripped = s.replace(/\x1b\[[AB]/g, "");
+    const isPureArrows = stripped.length === 0 && arrowCount > 0;
+
+    if (isPureArrows) {
+      if (arrowCount >= 2) {
+        // Multi-arrow chunk → definitely wheel
+        if (arrowFlushTimer) { clearTimeout(arrowFlushTimer); arrowFlushTimer = null; }
+        arrowQueue = []; // clear any queued singles, wheel takes priority
+        xterm.scrollLines((downs - ups) * 2);
+        scheduleRender();
+        return;
+      }
+      // Single arrow — queue it, wait to see if more follow
+      arrowQueue.push(s);
+      if (arrowFlushTimer) clearTimeout(arrowFlushTimer);
+      arrowFlushTimer = setTimeout(flushArrowQueue, 30);
+      return;
+    }
+  }
 
   // Ctrl+Space (\x00) or F2 (\x1bOQ or \x1b[12~) — toggle panel focus
   if (s === "\x00" || s === "\x1bOQ" || s === "\x1b[12~") {
@@ -504,13 +715,19 @@ function exitFullSettings() {
   pty.write("\x0c");
 }
 
-// Resize
+// Resize: clear xterm completely (no history preservation — like tmux).
+// Claude's SIGWINCH redraw lands on a clean buffer. Loses conversation
+// history across resize, but avoids ghost echoes.
 process.stdout.on("resize", () => {
   const l = layout();
+  xterm.reset();
+  xterm.resize(l.cols, l.code);
   pty.resize(l.cols, l.code);
-  process.stdout.write(`${ESC}7`);
+  process.stdout.write(`${CSI}2J`);
+  process.stdout.write(renderXtermViewport(xterm, 1, l.code, l.cols));
   setupPanel();
-  process.stdout.write(`${ESC}8`);
+  // Ask Claude to redraw cleanly into the empty buffer
+  pty.write("\x0c");
 });
 
 // Periodic panel refresh (repairs gradual damage)
@@ -520,16 +737,13 @@ const timer = setInterval(() => {
   process.stdout.write(`${ESC}8`);
 }, 3000);
 
-// Cleanup
+// Cleanup: leave alt screen — original terminal content comes back
 pty.onExit(({ exitCode }) => {
   clearInterval(timer);
-  process.stdout.write(`${CSI}r`);           // reset scroll region
-  const l = layout();
-  for (let i = 0; i < l.panel; i++) {
-    process.stdout.write(moveTo(l.code + 1 + i, 1) + clearLine);
-  }
-  process.stdout.write(moveTo(l.code + 1, 1));
-  process.stdout.write(`${CSI}?25h`);
+  process.stdout.write(`${CSI}r`);                   // reset scroll region
+  process.stdout.write(`${CSI}?1007l`);               // disable alternate scroll
+  process.stdout.write(`${CSI}?1049l`);              // leave alt screen
+  process.stdout.write(`${CSI}?25h`);                // show cursor
   try { process.stdin.setRawMode(false); } catch {}
   process.stdin.pause();
   process.exit(exitCode);
