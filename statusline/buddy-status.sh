@@ -8,6 +8,10 @@
 #   - refreshInterval: 1s in settings.json cycles the animation
 #
 # Uses Braille Blank (U+2800) for padding — survives JS .trim()
+#
+# When running inside buddy-shell (the PTY wrapper), skip status line rendering
+# so the buddy doesn't show up twice (once in status line, once in wrapper panel).
+[ "$BUDDY_SHELL" = "1" ] && exit 0
 
 STATE="$HOME/.claude-buddy/status.json"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
