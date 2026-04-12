@@ -98,10 +98,94 @@ function bgForCell(cell: any): string {
 }
 
 const SCROLLBAR_WIDTH = 2;
-// Reserved gap between Claude's content and the scrollbar — so word-select
-// stops at the gap instead of copying scrollbar characters.
 const SCROLLBAR_GAP = 1;
 const SCROLLBAR_RESERVED = SCROLLBAR_WIDTH + SCROLLBAR_GAP;
+
+// ─── Custom selection (buffer-coord anchors, survives scroll) ───────────────
+
+interface SelPoint { line: number; col: number }
+interface Selection {
+  anchor: SelPoint;   // where the click started (xterm buffer coords)
+  cursor: SelPoint;   // where the drag is now
+  mode: "char" | "word" | "line";
+  dragging: boolean;  // mouse button currently held
+}
+
+let selection: Selection | null = null;
+
+// Multi-click tracking for double-click word / triple-click line selection
+let lastClick: { time: number; line: number; col: number; count: number } | null = null;
+const MULTI_CLICK_MS = 600;
+
+function isWordChar(ch: string): boolean {
+  return /[\w-]/.test(ch);
+}
+
+function charAt(line: number, col: number): string {
+  const l = xterm.buffer.active.getLine(line);
+  if (!l) return " ";
+  const c = l.getCell(col);
+  return c?.getChars() || " ";
+}
+
+function lineLen(line: number): number {
+  return xterm.buffer.active.getLine(line)?.length ?? 0;
+}
+
+function wordBoundsAt(line: number, col: number): { start: number; end: number } {
+  const len = lineLen(line);
+  if (len === 0) return { start: 0, end: 0 };
+  const c = Math.min(col, len - 1);
+  if (!isWordChar(charAt(line, c))) return { start: c, end: c };
+  let start = c;
+  while (start > 0 && isWordChar(charAt(line, start - 1))) start--;
+  let end = c;
+  while (end < len - 1 && isWordChar(charAt(line, end + 1))) end++;
+  return { start, end };
+}
+
+function rawOrder(): { s: SelPoint; e: SelPoint } | null {
+  if (!selection) return null;
+  const { anchor, cursor } = selection;
+  const sFirst = anchor.line < cursor.line
+    || (anchor.line === cursor.line && anchor.col <= cursor.col);
+  return sFirst ? { s: anchor, e: cursor } : { s: cursor, e: anchor };
+}
+
+function selStart(): SelPoint | null {
+  if (!selection) return null;
+  const { s } = rawOrder()!;
+  if (selection.mode === "word") {
+    return { line: s.line, col: wordBoundsAt(s.line, s.col).start };
+  }
+  if (selection.mode === "line") {
+    return { line: s.line, col: 0 };
+  }
+  return s;
+}
+
+function selEnd(): SelPoint | null {
+  if (!selection) return null;
+  const { e } = rawOrder()!;
+  if (selection.mode === "word") {
+    return { line: e.line, col: wordBoundsAt(e.line, e.col).end };
+  }
+  if (selection.mode === "line") {
+    return { line: e.line, col: Math.max(0, lineLen(e.line) - 1) };
+  }
+  return e;
+}
+
+function isCellSelected(line: number, col: number): boolean {
+  if (!selection) return false;
+  const s = selStart()!;
+  const e = selEnd()!;
+  if (line < s.line || line > e.line) return false;
+  if (s.line === e.line) return col >= s.col && col <= e.col;
+  if (line === s.line) return col >= s.col;
+  if (line === e.line) return col <= e.col;
+  return true;
+}
 
 function renderScrollbar(term: any, startRow: number, codeRows: number, col: number): string {
   const buf = term.buffer.active;
@@ -144,12 +228,13 @@ function renderXtermViewport(term: any, startRow: number, codeRows: number, cols
       const cell = line.getCell(x);
       if (!cell) { out.push(" "); rendered++; continue; }
 
+      const selected = isCellSelected(bufY, x);
       const parts: string[] = ["0"];
       if (cell.isBold()) parts.push("1");
       if (cell.isDim()) parts.push("2");
       if (cell.isItalic()) parts.push("3");
       if (cell.isUnderline()) parts.push("4");
-      if (cell.isInverse()) parts.push("7");
+      if (Boolean(cell.isInverse()) !== selected) parts.push("7"); // XOR
       parts.push(fgForCell(cell));
       parts.push(bgForCell(cell));
       const attrs = parts.join(";");
@@ -161,7 +246,7 @@ function renderXtermViewport(term: any, startRow: number, codeRows: number, cols
 
       const chars = cell.getChars();
       const width = cell.getWidth();
-      if (width === 0) continue; // second half of a wide char
+      if (width === 0) continue;
       out.push(chars || " ");
       rendered += width || 1;
     }
@@ -494,53 +579,33 @@ const pty = ptySpawn(cmd, args, {
 // Coalesced renderer — we don't re-render on every tiny PTY chunk,
 // we accumulate and render at most every ~16ms (60 fps).
 let renderPending = false;
-
-// Safety-net queue for single-arrow chunks. Node can split a wheel burst
-// across data events, so a lone arrow might actually be part of a wheel
-// tick. We hold single arrows for 30ms — if more arrive, scroll; if the
-// timer expires alone, treat as a real keypress.
-let arrowQueue: string[] = [];
-let arrowFlushTimer: ReturnType<typeof setTimeout> | null = null;
-
-function flushArrowQueue() {
-  const q = arrowQueue;
-  arrowQueue = [];
-  arrowFlushTimer = null;
-  if (q.length === 0) return;
-  if (q.length >= 2) {
-    const ups = q.filter(a => a === "\x1b[A").length;
-    const downs = q.filter(a => a === "\x1b[B").length;
-    xterm.scrollLines((downs - ups) * 2);
-    scheduleRender();
-  } else {
-    for (const a of q) pty.write(a);
-  }
-}
 // Track what we last told the real terminal so we only send updates on change
 let lastCursorX = -1, lastCursorY = -1;
 let lastCursorVisible = true;
 
+function renderNow() {
+  renderPending = false;
+  if (pauseOutput) return;
+  const { cols: c, code: h } = layout();
+  const innerCols = c - SCROLLBAR_RESERVED;
+  const buf = xterm.buffer.active;
+  const isAtBottom = buf.viewportY === buf.baseY;
+
+  const parts: string[] = [];
+  parts.push(`${CSI}?25l`);
+  parts.push(renderXtermViewport(xterm, 1, h, innerCols));
+  parts.push(renderScrollbar(xterm, 1, h, c));
+  if (isAtBottom) {
+    parts.push(moveTo(buf.cursorY + 1, buf.cursorX + 1));
+    parts.push(`${CSI}?25h`);
+  }
+  process.stdout.write(parts.join(""));
+}
+
 function scheduleRender() {
   if (renderPending) return;
   renderPending = true;
-  setTimeout(() => {
-    renderPending = false;
-    if (pauseOutput) return;
-    const { cols: c, code: h } = layout();
-    const innerCols = c - SCROLLBAR_RESERVED;
-    const buf = xterm.buffer.active;
-    const isAtBottom = buf.viewportY === buf.baseY;
-
-    const parts: string[] = [];
-    parts.push(`${CSI}?25l`);
-    parts.push(renderXtermViewport(xterm, 1, h, innerCols));
-    parts.push(renderScrollbar(xterm, 1, h, c));
-    if (isAtBottom) {
-      parts.push(moveTo(buf.cursorY + 1, buf.cursorX + 1));
-      parts.push(`${CSI}?25h`);
-    }
-    process.stdout.write(parts.join(""));
-  }, 16);
+  setTimeout(renderNow, 16);
 }
 
 pty.onData((data: string) => {
@@ -548,41 +613,85 @@ pty.onData((data: string) => {
   if (!pauseOutput) scheduleRender();
 });
 
-// Enable alternate scroll mode (1007) — terminal converts wheel to arrow
-// keys in alt screen, so we can detect them as key events. No mouse tracking
-// means native selection (click, double-click, shift-extend) works normally.
-process.stdout.write(`${CSI}?1007h`);
+// Enable SGR mouse tracking: 1002 = button-event (press + motion while held),
+// 1006 = SGR protocol (distinct sequences from keyboard). We implement our
+// own selection + clipboard because native terminal selection can't stay in
+// sync when we scroll xterm's virtual buffer.
+process.stdout.write(`${CSI}?1002h${CSI}?1006h`);
 
 // Keyboard → PTY or panel
 process.stdin.on("data", (data: Buffer) => {
   const s = data.toString();
 
-  // Wheel-scroll detection.
-  //   - 2+ arrows in one chunk → definitely wheel (most common case)
-  //   - 1 arrow → ambiguous; queue for 30ms to catch burst split across chunks
-  if (!panelFocus && panelMode !== "settings-full") {
-    const ups = (s.match(/\x1b\[A/g) || []).length;
-    const downs = (s.match(/\x1b\[B/g) || []).length;
-    const arrowCount = ups + downs;
-    const stripped = s.replace(/\x1b\[[AB]/g, "");
-    const isPureArrows = stripped.length === 0 && arrowCount > 0;
+  // SGR mouse events: \x1b[<btn;x;y[Mm]
+  // M = press/motion, m = release
+  // btn 0 = left, btn 32 = motion-with-button, btn 64 = wheel up, btn 65 = wheel down
+  // (modifier flags: +4 shift, +8 alt, +16 ctrl)
+  const mouseEvents = [...s.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)];
+  if (mouseEvents.length > 0 && !panelFocus && panelMode !== "settings-full") {
+    const { code: mouseCode } = layout();
+    let handled = false;
 
-    if (isPureArrows) {
-      if (arrowCount >= 2) {
-        // Merge with anything queued (all wheel)
-        if (arrowFlushTimer) { clearTimeout(arrowFlushTimer); arrowFlushTimer = null; }
-        const qUps = arrowQueue.filter(a => a === "\x1b[A").length + ups;
-        const qDowns = arrowQueue.filter(a => a === "\x1b[B").length + downs;
-        arrowQueue = [];
-        xterm.scrollLines((qDowns - qUps) * 2);
-        scheduleRender();
-        return;
+    for (const m of mouseEvents) {
+      const rawBtn = parseInt(m[1], 10);
+      const mx = parseInt(m[2], 10);
+      const my = parseInt(m[3], 10);
+      const release = m[4] === "m";
+      const btn = rawBtn & 3;       // 0=left, 1=mid, 2=right, 3=none
+      const isMotion = (rawBtn & 32) !== 0;
+      const isWheel = (rawBtn & 64) !== 0;
+
+      // Wheel scroll
+      if (isWheel) {
+        xterm.scrollLines((rawBtn === 64 ? -3 : 3));
+        handled = true;
+        continue;
       }
-      arrowQueue.push(s);
-      if (arrowFlushTimer) clearTimeout(arrowFlushTimer);
-      arrowFlushTimer = setTimeout(flushArrowQueue, 30);
-      return;
+
+      // Only handle mouse in the code area (not panel)
+      if (my < 1 || my > mouseCode) continue;
+
+      // Left button only (press/motion/release)
+      if (btn === 0 || (release && rawBtn === 0)) {
+        const buf = xterm.buffer.active;
+        const bufLine = buf.viewportY + my - 1;
+        const bufCol = Math.min(mx - 1, buf.getLine(bufLine)?.length ?? mx - 1);
+
+        if (release) {
+          // End of drag — finalize cursor at release point, keep selection visible
+          if (selection) {
+            selection.cursor = { line: bufLine, col: bufCol };
+            selection.dragging = false;
+          }
+        } else if (isMotion) {
+          // Motion with button held — update cursor (only if we have an active drag)
+          if (selection && selection.dragging) {
+            selection.cursor = { line: bufLine, col: bufCol };
+          }
+        } else {
+          // Press — detect single/double/triple click by time + proximity
+          const now = Date.now();
+          const sameSpot = lastClick
+            && now - lastClick.time < MULTI_CLICK_MS
+            && Math.abs(lastClick.line - bufLine) <= 1
+            && Math.abs(lastClick.col - bufCol) <= 3;
+          const count = sameSpot ? Math.min(lastClick!.count + 1, 3) : 1;
+          lastClick = { time: now, line: bufLine, col: bufCol, count };
+
+          const mode = count === 1 ? "char" : count === 2 ? "word" : "line";
+          selection = {
+            anchor: { line: bufLine, col: bufCol },
+            cursor: { line: bufLine, col: bufCol },
+            mode,
+            dragging: true,
+          };
+        }
+        handled = true;
+      }
     }
+
+    if (handled) renderNow();
+    return;
   }
 
   // Ctrl+Space (\x00) or F2 (\x1bOQ or \x1b[12~) — toggle panel focus
@@ -746,7 +855,7 @@ const timer = setInterval(() => {
 pty.onExit(({ exitCode }) => {
   clearInterval(timer);
   process.stdout.write(`${CSI}r`);                   // reset scroll region
-  process.stdout.write(`${CSI}?1007l`);               // disable alternate scroll
+  process.stdout.write(`${CSI}?1002l${CSI}?1006l`);   // disable mouse tracking
   process.stdout.write(`${CSI}?1049l`);              // leave alt screen
   process.stdout.write(`${CSI}?25h`);                // show cursor
   try { process.stdin.setRawMode(false); } catch {}
