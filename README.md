@@ -93,6 +93,17 @@ Then restart Claude Code and type `/buddy`. That's it.
 <br>
 <sub>💡 Need help? → `bun run help` or `claude-buddy help` (if linked) in terminal · `/buddy help` in Claude Code</sub>
 
+### Multiple Claude profiles?
+
+If you run Claude Code with `CLAUDE_CONFIG_DIR` set (e.g. separate work and personal accounts), pass the same env var to install so buddy lands in the active profile and gets its own menagerie:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.claude-personal bun run install-buddy
+CLAUDE_CONFIG_DIR=~/.claude-personal bun run uninstall
+```
+
+The installer prints `Target profile: <path>` at the top so you can see at a glance which profile you're targeting. Each profile gets its own MCP entry, skill, hooks, status line, and `$CLAUDE_CONFIG_DIR/buddy-state/` menagerie — installs in one profile don't touch another. With `CLAUDE_CONFIG_DIR` unset, behaviour is identical to single-profile (`~/.claude/`, `~/.claude-buddy/`).
+
 <br>
 
 ---
