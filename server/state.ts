@@ -28,6 +28,7 @@ import {
 import { join } from "path";
 import { homedir } from "os";
 import type { Companion } from "./engine.ts";
+import { toUnixPath } from "./path.ts";
 
 export const STATE_DIR = join(homedir(), ".claude-buddy");
 const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
@@ -388,7 +389,7 @@ export function setBuddyStatusLine(
     const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
     settings.statusLine = {
       type: "command",
-      command: statusScript,
+      command: toUnixPath(statusScript),
       padding: 1,
       refreshInterval: 1,
     };

@@ -69,4 +69,18 @@ describe("buddy statusline settings patch", () => {
     const ok = setBuddyStatusLine("/opt/buddy/statusline/buddy-status.sh", missing);
     expect(ok).toBe(false);
   });
+
+  test("backslash path is normalized to forward slashes in persisted command", () => {
+    writeFileSync(settingsPath, JSON.stringify({}));
+
+    // Simulate a Windows-style path with backslashes (e.g. from path.join on Windows).
+    // The persisted command must contain only forward slashes so bash can execute it.
+    const backslashPath = "C:\\Users\\user\\.claude\\statusline\\buddy-status.sh";
+    const ok = setBuddyStatusLine(backslashPath, settingsPath);
+
+    expect(ok).toBe(true);
+    const result = JSON.parse(readFileSync(settingsPath, "utf8"));
+    expect(result.statusLine.command).not.toContain("\\");
+    expect(result.statusLine.command).toContain("/");
+  });
 });

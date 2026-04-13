@@ -387,7 +387,7 @@ The popup is modal. To scroll:
 |---|---|
 | **[Bun](https://bun.sh)** | `curl -fsSL https://bun.sh/install \| bash` |
 | **Claude Code** v2.1.80+ | Any version with MCP support |
-| **jq** | `apt install jq` / `brew install jq` |
+| **jq** | `apt install jq` / `brew install jq` / [`windows: download and add 'jq.exe' from jqlang/jq to path`](https://github.com/jqlang/jq/releases/latest)|
 
 > **Will I get the same buddy I had?** Yes. claude-buddy uses the exact same algorithm as the original (`wyhash + mulberry32`, same salt, same identity resolution). If your `~/.claude.json` still has your `accountUuid`, you'll get the identical species, rarity, stats, and cosmetics.
 
