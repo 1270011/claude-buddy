@@ -12,9 +12,13 @@
  */
 
 import { spawn as ptySpawn } from "node-pty";
-import { readFileSync, existsSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import { execSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { homedir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 import { getArtFrame, HAT_ART } from "../server/art.ts";
 import type { Species, Eye, Hat } from "../server/engine.ts";
 import { getBiome, listBiomes } from "./biomes.ts";
@@ -180,6 +184,10 @@ function isCellSelected(line: number, col: number): boolean {
   if (!selection) return false;
   const s = selStart()!;
   const e = selEnd()!;
+  // Hide empty (single-cell, non-dragged) selections — a plain click
+  // shouldn't leave a lingering inverse character on the screen.
+  if (!selection.dragging && selection.mode === "char"
+      && s.line === e.line && s.col === e.col) return false;
   if (line < s.line || line > e.line) return false;
   if (s.line === e.line) return col >= s.col && col <= e.col;
   if (line === s.line) return col >= s.col;
@@ -286,43 +294,11 @@ function loadStats(): Record<string, any> | null {
 
 // ─── Interactive panel state ────────────────────────────────────────────────
 
-type PanelMode = "menu" | "settings-full";
 let panelFocus = false;
-let panelMode: PanelMode = "menu";
 let menuCursor = 0;
-let settingsCursor = 0;
 let pauseOutput = false; // when true, swallow PTY output (Claude is "hidden")
-const MENU_ITEMS = ["Settings", "Pet buddy", "Say hi"];
+const MENU_ITEMS = ["Dashboard", "Pet buddy", "Say hi"];
 let panelMessage = "";
-
-// Settings definitions (key, label, cycle function on Enter)
-import { readFileSync as readFs, writeFileSync as writeFs, existsSync as existsFs, mkdirSync as mkdirFs } from "fs";
-const CONFIG_FILE = join(STATE_DIR, "config.json");
-
-interface Settings {
-  commentCooldown: number;
-  reactionTTL: number;
-  bubbleStyle: string;
-  bubblePosition: string;
-  showRarity: boolean;
-}
-
-function loadSettings(): Settings {
-  const defaults: Settings = { commentCooldown: 30, reactionTTL: 0, bubbleStyle: "classic", bubblePosition: "top", showRarity: true };
-  try { return { ...defaults, ...JSON.parse(readFs(CONFIG_FILE, "utf8")) }; } catch { return defaults; }
-}
-function saveSettings(cfg: Settings) {
-  if (!existsFs(STATE_DIR)) mkdirFs(STATE_DIR, { recursive: true });
-  writeFs(CONFIG_FILE, JSON.stringify(cfg, null, 2));
-}
-
-const SETTINGS_LIST = [
-  { key: "commentCooldown" as const, label: "Comment Cooldown", cycle: (v: Settings) => { v.commentCooldown = (v.commentCooldown + 10) % 120; } },
-  { key: "reactionTTL" as const, label: "Reaction TTL", cycle: (v: Settings) => { v.reactionTTL = (v.reactionTTL + 10) % 60; } },
-  { key: "bubbleStyle" as const, label: "Bubble Style", cycle: (v: Settings) => { v.bubbleStyle = v.bubbleStyle === "classic" ? "round" : "classic"; } },
-  { key: "bubblePosition" as const, label: "Bubble Position", cycle: (v: Settings) => { v.bubblePosition = v.bubblePosition === "top" ? "left" : "top"; } },
-  { key: "showRarity" as const, label: "Show Rarity", cycle: (v: Settings) => { v.showRarity = !v.showRarity; } },
-];
 
 function setupPanel() {
   const { cols, code, panel } = layout();
@@ -475,7 +451,7 @@ function setupPanel() {
     out.push(renderBgRow(row, i * 3 + 1, isLastRow));
 
     // Interactive menu (top-left of panel)
-    if (panelMode === "menu" && i < MENU_ITEMS.length) {
+    if (i < MENU_ITEMS.length) {
       const isCursor = panelFocus && i === menuCursor;
       const prefix = isCursor ? `${CSI}33m▸ ` : "  ";
       const text = MENU_ITEMS[i];
@@ -628,7 +604,7 @@ process.stdin.on("data", (data: Buffer) => {
   // btn 0 = left, btn 32 = motion-with-button, btn 64 = wheel up, btn 65 = wheel down
   // (modifier flags: +4 shift, +8 alt, +16 ctrl)
   const mouseEvents = [...s.matchAll(/\x1b\[<(\d+);(\d+);(\d+)([Mm])/g)];
-  if (mouseEvents.length > 0 && !panelFocus && panelMode !== "settings-full") {
+  if (mouseEvents.length > 0 && !panelFocus) {
     const { code: mouseCode } = layout();
     let handled = false;
 
@@ -702,31 +678,14 @@ process.stdin.on("data", (data: Buffer) => {
     return;
   }
 
-  // Fullscreen settings mode: navigate settings, Esc exits back to Claude
-  if (panelMode === "settings-full") {
-    if (s === "\x1b[A") { settingsCursor = Math.max(0, settingsCursor - 1); renderFullSettings(); return; }
-    if (s === "\x1b[B") { settingsCursor = Math.min(SETTINGS_LIST.length - 1, settingsCursor + 1); renderFullSettings(); return; }
-    if (s === "\r" || s === "\n") {
-      const cfg = loadSettings();
-      const def = SETTINGS_LIST[settingsCursor];
-      def.cycle(cfg);
-      saveSettings(cfg);
-      panelMessage = `${def.label} → ${cfg[def.key]}`;
-      renderFullSettings();
-      return;
-    }
-    if (s === "\x1b") { exitFullSettings(); return; }
-    return;  // swallow all other keys in fullscreen
-  }
-
   // Panel focus mode (small menu at bottom)
   if (panelFocus) {
     if (s === "\x1b[A") { menuCursor = Math.max(0, menuCursor - 1); refreshPanel(); return; }
     if (s === "\x1b[B") { menuCursor = Math.min(MENU_ITEMS.length - 1, menuCursor + 1); refreshPanel(); return; }
     if (s === "\r" || s === "\n") {
       if (menuCursor === 0) {
-        panelFocus = false; // leave focus mode since fullscreen takes over
-        enterFullSettings();
+        panelFocus = false;
+        launchDashboard();
       } else if (menuCursor === 1) {
         panelMessage = "*purrs*";
         refreshPanel();
@@ -740,7 +699,11 @@ process.stdin.on("data", (data: Buffer) => {
     return;
   }
 
-  // Normal mode: forward everything to PTY
+  // Normal mode: typing clears any lingering selection, then forwards to PTY
+  if (selection) {
+    selection = null;
+    scheduleRender();
+  }
   pty.write(s);
 });
 
@@ -750,81 +713,49 @@ function refreshPanel() {
   process.stdout.write(`${ESC}8`);
 }
 
-// Render settings taking over the full terminal
-function renderFullSettings() {
-  const { cols, rows } = layout();
-  const cfg = loadSettings();
-  const out: string[] = [];
-
-  // Clear entire screen
-  out.push(`${CSI}2J${moveTo(1, 1)}`);
-
-  // Title bar
-  const title = " ⚙  claude-buddy — Settings ";
-  const titleFill = "─".repeat(Math.max(0, cols - title.length - 2));
-  out.push(`${CYAN}${BOLD}─${title}${NC}${CYAN}${titleFill}─${NC}\n`);
-  out.push("\n");
-
-  // Render each setting as a box-like line
-  const listStart = 4;
-  for (let i = 0; i < SETTINGS_LIST.length; i++) {
-    const def = SETTINGS_LIST[i];
-    const isCursor = i === settingsCursor;
-    const val = String(cfg[def.key]);
-    const border = isCursor ? `${CSI}33m` : GRAY;
-    const textClr = isCursor ? `${CSI}33m${BOLD}` : `${CSI}37m`;
-    const row = listStart + i * 3;
-
-    out.push(moveTo(row, 4) +
-      `${border}╭${"─".repeat(cols - 10)}╮${NC}`);
-    out.push(moveTo(row + 1, 4) +
-      `${border}│${NC} ${textClr}${isCursor ? "▸ " : "  "}${def.label.padEnd(24)}${NC}` +
-      `${CSI}36m${BOLD}${val.padEnd(cols - 38)}${NC}${border}│${NC}`);
-    out.push(moveTo(row + 2, 4) +
-      `${border}╰${"─".repeat(cols - 10)}╯${NC}`);
-  }
-
-  // Message
-  if (panelMessage) {
-    const msgRow = listStart + SETTINGS_LIST.length * 3 + 1;
-    out.push(moveTo(msgRow, 4) + `${GREEN}✓ ${panelMessage}${NC}`);
-  }
-
-  // Footer help bar
-  const help = " ↑↓ navigate  enter change  esc back to claude ";
-  out.push(moveTo(rows, 1) +
-    `${CYAN}─${DIM}${help}${NC}${CYAN}${"─".repeat(Math.max(0, cols - help.length - 1))}${NC}`);
-
-  process.stdout.write(out.join(""));
-}
-
-function enterFullSettings() {
+// Launch the full TUI dashboard as a blocking child process.
+//
+// IMPORTANT: we stay in the alt-screen buffer throughout. Ink renders inline
+// (it does not use its own alt-screen), so if we exited to main here the TUI
+// would paint into the user's original terminal — and its remnants would
+// surface when buddy-shell finally exits. By staying in alt, any TUI output
+// is contained in the alt buffer which the terminal discards on exit.
+function launchDashboard() {
   pauseOutput = true;
-  panelMode = "settings-full";
-  settingsCursor = 0;
-  panelMessage = "";
-  // We're ALREADY in alt screen (wrapper entered it at startup).
-  // Just reset scroll region, clear the whole screen, and draw settings.
-  // Don't send another \x1b[?1049h — it's a no-op when stacked and the
-  // matching ?1049l would exit the wrapper's alt screen entirely.
-  process.stdout.write(`${CSI}r`);
-  process.stdout.write(`${CSI}2J${moveTo(1, 1)}`);
-  process.stdout.write(`${CSI}?25l`);
-  renderFullSettings();
-}
 
-function exitFullSettings() {
-  panelMode = "menu";
-  panelMessage = "";
-  pauseOutput = false;
+  // Release terminal state the TUI conflicts with, but keep alt screen.
+  process.stdout.write(`${CSI}?1002l${CSI}?1006l`); // disable our mouse tracking
+  process.stdout.write(`${CSI}r`);                  // reset scroll region
+  process.stdout.write(`${CSI}2J${moveTo(1, 1)}`);  // clear alt buffer
+  process.stdout.write(`${CSI}?25h`);               // show cursor
+  try { process.stdin.setRawMode(false); } catch {}
+
+  try {
+    execSync("bun run tui", {
+      stdio: "inherit",
+      cwd: PROJECT_ROOT,
+      // Propagate the flag so the TUI can show a "suppressed while in
+      // buddy-shell" hint next to the Status Line setting.
+      env: { ...process.env, BUDDY_SHELL: "1" },
+    });
+  } catch {
+    // user exited or TUI errored — either way we return to the panel
+  }
+
+  // Re-acquire terminal and redraw our layout.
+  try { process.stdin.setRawMode(true); } catch {}
+  process.stdout.write(`${CSI}?1002h${CSI}?1006h`); // re-enable mouse
+  process.stdout.write(`${CSI}2J${moveTo(1, 1)}`);  // wipe any TUI leftovers
+
   const { cols: c, code: h } = layout();
   const innerCols = c - SCROLLBAR_RESERVED;
-  process.stdout.write(`${CSI}2J`);
   process.stdout.write(setScrollRegion(1, h));
   process.stdout.write(renderXtermViewport(xterm, 1, h, innerCols));
   process.stdout.write(renderScrollbar(xterm, 1, h, c));
   setupPanel();
-  process.stdout.write(`${CSI}?25h`);
+
+  panelMessage = "";
+  pauseOutput = false;
 }
 
 // Resize: clear xterm completely (no history preservation — like tmux).
@@ -842,10 +773,10 @@ process.stdout.on("resize", () => {
   pty.write("\x0c");
 });
 
-// Periodic panel refresh (repairs gradual damage). Skipped while
-// fullscreen settings are open — the panel doesn't exist there.
+// Periodic panel refresh (repairs gradual damage). Skipped while the TUI
+// dashboard owns the terminal — pauseOutput is set during that window.
 const timer = setInterval(() => {
-  if (panelMode === "settings-full") return;
+  if (pauseOutput) return;
   process.stdout.write(`${ESC}7`);
   setupPanel();
   process.stdout.write(`${ESC}8`);

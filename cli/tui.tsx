@@ -22,6 +22,7 @@ import {
   listCompanionSlots, loadActiveSlot, saveActiveSlot,
   loadConfig, saveConfig, writeStatusState, loadReaction,
   resolveUserId, saveCompanionSlot, updateCompanionSlot, slugify, unusedName,
+  setBuddyStatusLine, unsetBuddyStatusLine,
   type BuddyConfig,
 } from "../server/state.ts";
 import {
@@ -258,6 +259,7 @@ const SETTINGS_ITEMS = [
   { key: "bubbleStyle", label: "Bubble Style" },
   { key: "bubblePosition", label: "Bubble Position" },
   { key: "showRarity", label: "Show Rarity" },
+  { key: "statusLineEnabled", label: "Status Line" },
 ] as const;
 
 function SettingsListPane({ cursor, config, focused }: {
@@ -1362,6 +1364,7 @@ const SETTING_DEFS: SettingDef[] = [
   { key: "bubbleStyle", label: "Bubble Style", description: ["Speech bubble style.", "", 'classic → "quoted"', "round → (parens)"], type: "options", options: ["classic", "round"], default: "classic" },
   { key: "bubblePosition", label: "Bubble Position", description: ["Bubble placement.", "", "top → above buddy", "left → beside buddy"], type: "options", options: ["top", "left"], default: "top" },
   { key: "showRarity", label: "Show Rarity", description: ["Show rarity stars in", "the status line.", "", "true → ★★★★ visible", "false → hidden"], type: "options", options: ["true", "false"], default: "true" },
+  { key: "statusLineEnabled", label: "Status Line", description: ["Animated buddy in Claude Code's", "status line bar.", "", "true  → patches settings.json", "false → removes it", "", "Restart Claude Code after toggle."], type: "options", options: ["true", "false"], default: "false" },
 ];
 
 function SettingDetailPane({ settingIndex, config, editing, numInput, optCursor }: {
@@ -1369,12 +1372,25 @@ function SettingDetailPane({ settingIndex, config, editing, numInput, optCursor 
 }) {
   const def = SETTING_DEFS[settingIndex];
   const currentVal = String(config[def.key as keyof BuddyConfig]);
+  const inBuddyShell = process.env.BUDDY_SHELL === "1";
+  const showBuddyShellHint = def.key === "statusLineEnabled" && inBuddyShell;
   return (
     <Box flexDirection="column" paddingLeft={1}>
       <Text>{""}</Text>
       <Text bold color="cyan">{def.label}</Text>
       <Text>{""}</Text>
       {def.description.map((line, i) => <Text key={i} dimColor>{line}</Text>)}
+      {showBuddyShellHint ? (
+        <Box flexDirection="column" marginTop={1}>
+          <Text color="yellow">⚠  Currently suppressed</Text>
+          <Text dimColor>You're inside buddy-shell — the</Text>
+          <Text dimColor>status line is hidden automatically</Text>
+          <Text dimColor>(buddy already shown in the panel).</Text>
+          <Text dimColor>This setting still persists; it takes</Text>
+          <Text dimColor>effect when you run claude without</Text>
+          <Text dimColor>the shell wrapper.</Text>
+        </Box>
+      ) : null}
       <Text>{""}</Text>
       <Text dimColor>{"─".repeat(28)}</Text>
       <Text>{""}</Text>
@@ -2008,6 +2024,21 @@ function App() {
         if (isSelect) {
           const selected = def.options![optCursor];
           const val = selected === "true" ? true : selected === "false" ? false : selected;
+          // Side-effect for statusLineEnabled: also patch settings.json
+          if (def.key === "statusLineEnabled") {
+            try {
+              if (val === true) {
+                const statusScript = join(PROJECT_ROOT, "statusline", "buddy-status.sh");
+                setBuddyStatusLine(statusScript);
+              } else {
+                unsetBuddyStatusLine();
+              }
+            } catch (e: any) {
+              setMessage(`✗ ${e?.message ?? "failed to patch settings.json"}`);
+              setFocus("list");
+              return;
+            }
+          }
           setConfig(saveConfig({ [def.key]: val }));
           setMessage(`✓ ${def.label} → ${selected}`);
           setFocus("list");
