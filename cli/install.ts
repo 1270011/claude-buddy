@@ -153,45 +153,23 @@ function installStatusLine(settings: Record<string, any>) {
   ok("Status line configured (with animation refresh)");
 }
 
-// ─── Step 3b: Configure tmux popup mode (if in tmux) ────────────────────────
+// The tmux popup mode was removed in favour of the status line / buddy-shell
+// — its modal `tmux display-popup` intercepted the `Ctrl+b` prefix, breaking
+// every tmux binding while the buddy was visible (issue #57). For backwards
+// compatibility any legacy SessionStart/SessionEnd hooks that reference the
+// popup manager are stripped out below when re-installing.
 
-function detectTmux(): boolean {
-  if (!process.env.TMUX) return false;
-  try {
-    const ver = execSync("tmux -V 2>/dev/null", { encoding: "utf8" }).trim();
-    const match = ver.match(/(\d+)\.(\d+)/);
-    if (!match) return false;
-    const major = parseInt(match[1]), minor = parseInt(match[2]);
-    return major > 3 || (major === 3 && minor >= 2);
-  } catch {
-    return false;
+function stripLegacyPopupHooks(settings: Record<string, any>) {
+  if (!settings.hooks) return;
+  for (const hookType of ["SessionStart", "SessionEnd"] as const) {
+    if (!settings.hooks[hookType]) continue;
+    settings.hooks[hookType] = settings.hooks[hookType].filter(
+      (h: any) => !h.hooks?.some((hh: any) =>
+        hh.command?.includes("popup-manager") || hh.command?.includes("claude-buddy/popup"),
+      ),
+    );
+    if (settings.hooks[hookType].length === 0) delete settings.hooks[hookType];
   }
-}
-
-function installPopupHooks(settings: Record<string, any>) {
-  const popupManager = join(PROJECT_ROOT, "popup", "popup-manager.sh");
-
-  if (!settings.hooks) settings.hooks = {};
-
-  // SessionStart: open popup
-  if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];
-  settings.hooks.SessionStart = settings.hooks.SessionStart.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
-  );
-  settings.hooks.SessionStart.push({
-    hooks: [{ type: "command", command: `${toUnixPath(popupManager)} start` }],
-  });
-
-  // SessionEnd: close popup
-  if (!settings.hooks.SessionEnd) settings.hooks.SessionEnd = [];
-  settings.hooks.SessionEnd = settings.hooks.SessionEnd.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
-  );
-  settings.hooks.SessionEnd.push({
-    hooks: [{ type: "command", command: `${toUnixPath(popupManager)} stop` }],
-  });
-
-  ok("Popup hooks registered: SessionStart + SessionEnd");
 }
 
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
@@ -295,18 +273,8 @@ const settings = loadSettings();
 installMcp();
 installSkill();
 
-const useTmuxPopup = detectTmux();
-if (useTmuxPopup) {
-  info("tmux detected (>= 3.2) -- using popup overlay mode");
-  installPopupHooks(settings);
-  // Disable status line to avoid duplicate buddy rendering
-  if (settings.statusLine?.command?.includes("buddy")) {
-    delete settings.statusLine;
-    ok("Status line disabled (popup replaces it)");
-  }
-} else {
-  installStatusLine(settings);
-}
+stripLegacyPopupHooks(settings);
+installStatusLine(settings);
 
 installHooks(settings);
 ensurePermissions(settings);
@@ -321,10 +289,9 @@ console.log("");
 console.log(`  ${BOLD}${companion.name}${NC} -- ${companion.personality}`);
 console.log("");
 
-const modeMsg = useTmuxPopup ? "popup overlay" : "status line";
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log(`${GREEN}  Done! Restart Claude Code and type /buddy${NC}`);
-console.log(`${GREEN}  Display mode: ${modeMsg}${NC}`);
+console.log(`${GREEN}  Display mode: status line${NC}`);
 console.log(`${GREEN}  Your companion is now permanent -- survives any update.${NC}`);
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log("");

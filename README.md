@@ -344,41 +344,6 @@ bun run cli/uninstall.ts    # full clean removal
 ---
 
 <details>
-<summary><b>🖥️ &nbsp; tmux Popup Mode</b></summary>
-
-<br>
-
-Inside tmux, buddy appears as a floating popup overlay in the bottom-right corner instead of the status line.
-
-**Features:** animated ASCII art with speech bubbles · ESC passthrough · dynamic resizing · full keyboard forwarding
-
-| tmux version | Support |
-|---|---|
-| **3.4+** | Full support (borderless) |
-| **3.2 – 3.3** | Supported with border |
-| **< 3.2** | Falls back to status line |
-
-### Recommended `~/.tmux.conf`
-
-```
-set -g set-titles on
-set -g set-titles-string "#{pane_title}"
-set -g mouse on
-set -g history-limit 10000
-```
-
-### Scrolling
-
-The popup is modal. To scroll:
-1. Press **F12** → scroll mode (popup hides, copy-mode activates)
-2. Scroll with **mouse wheel** or **arrows**
-3. Press **q** → exit scroll mode
-
-</details>
-
----
-
-<details>
 <summary><b>📋 &nbsp; Requirements</b></summary>
 
 <br>
@@ -400,7 +365,6 @@ The popup is modal. To scroll:
 ## 🗺️ Roadmap
 
 - [x] **Multi-buddy support** — menagerie system with named slots, interactive TUI picker 💜[@doctor-ew](https://github.com/doctor-ew)💜
-- [x] **tmux popup mode** — floating overlay via `tmux display-popup` 💜[@gzenz](https://github.com/gzenz)💜
 - [ ] **Leveling system** — XP from coding sessions, unlockable reactions and upgrades
 - [ ] **Buddy pair-programming** — active help during sessions, pattern detection
 - [ ] **Cross-session memory** — remembers past projects and earlier conversations

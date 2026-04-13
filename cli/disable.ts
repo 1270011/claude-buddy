@@ -54,7 +54,7 @@ try {
   }
 
   if (settings.hooks) {
-    for (const hookType of ["PostToolUse", "Stop", "SessionStart", "SessionEnd"]) {
+    for (const hookType of ["PostToolUse", "Stop", "SessionStart", "SessionEnd", "UserPromptSubmit"]) {
       if (settings.hooks[hookType]) {
         const before = settings.hooks[hookType].length;
         settings.hooks[hookType] = settings.hooks[hookType].filter(
