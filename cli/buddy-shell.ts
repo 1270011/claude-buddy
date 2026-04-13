@@ -297,7 +297,7 @@ function loadStats(): Record<string, any> | null {
 let panelFocus = false;
 let menuCursor = 0;
 let pauseOutput = false; // when true, swallow PTY output (Claude is "hidden")
-const MENU_ITEMS = ["Dashboard", "Pet buddy", "Say hi"];
+const MENU_ITEMS = ["Dashboard"];
 let panelMessage = "";
 
 function setupPanel() {
@@ -686,12 +686,6 @@ process.stdin.on("data", (data: Buffer) => {
       if (menuCursor === 0) {
         panelFocus = false;
         launchDashboard();
-      } else if (menuCursor === 1) {
-        panelMessage = "*purrs*";
-        refreshPanel();
-      } else if (menuCursor === 2) {
-        panelMessage = "Hi from the buddy!";
-        refreshPanel();
       }
       return;
     }
