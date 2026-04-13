@@ -4,7 +4,10 @@
 #
 # Combined: PR #4 species reactions + PR #6 session isolation + PR #13 field fix
 
-STATE_DIR="$HOME/.claude-buddy"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE_DIR="$BUDDY_STATE_DIR"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"
 SID="${SID:-default}"

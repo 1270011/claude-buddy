@@ -13,7 +13,10 @@
 # so the buddy doesn't show up twice (once in status line, once in wrapper panel).
 [ "$BUDDY_SHELL" = "1" ] && exit 0
 
-STATE="$HOME/.claude-buddy/status.json"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE="$BUDDY_STATE_DIR/status.json"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"
 SID="${SID:-default}"
@@ -219,9 +222,9 @@ BUBBLE=""
 if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
     BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
-REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
+REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION_TTL=0
-CONFIG_FILE="$HOME/.claude-buddy/config.json"
+CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
 if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
