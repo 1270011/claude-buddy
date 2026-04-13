@@ -34,8 +34,9 @@ if (typeof (globalThis as { Bun?: unknown }).Bun !== "undefined") {
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
-import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+
+import { buddyStateDir } from "../server/path.ts";
 import { getArtFrame, HAT_ART } from "../server/art.ts";
 import type { Species, Eye, Hat } from "../server/engine.ts";
 import { getBiome, listBiomes } from "./biomes.ts";
@@ -95,7 +96,7 @@ const RARITY_CLR: Record<string, string> = {
   epic: MAGENTA, legendary: YELLOW,
 };
 
-const STATE_DIR = join(homedir(), ".claude-buddy");
+const STATE_DIR = buddyStateDir();
 
 // ─── xterm cell → ANSI renderer ─────────────────────────────────────────────
 //

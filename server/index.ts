@@ -45,6 +45,11 @@ import {
   cleanupPluginState,
 } from "./state.ts";
 import {
+  buddyStateDir,
+  claudeConfigDir,
+  claudeSettingsPath,
+} from "./path.ts";
+import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
 import { renderCompanionCardMarkdown } from "./art.ts";
@@ -493,7 +498,7 @@ server.tool(
             type: "text",
             text:
               "Status line enabled! Restart Claude Code to see your buddy in the status line.\n\n" +
-              "Note: this writes an entry to ~/.claude/settings.json that `claude plugin uninstall` does not remove. " +
+              `Note: this writes an entry to ${claudeSettingsPath()} that \`claude plugin uninstall\` does not remove. ` +
               "Run `/buddy uninstall` before uninstalling the plugin to clean it up.",
           },
         ],
@@ -516,17 +521,21 @@ server.tool(
 
 server.tool(
   "buddy_uninstall",
-  "Clean up claude-buddy's writes to ~/.claude/settings.json and transient session files in ~/.claude-buddy/, in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
+  "Clean up claude-buddy's writes to Claude Code's settings.json and transient session files in the buddy state dir (resolved via CLAUDE_CONFIG_DIR), in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
   {},
   async () => {
     const result = cleanupPluginState();
+
+    const settingsPath = claudeSettingsPath();
+    const stateDir = buddyStateDir();
+    const pluginsCacheDir = join(claudeConfigDir(), "plugins", "cache", "claude-buddy");
 
     const lines: string[] = [];
     lines.push("claude-buddy: settings.json cleanup complete.");
     lines.push("");
     lines.push(
       result.statusLineRemoved
-        ? "  \u2713 statusLine entry removed from ~/.claude/settings.json"
+        ? `  \u2713 statusLine entry removed from ${settingsPath}`
         : "  \u2014 no buddy statusLine was present (nothing to remove)",
     );
     if (result.foreignStatusLineKept) {
@@ -535,15 +544,15 @@ server.tool(
       );
     }
     lines.push(
-      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ~/.claude-buddy/`,
+      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ${stateDir}`,
     );
-    lines.push("  \u2014 companion data at ~/.claude-buddy/ preserved");
+    lines.push(`  \u2014 companion data at ${stateDir} preserved`);
     lines.push("");
     lines.push("Now run these commands via the Bash tool, in order:");
     lines.push("");
     lines.push("  claude plugin uninstall claude-buddy@claude-buddy");
     lines.push("  claude plugin marketplace remove claude-buddy");
-    lines.push("  rm -rf ~/.claude/plugins/cache/claude-buddy");
+    lines.push(`  rm -rf ${pluginsCacheDir}`);
     lines.push("");
     lines.push(
       "After those three commands the plugin is fully removed. Restart Claude Code to apply.",

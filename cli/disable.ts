@@ -9,8 +9,11 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import {
+  buddyStateDir,
+  claudeSettingsPath,
+  claudeUserConfigPath,
+} from "../server/path.ts";
 
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
@@ -21,9 +24,9 @@ const NC = "\x1b[0m";
 function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 
-const HOME = homedir();
-const CLAUDE_JSON = join(HOME, ".claude.json");
-const SETTINGS = join(HOME, ".claude", "settings.json");
+const CLAUDE_JSON = claudeUserConfigPath();
+const SETTINGS = claudeSettingsPath();
+const STATE_DIR = buddyStateDir();
 
 console.log(`\n${BOLD}Disabling claude-buddy...${NC}\n`);
 
@@ -34,12 +37,12 @@ try {
     delete claudeJson.mcpServers["claude-buddy"];
     if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
     writeFileSync(CLAUDE_JSON, JSON.stringify(claudeJson, null, 2));
-    ok("MCP server removed from ~/.claude.json");
+    ok(`MCP server removed from ${CLAUDE_JSON}`);
   } else {
     warn("MCP server was not registered");
   }
 } catch {
-  warn("Could not update ~/.claude.json");
+  warn(`Could not update ${CLAUDE_JSON}`);
 }
 
 // 2. Remove status line + hooks from settings.json
@@ -86,7 +89,7 @@ try {
 console.log(`
 ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 ${GREEN}  Buddy disabled.${NC}
-${GREEN}  Companion data is preserved at ~/.claude-buddy/${NC}
+${GREEN}  Companion data is preserved at ${STATE_DIR}${NC}
 ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 
 ${DIM}  Restart Claude Code for changes to take effect.

@@ -11,9 +11,9 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "fs";
 import { join } from "path";
-import { homedir } from "os";
+import { buddyStateDir } from "./path.ts";
 
-const STATE_DIR = join(homedir(), ".claude-buddy");
+const STATE_DIR = buddyStateDir();
 const EVENTS_FILE = join(STATE_DIR, "events.json");
 const DAYS_FILE = join(STATE_DIR, "active_days.json");
 const UNLOCKED_FILE = join(STATE_DIR, "unlocked.json");

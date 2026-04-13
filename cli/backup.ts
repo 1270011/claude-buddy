@@ -10,30 +10,37 @@
  *   bun run backup restore <ts>    Restore a specific backup
  *   bun run backup delete <ts>     Delete a specific backup
  *
- * Backups are stored in ~/.claude-buddy/backups/YYYY-MM-DD-HHMMSS/
+ * Backups are stored in <state-dir>/backups/YYYY-MM-DD-HHMMSS/, where
+ * <state-dir> resolves via server/paths.ts ($CLAUDE_CONFIG_DIR/buddy-state
+ * when that env var is set, else ~/.claude-buddy).
  *
  * What gets backed up:
- *   - ~/.claude/settings.json (full file)
- *   - ~/.claude.json mcpServers["claude-buddy"] block (only our entry)
- *   - ~/.claude/skills/buddy/SKILL.md
- *   - ~/.claude-buddy/companion.json
- *   - ~/.claude-buddy/status.json
- *   - ~/.claude-buddy/reaction.json
+ *   - settings.json (full file)
+ *   - .claude.json mcpServers["claude-buddy"] block (only our entry)
+ *   - skills/buddy/SKILL.md
+ *   - <state-dir>/companion.json
+ *   - <state-dir>/status.json
+ *   - <state-dir>/reaction.json
  */
 
 import {
   readFileSync, writeFileSync, mkdirSync, existsSync,
   readdirSync, statSync, rmSync, copyFileSync,
 } from "fs";
-import { join } from "path";
-import { homedir } from "os";
+import { dirname, join } from "path";
+import {
+  buddyStateDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+} from "../server/path.ts";
 
-const HOME = homedir();
-const BACKUPS_DIR = join(HOME, ".claude-buddy", "backups");
-const SETTINGS = join(HOME, ".claude", "settings.json");
-const CLAUDE_JSON = join(HOME, ".claude.json");
-const SKILL = join(HOME, ".claude", "skills", "buddy", "SKILL.md");
-const STATE_DIR = join(HOME, ".claude-buddy");
+const SETTINGS = claudeSettingsPath();
+const CLAUDE_JSON = claudeUserConfigPath();
+const SKILL_DIR = claudeSkillDir("buddy");
+const SKILL = join(SKILL_DIR, "SKILL.md");
+const STATE_DIR = buddyStateDir();
+const BACKUPS_DIR = join(STATE_DIR, "backups");
 
 const RED = "\x1b[31m";
 const GREEN = "\x1b[32m";
@@ -80,9 +87,9 @@ function createBackup(): string {
   if (settings) {
     writeFileSync(join(dir, "settings.json"), settings);
     manifest.files.push("settings.json");
-    ok(`Backed up: ~/.claude/settings.json`);
+    ok(`Backed up: ${SETTINGS}`);
   } else {
-    warn(`Skipped: ~/.claude/settings.json (not found)`);
+    warn(`Skipped: ${SETTINGS} (not found)`);
   }
 
   // 2. claude.json mcpServers["claude-buddy"]
@@ -94,12 +101,12 @@ function createBackup(): string {
       if (ourMcp) {
         writeFileSync(join(dir, "mcpserver.json"), JSON.stringify(ourMcp, null, 2));
         manifest.files.push("mcpserver.json");
-        ok(`Backed up: ~/.claude.json → mcpServers["claude-buddy"]`);
+        ok(`Backed up: ${CLAUDE_JSON} → mcpServers["claude-buddy"]`);
       } else {
-        warn(`Skipped: ~/.claude.json mcpServers["claude-buddy"] (not registered)`);
+        warn(`Skipped: ${CLAUDE_JSON} mcpServers["claude-buddy"] (not registered)`);
       }
     } catch {
-      err(`Failed to parse ~/.claude.json`);
+      err(`Failed to parse ${CLAUDE_JSON}`);
     }
   }
 
@@ -108,9 +115,9 @@ function createBackup(): string {
   if (skill) {
     writeFileSync(join(dir, "SKILL.md"), skill);
     manifest.files.push("SKILL.md");
-    ok(`Backed up: ~/.claude/skills/buddy/SKILL.md`);
+    ok(`Backed up: ${SKILL}`);
   } else {
-    warn(`Skipped: ~/.claude/skills/buddy/SKILL.md (not found)`);
+    warn(`Skipped: ${SKILL} (not found)`);
   }
 
   // 4-6. ~/.claude-buddy/ state files (don't back up the backups dir itself)
@@ -122,7 +129,7 @@ function createBackup(): string {
     if (existsSync(src)) {
       copyFileSync(src, join(stateDestDir, f));
       manifest.files.push(`claude-buddy/${f}`);
-      ok(`Backed up: ~/.claude-buddy/${f}`);
+      ok(`Backed up: ${join(STATE_DIR, f)}`);
     }
   }
 
@@ -193,9 +200,9 @@ function restoreBackup(ts: string) {
   // 1. settings.json — overwrite
   const settingsBak = join(dir, "settings.json");
   if (existsSync(settingsBak)) {
-    mkdirSync(join(HOME, ".claude"), { recursive: true });
+    mkdirSync(dirname(SETTINGS), { recursive: true });
     copyFileSync(settingsBak, SETTINGS);
-    ok("Restored: ~/.claude/settings.json");
+    ok(`Restored: ${SETTINGS}`);
   }
 
   // 2. claude.json mcpServers — merge our entry back in
@@ -208,16 +215,19 @@ function restoreBackup(ts: string) {
     } catch { /* empty */ }
     if (!claudeJson.mcpServers) claudeJson.mcpServers = {};
     claudeJson.mcpServers["claude-buddy"] = ourMcp;
+    // Under CLAUDE_CONFIG_DIR the parent dir is not guaranteed to exist
+    // if settings.json wasn't in this backup (and so step 1 was skipped).
+    mkdirSync(dirname(CLAUDE_JSON), { recursive: true });
     writeFileSync(CLAUDE_JSON, JSON.stringify(claudeJson, null, 2));
-    ok("Restored: ~/.claude.json → mcpServers[\"claude-buddy\"]");
+    ok(`Restored: ${CLAUDE_JSON} → mcpServers["claude-buddy"]`);
   }
 
   // 3. SKILL.md
   const skillBak = join(dir, "SKILL.md");
   if (existsSync(skillBak)) {
-    mkdirSync(join(HOME, ".claude", "skills", "buddy"), { recursive: true });
+    mkdirSync(SKILL_DIR, { recursive: true });
     copyFileSync(skillBak, SKILL);
-    ok("Restored: ~/.claude/skills/buddy/SKILL.md");
+    ok(`Restored: ${SKILL}`);
   }
 
   // 4. ~/.claude-buddy/ state files
@@ -226,7 +236,7 @@ function restoreBackup(ts: string) {
     mkdirSync(STATE_DIR, { recursive: true });
     for (const f of readdirSync(stateDir)) {
       copyFileSync(join(stateDir, f), join(STATE_DIR, f));
-      ok(`Restored: ~/.claude-buddy/${f}`);
+      ok(`Restored: ${join(STATE_DIR, f)}`);
     }
   }
 
@@ -317,12 +327,12 @@ ${BOLD}Commands:${NC}
   bun run backup delete <ts>     Delete a specific backup
 
 ${BOLD}What gets backed up:${NC}
-  - ~/.claude/settings.json (full)
-  - ~/.claude.json mcpServers["claude-buddy"] (only our entry)
-  - ~/.claude/skills/buddy/SKILL.md
-  - ~/.claude-buddy/companion.json
-  - ~/.claude-buddy/status.json
-  - ~/.claude-buddy/reaction.json
+  - ${SETTINGS}
+  - ${CLAUDE_JSON} mcpServers["claude-buddy"] (only our entry)
+  - ${SKILL}
+  - ${STATE_DIR}/companion.json
+  - ${STATE_DIR}/status.json
+  - ${STATE_DIR}/reaction.json
 
 ${BOLD}Backup location:${NC}
   ${BACKUPS_DIR}/<timestamp>/
