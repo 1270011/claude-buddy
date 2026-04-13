@@ -1,22 +1,29 @@
 /**
  * claude-buddy hunt — brute-force search for a specific buddy
+ *
+ * Rules:
+ *   - Asks for a name before saving
+ *   - If no name given, picks a random unused name from the manifest
+ *   - Appends to the manifest — never overwrites an existing slot
  */
 
 import {
   searchBuddy, renderBuddy, SPECIES, RARITIES, STAT_NAMES,
   type Species, type Rarity, type StatName, type SearchCriteria,
 } from "../server/engine.ts";
-import { saveCompanion, writeStatusState, resolveUserId } from "../server/state.ts";
-import { generateFallbackName } from "../server/reactions.ts";
+import {
+  saveCompanionSlot, saveActiveSlot, writeStatusState,
+  slugify, unusedName, listCompanionSlots,
+} from "../server/state.ts";
 import { createInterface } from "readline";
 
-const CYAN = "\x1b[36m";
+const CYAN  = "\x1b[36m";
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
-const RED = "\x1b[31m";
-const BOLD = "\x1b[1m";
-const DIM = "\x1b[2m";
-const NC = "\x1b[0m";
+const RED   = "\x1b[31m";
+const BOLD  = "\x1b[1m";
+const DIM   = "\x1b[2m";
+const NC    = "\x1b[0m";
 
 const rl = createInterface({ input: process.stdin, output: process.stdout });
 
@@ -65,7 +72,6 @@ ${CYAN}╚═══════════════════════�
     console.log(`${GREEN}✓${NC} peak=${wantPeak} dump=${wantDump}`);
   }
 
-  // Calculate max attempts
   let maxAttempts = 10_000_000;
   if (rarity === "legendary") maxAttempts = 200_000_000;
   else if (rarity === "epic") maxAttempts = 50_000_000;
@@ -118,36 +124,41 @@ ${CYAN}╚═══════════════════════�
   const chosen = top[pickIdx];
   console.log(`\n${renderBuddy(chosen.bones)}\n`);
 
+  // ─── Ask for a name ────────────────────────────────────────────────────────
+  const existing = new Set(listCompanionSlots().map((e) => slugify(e.companion.name)));
+  const suggested = unusedName();
+  console.log(`\n${DIM}  Existing buddies: ${[...existing].join(", ") || "none"}${NC}`);
+
+  let chosenName = "";
+  while (true) {
+    const raw = await ask(
+      `  Name this buddy (Enter for "${suggested}"): `,
+    );
+    chosenName = raw.trim() || suggested;
+    const slot = slugify(chosenName);
+    if (existing.has(slot)) {
+      console.log(`  ${YELLOW}⚠${NC}  Slot "${slot}" already taken — pick another name.`);
+    } else {
+      break;
+    }
+  }
+
+  const slot = slugify(chosenName);
   const companion = {
     bones: chosen.bones,
-    name: generateFallbackName(),
+    name: chosenName,
     personality: `A ${chosen.bones.rarity} ${chosen.bones.species} who watches code with quiet intensity.`,
     hatchedAt: Date.now(),
     userId: chosen.userId,
   };
 
-  saveCompanion(companion);
-  writeStatusState(companion);
+  saveCompanionSlot(companion, slot);
+  saveActiveSlot(slot);
+  writeStatusState(companion, `*${chosenName} arrives*`);
 
-  // Also update ~/.claude.json userID for Claude Code's own companion system
-  try {
-    const { readFileSync: rf, writeFileSync: wf } = require("fs");
-    const { join: pj } = require("path");
-    const { homedir: hd } = require("os");
-    const cfgPath = pj(hd(), ".claude.json");
-    const cfg = JSON.parse(rf(cfgPath, "utf8"));
-    cfg.userID = chosen.userId;
-    delete cfg.companion;
-    if (cfg.oauthAccount?.accountUuid) delete cfg.oauthAccount.accountUuid;
-    wf(cfgPath, JSON.stringify(cfg, null, 2));
-    console.log(`${GREEN}✓${NC}  userID set in ~/.claude.json`);
-  } catch {
-    console.log(`${YELLOW}⚠${NC}  Could not update ~/.claude.json — do it manually or run with --fix`);
-  }
-
-  console.log(`${GREEN}✓${NC}  Companion saved: ${companion.name}`);
+  console.log(`${GREEN}✓${NC}  ${chosenName} saved to slot "${slot}" and set as active.`);
   console.log(`\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
-  console.log(`${GREEN}  Done! Restart Claude Code and type /buddy${NC}`);
+  console.log(`${GREEN}  Done! Restart Claude Code to see your new buddy.${NC}`);
   console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n`);
 
   rl.close();

@@ -2,7 +2,7 @@
  * claude-buddy uninstall — remove all integrations
  */
 
-import { readFileSync, writeFileSync, existsSync, rmSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, rmSync, readdirSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -19,6 +19,33 @@ const SKILL_DIR = join(CLAUDE_DIR, "skills", "buddy");
 const STATE_DIR = join(homedir(), ".claude-buddy");
 
 console.log("\nclaude-buddy uninstall\n");
+
+// Stop all popup reopen loops and close any running popup
+try {
+  if (existsSync(STATE_DIR)) {
+    // Kill all session popup loops (popup-reopen-pid.*)
+    for (const f of readdirSync(STATE_DIR).filter(f => f.startsWith("popup-reopen-pid."))) {
+      const pidPath = join(STATE_DIR, f);
+      const pid = parseInt(readFileSync(pidPath, "utf8").trim(), 10);
+      if (pid > 0) { try { process.kill(pid); } catch { /* already dead */ } }
+      rmSync(pidPath, { force: true });
+    }
+    // Clean up all session-scoped files
+    const patterns = ["popup-stop.", "popup-resize.", "popup-env.", "popup-scroll.",
+                      "reaction.", ".last_reaction.", ".last_comment."];
+    for (const f of readdirSync(STATE_DIR)) {
+      if (patterns.some(p => f.startsWith(p))) {
+        rmSync(join(STATE_DIR, f), { force: true });
+      }
+    }
+  }
+  // Close any open popup
+  if (process.env.TMUX) {
+    const { execSync } = await import("child_process");
+    execSync("tmux display-popup -C 2>/dev/null", { stdio: "ignore" });
+  }
+  ok("Popup stopped");
+} catch { /* not in tmux or no popup */ }
 
 // Remove MCP server from ~/.claude.json
 try {
@@ -45,7 +72,7 @@ try {
     changed = true;
   }
 
-  for (const hookType of ["PostToolUse", "Stop"] as const) {
+  for (const hookType of ["PostToolUse", "Stop", "SessionStart", "SessionEnd"] as const) {
     if (settings.hooks?.[hookType]) {
       const before = settings.hooks[hookType].length;
       settings.hooks[hookType] = settings.hooks[hookType].filter(

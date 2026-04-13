@@ -1,43 +1,248 @@
 /**
  * State management — reads/writes companion data to ~/.claude-buddy/
+ *
+ * Storage layout (v3 — single manifest):
+ *   ~/.claude-buddy/
+ *     menagerie.json   <- SSOT: { active, companions: { [slot]: Companion } }
+ *     reaction.$SID.json  <- transient reaction state (session-scoped)
+ *     status.json      <- compact state for the status-line shell script
+ *     config.json      <- user preferences (cooldown, bubble style, etc.)
+ *
+ * Rules:
+ *   - saveCompanionSlot()  APPENDS only — throws if the slot already exists
+ *   - saveCompanion()      UPDATES the currently-active slot (rename / personality)
+ *   - All manifest writes are atomic (write tmp -> rename)
+ *
+ * Combined: PR #4 menagerie + PR #6 session isolation + config
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  renameSync,
+} from "fs";
 import { join } from "path";
 import { homedir } from "os";
-import type { Companion, BuddyBones } from "./engine.ts";
+import type { Companion } from "./engine.ts";
 
 const STATE_DIR = join(homedir(), ".claude-buddy");
-const COMPANION_FILE = join(STATE_DIR, "companion.json");
-const REACTION_FILE = join(STATE_DIR, "reaction.json");
+const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
+const CONFIG_FILE = join(STATE_DIR, "config.json");
 
-function ensureDir(): void {
-  if (!existsSync(STATE_DIR)) mkdirSync(STATE_DIR, { recursive: true });
+// ─── Session ID (PR #6: tmux session isolation) ─────────────────────────────
+
+function sessionId(): string {
+  const pane = process.env.TMUX_PANE;
+  if (!pane) return "default";
+  return pane.replace(/^%/, "");
 }
 
-// ─── Companion persistence ──────────────────────────────────────────────────
+function reactionFile(): string {
+  return join(STATE_DIR, `reaction.${sessionId()}.json`);
+}
 
-export function loadCompanion(): Companion | null {
+// ─── Manifest schema ─────────────────────────────────────────────────────────
+
+interface Manifest {
+  active: string;
+  companions: Record<string, Companion>;
+}
+
+function emptyManifest(): Manifest {
+  return { active: "buddy", companions: {} };
+}
+
+// ─── Atomic manifest I/O ─────────────────────────────────────────────────────
+
+function loadManifest(): Manifest {
   try {
-    return JSON.parse(readFileSync(COMPANION_FILE, "utf8"));
+    const raw = readFileSync(MANIFEST_FILE, "utf8");
+    const m = JSON.parse(raw) as Manifest;
+    if (!m.companions) m.companions = {};
+    return m;
   } catch {
-    return null;
+    return emptyManifest();
   }
 }
 
+function saveManifest(m: Manifest): void {
+  mkdirSync(STATE_DIR, { recursive: true });
+  const tmp = MANIFEST_FILE + ".tmp";
+  writeFileSync(tmp, JSON.stringify(m, null, 2));
+  renameSync(tmp, MANIFEST_FILE); // atomic on same filesystem
+}
+
+// ─── Slot helpers ────────────────────────────────────────────────────────────
+
+/** Normalise a string to a safe slot key (a-z0-9-, max 14 chars). */
+export function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 14) || "buddy"
+  );
+}
+
+/**
+ * Return a random fallback name whose slug is not already in the manifest.
+ * Falls back to "buddy-<random 3 digits>" if all names are taken.
+ */
+export function unusedName(): string {
+  const { generateFallbackName } =
+    require("./reactions.ts") as typeof import("./reactions.ts");
+  const taken = new Set(Object.keys(loadManifest().companions));
+  for (let i = 0; i < 50; i++) {
+    const n = generateFallbackName();
+    if (!taken.has(slugify(n))) return n;
+  }
+  let suffix = 0;
+  while (taken.has(`buddy-${suffix}`)) suffix++;
+  return `buddy-${suffix}`;
+}
+
+// ─── Active slot ─────────────────────────────────────────────────────────────
+
+export function loadActiveSlot(): string {
+  const m = loadManifest();
+  if (m.active && m.companions[m.active]) return m.active;
+  const first = Object.keys(m.companions)[0];
+  if (first) {
+    m.active = first;
+    saveManifest(m);
+    return first;
+  }
+  return "buddy";
+}
+
+export function saveActiveSlot(slot: string): void {
+  const m = loadManifest();
+  m.active = slot;
+  saveManifest(m);
+}
+
+// ─── Companion slot API ───────────────────────────────────────────────────────
+
+export function loadCompanionSlot(slot: string): Companion | null {
+  return loadManifest().companions[slot] ?? null;
+}
+
+/**
+ * APPEND a new companion to the manifest.
+ * Throws if the slot already exists — use saveCompanion() to update an existing buddy.
+ */
+export function saveCompanionSlot(companion: Companion, slot: string): void {
+  const m = loadManifest();
+  if (m.companions[slot]) {
+    throw new Error(`Slot "${slot}" already exists. Choose a different name.`);
+  }
+  m.companions[slot] = companion;
+  saveManifest(m);
+}
+
+export function deleteCompanionSlot(slot: string): void {
+  const m = loadManifest();
+  delete m.companions[slot];
+  if (m.active === slot) {
+    m.active = Object.keys(m.companions)[0] ?? "buddy";
+  }
+  saveManifest(m);
+}
+
+export function listCompanionSlots(): Array<{
+  slot: string;
+  companion: Companion;
+}> {
+  return Object.entries(loadManifest().companions).map(([slot, companion]) => ({
+    slot,
+    companion,
+  }));
+}
+
+// ─── Primary companion API ────────────────────────────────────────────────────
+
+export function loadCompanion(): Companion | null {
+  migrateIfNeeded();
+  const m = loadManifest();
+  return m.companions[m.active] ?? null;
+}
+
+/**
+ * UPDATE the currently-active companion (rename, personality changes, etc.).
+ * This is the ONLY intentional in-place update path.
+ */
 export function saveCompanion(companion: Companion): void {
-  ensureDir();
-  writeFileSync(COMPANION_FILE, JSON.stringify(companion, null, 2));
+  const m = loadManifest();
+  m.companions[m.active] = companion;
+  saveManifest(m);
 }
 
-export function deleteCompanion(): void {
-  try {
-    const { unlinkSync } = require("fs") as typeof import("fs");
-    unlinkSync(COMPANION_FILE);
-  } catch { /* noop */ }
+// ─── Migration: legacy companion.json -> single manifest ────────────────────
+
+function migrateIfNeeded(): void {
+  if (existsSync(MANIFEST_FILE)) return;
+
+  const companions: Record<string, Companion> = {};
+  let active = "buddy";
+
+  // Absorb menagerie/<slot>.json files
+  const menagerieDir = join(STATE_DIR, "menagerie");
+  if (existsSync(menagerieDir)) {
+    try {
+      for (const f of readdirSync(menagerieDir).filter((f) =>
+        f.endsWith(".json"),
+      )) {
+        const slot = f.slice(0, -5);
+        try {
+          companions[slot] = JSON.parse(
+            readFileSync(join(menagerieDir, f), "utf8"),
+          );
+        } catch {
+          /* skip malformed */
+        }
+      }
+    } catch {
+      /* noop */
+    }
+  }
+
+  // Absorb legacy companion.json
+  const legacyFile = join(STATE_DIR, "companion.json");
+  if (existsSync(legacyFile) && Object.keys(companions).length === 0) {
+    try {
+      const c: Companion = JSON.parse(readFileSync(legacyFile, "utf8"));
+      const slot = slugify(c.name);
+      companions[slot] = c;
+      active = slot;
+    } catch {
+      /* noop */
+    }
+  }
+
+  // Read active pointer if it exists
+  const activeFile = join(STATE_DIR, "active");
+  if (existsSync(activeFile)) {
+    try {
+      const a = readFileSync(activeFile, "utf8").trim();
+      if (a && companions[a]) active = a;
+    } catch {
+      /* noop */
+    }
+  }
+
+  if (Object.keys(companions).length > 0) {
+    active = active && companions[active] ? active : Object.keys(companions)[0];
+  }
+
+  saveManifest({ active, companions });
 }
 
-// ─── Reaction state (for status line) ───────────────────────────────────────
+// ─── Reaction state (session-scoped for tmux isolation) ──────────────────────
 
 export interface ReactionState {
   reaction: string;
@@ -47,9 +252,9 @@ export interface ReactionState {
 
 export function loadReaction(): ReactionState | null {
   try {
-    const data: ReactionState = JSON.parse(readFileSync(REACTION_FILE, "utf8"));
-    // Reactions expire after 60 seconds
-    if (Date.now() - data.timestamp > 60_000) return null;
+    const data: ReactionState = JSON.parse(readFileSync(reactionFile(), "utf8"));
+    const { reactionTTL } = loadConfig();
+    if (reactionTTL > 0 && Date.now() - data.timestamp > reactionTTL * 1000) return null;
     return data;
   } catch {
     return null;
@@ -57,12 +262,12 @@ export function loadReaction(): ReactionState | null {
 }
 
 export function saveReaction(reaction: string, reason: string): void {
-  ensureDir();
+  mkdirSync(STATE_DIR, { recursive: true });
   const state: ReactionState = { reaction, timestamp: Date.now(), reason };
-  writeFileSync(REACTION_FILE, JSON.stringify(state));
+  writeFileSync(reactionFile(), JSON.stringify(state));
 }
 
-// ─── Identity resolution ────────────────────────────────────────────────────
+// ─── Identity resolution ─────────────────────────────────────────────────────
 
 export function resolveUserId(): string {
   try {
@@ -75,7 +280,44 @@ export function resolveUserId(): string {
   }
 }
 
-// ─── Status line state (compact JSON for the shell script) ──────────────────
+// ─── Config persistence (PR #6: tmux popup settings) ─────────────────────────
+
+export interface BuddyConfig {
+  commentCooldown: number;
+  reactionTTL: number;
+  bubbleStyle: "classic" | "round";
+  bubblePosition: "top" | "left";
+  showRarity: boolean;
+  statusLineEnabled: boolean;
+}
+
+const DEFAULT_CONFIG: BuddyConfig = {
+  commentCooldown: 30,
+  reactionTTL: 0,
+  bubbleStyle: "classic",
+  bubblePosition: "top",
+  showRarity: true,
+  statusLineEnabled: false,
+};
+
+export function loadConfig(): BuddyConfig {
+  try {
+    const data = JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
+    return { ...DEFAULT_CONFIG, ...data };
+  } catch {
+    return { ...DEFAULT_CONFIG };
+  }
+}
+
+export function saveConfig(config: Partial<BuddyConfig>): BuddyConfig {
+  mkdirSync(STATE_DIR, { recursive: true });
+  const current = loadConfig();
+  const merged = { ...current, ...config };
+  writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2));
+  return merged;
+}
+
+// ─── Status line state (compact JSON for the shell script) ───────────────────
 
 export interface StatusState {
   name: string;
@@ -83,25 +325,85 @@ export interface StatusState {
   rarity: string;
   stars: string;
   face: string;
+  eye: string;
   shiny: boolean;
   hat: string;
   reaction: string;
   muted: boolean;
+  achievement: string;
 }
 
-export function writeStatusState(companion: Companion, reaction?: string, muted?: boolean): void {
-  ensureDir();
-  const { renderFace, RARITY_STARS } = require("./engine.ts") as typeof import("./engine.ts");
+export function writeStatusState(
+  companion: Companion,
+  reaction?: string,
+  muted?: boolean,
+  achievement?: string,
+): void {
+  mkdirSync(STATE_DIR, { recursive: true });
+  const { renderFace, RARITY_STARS } =
+    require("./engine.ts") as typeof import("./engine.ts");
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
     rarity: companion.bones.rarity,
     stars: RARITY_STARS[companion.bones.rarity],
     face: renderFace(companion.bones.species, companion.bones.eye),
+    eye: companion.bones.eye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
     reaction: reaction ?? "",
     muted: muted ?? false,
+    achievement: achievement ?? "",
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
+}
+
+// ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
+
+export const CLAUDE_SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
+
+/**
+ * Write settings.statusLine pointing to the given buddy-status script.
+ * Atomic via tmp + rename. Returns false if settings.json is unreachable.
+ */
+export function setBuddyStatusLine(
+  statusScript: string,
+  settingsPath: string = CLAUDE_SETTINGS_PATH,
+): boolean {
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    settings.statusLine = {
+      type: "command",
+      command: statusScript,
+      padding: 1,
+      refreshInterval: 1,
+    };
+    const tmp = settingsPath + ".tmp";
+    writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n");
+    renameSync(tmp, settingsPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Remove settings.statusLine — but only if it points to buddy-status.sh.
+ * Leaves foreign statusLines untouched. Returns false if no buddy line was
+ * present or settings.json is unreachable.
+ */
+export function unsetBuddyStatusLine(
+  settingsPath: string = CLAUDE_SETTINGS_PATH,
+): boolean {
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    if (!settings.statusLine?.command?.includes("buddy-status.sh")) return false;
+    delete settings.statusLine;
+    const tmp = settingsPath + ".tmp";
+    writeFileSync(tmp, JSON.stringify(settings, null, 2) + "\n");
+    renameSync(tmp, settingsPath);
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -10,10 +10,11 @@
 # Uses Braille Blank (U+2800) for padding — survives JS .trim()
 
 STATE="$HOME/.claude-buddy/status.json"
-COMPANION="$HOME/.claude-buddy/companion.json"
+# Session ID: sanitized tmux pane number, or "default" outside tmux
+SID="${TMUX_PANE#%}"
+SID="${SID:-default}"
 
 [ -f "$STATE" ] || exit 0
-[ -f "$COMPANION" ] || exit 0
 
 MUTED=$(jq -r '.muted // false' "$STATE" 2>/dev/null)
 [ "$MUTED" = "true" ] && exit 0
@@ -25,7 +26,9 @@ SPECIES=$(jq -r '.species // ""' "$STATE" 2>/dev/null)
 HAT=$(jq -r '.hat // "none"' "$STATE" 2>/dev/null)
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
 REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
-E=$(jq -r '.bones.eye // "°"' "$COMPANION" 2>/dev/null)
+ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
+# eye is written to status.json by writeStatusState (v2+); fall back to "°"
+E=$(jq -r '.eye // "°"' "$STATE" 2>/dev/null)
 
 cat > /dev/null  # drain stdin
 
@@ -207,10 +210,37 @@ case "$HAT" in
   tinyduck)  HAT_LINE="  ,>" ;;
 esac
 
-# ─── Reaction bubble ─────────────────────────────────────────────────────────
+# ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
+if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
+    BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
+fi
+REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
+REACTION_TTL=0
+CONFIG_FILE="$HOME/.claude-buddy/config.json"
+if [ -f "$CONFIG_FILE" ]; then
+    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
+    case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
+fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
-    BUBBLE="\"${REACTION}\""
+    FRESH=0
+    if [ "$REACTION_TTL" -eq 0 ]; then
+        FRESH=1
+    elif [ -f "$REACTION_FILE" ]; then
+        TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
+        if [ "$TS" != "0" ]; then
+            NOW=$(date +%s)
+            AGE=$(( NOW - TS / 1000 ))
+            [ "$AGE" -lt "$REACTION_TTL" ] && FRESH=1
+        fi
+    fi
+    if [ "$FRESH" -eq 1 ]; then
+        if [ -n "$BUBBLE" ]; then
+            BUBBLE="$BUBBLE | \"${REACTION}\""
+        else
+            BUBBLE="\"${REACTION}\""
+        fi
+    fi
 fi
 
 # ─── Build art lines ─────────────────────────────────────────────────────────

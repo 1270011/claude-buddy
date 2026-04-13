@@ -139,6 +139,34 @@ export const RARITY_STARS: Record<Rarity, string> = {
   legendary: "\u2605\u2605\u2605\u2605\u2605",
 };
 
+// ─── Display width helpers ──────────────────────────────────────────────────
+
+function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
+
+function charWidth(cp: number): number {
+  if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
+  if (cp === 0x200D) return 0;
+  if (cp >= 0x1F000) return 2;
+  if (cp === 0x2728) return 2; // ✨
+  if (cp >= 0x2600 && cp <= 0x27BF) return 1;
+  if (cp >= 0x2500 && cp <= 0x259F) return 1;
+  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;
+  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
+  return 1;
+}
+
+function displayWidth(s: string): number {
+  let w = 0;
+  for (const ch of stripAnsi(s)) w += charWidth(ch.codePointAt(0)!);
+  return w;
+}
+
+/** Pad string with spaces to reach target display width */
+function dpad(s: string, targetW: number): string {
+  const w = displayWidth(s);
+  return w < targetW ? s + " ".repeat(targetW - w) : s;
+}
+
 // ─── Render functions ───────────────────────────────────────────────────────
 
 export function getArtFrame(species: Species, eye: Eye, frame: number = 0): string[] {
@@ -153,6 +181,7 @@ export function renderCompanionCard(
   personality: string,
   reaction?: string,
   frame: number = 0,
+  width: number = 40,
 ): string {
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
@@ -166,32 +195,36 @@ export function renderCompanionCard(
   }
 
   // Build the card
-  const W = 40;
+  const W = Math.max(24, width);
   const hr = "\u2500".repeat(W - 2);
   const lines: string[] = [];
 
   // Top border
   lines.push(`${color}\u256d${hr}\u256e${NC}`);
 
+  // Inner width = W - 2 (borders), content area = W - 4 (borders + padding)
+  const innerW = W - 4;
+
   // Species art (centered)
   for (const artLine of art) {
     if (!artLine.trim()) continue;
-    const padded = artLine.padEnd(W - 4);
-    lines.push(`${color}\u2502${NC}  ${padded}${color}\u2502${NC}`);
+    lines.push(`${color}\u2502${NC}  ${dpad(artLine, innerW)}${color}\u2502${NC}`);
   }
 
   // Separator
   lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
 
   // Name + rarity
-  const rarityLabel = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${bones.species}`;
-  const starsStr = `${color}${stars}${NC}`;
-  lines.push(`${color}\u2502${NC} ${BOLD}${name}${NC}  ${starsStr}${"".padEnd(2)}${color}\u2502${NC}`);
-  lines.push(`${color}\u2502${NC} ${rarityLabel}${"".padEnd(2)}${color}\u2502${NC}`);
+  const nameStarsRaw = `${BOLD}${name}${NC}  ${color}${stars}${NC}`;
+  lines.push(`${color}\u2502${NC}  ${nameStarsRaw}${" ".repeat(Math.max(0, innerW - displayWidth(name) - 2 - displayWidth(stars)))}${color}\u2502${NC}`);
+
+  const rarityRaw = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${bones.species}`;
+  const rarityVis = (bones.shiny ? 3 : 0) + bones.rarity.length + 1 + bones.species.length;
+  lines.push(`${color}\u2502${NC}  ${rarityRaw}${" ".repeat(Math.max(0, innerW - rarityVis))}${color}\u2502${NC}`);
 
   // Eye + Hat info
   const cosmeticLine = `eye: ${bones.eye}  hat: ${bones.hat}`;
-  lines.push(`${color}\u2502${NC} ${DIM}${cosmeticLine}${NC}${"".padEnd(W - cosmeticLine.length - 4)}${color}\u2502${NC}`);
+  lines.push(`${color}\u2502${NC}  ${DIM}${cosmeticLine}${NC}${" ".repeat(Math.max(0, innerW - displayWidth(cosmeticLine)))}${color}\u2502${NC}`);
 
   // Separator
   lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
@@ -205,34 +238,35 @@ export function renderCompanionCard(
     const label = stat.slice(0, 3).padEnd(3);
     const marker = stat === bones.peak ? " \u25b2" : stat === bones.dump ? " \u25bc" : "  ";
     const valStr = String(val).padStart(3);
-    lines.push(`${color}\u2502${NC} ${DIM}${label}${NC} ${bar} ${valStr}${marker} ${color}\u2502${NC}`);
+    const statLine = `${DIM}${label}${NC} ${bar} ${valStr}${marker}`;
+    const statVis = 3 + 1 + 10 + 1 + 3 + 2; // label + spaces + bar + val + marker = 20
+    lines.push(`${color}\u2502${NC}  ${statLine}${" ".repeat(Math.max(0, innerW - statVis))}${color}\u2502${NC}`);
   }
 
   // Speech bubble (if reaction)
   if (reaction) {
     lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
-    const maxMsg = W - 8;
-    const msg = reaction.length > maxMsg ? reaction.slice(0, maxMsg - 1) + "\u2026" : reaction;
-    lines.push(`${color}\u2502${NC}  \ud83d\udcac ${msg}${"".padEnd(Math.max(0, maxMsg - msg.length + 1))}${color}\u2502${NC}`);
+    const maxMsg = innerW - 3; // "💬 " prefix (💬 = 2 cols + space)
+    const msg = displayWidth(reaction) > maxMsg ? reaction.slice(0, maxMsg - 1) + "\u2026" : reaction;
+    const msgPad = Math.max(0, innerW - displayWidth(msg) - 3);
+    lines.push(`${color}\u2502${NC}  \ud83d\udcac ${msg}${" ".repeat(msgPad)}${color}\u2502${NC}`);
   }
 
   // Personality
   if (personality) {
     lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
-    // Word-wrap personality to fit
-    const maxW = W - 6;
     const words = personality.split(" ");
     let line = "";
     for (const word of words) {
-      if (line.length + word.length + 1 > maxW) {
-        lines.push(`${color}\u2502${NC}  ${DIM}${line.padEnd(maxW)}${NC}${color}\u2502${NC}`);
+      if (displayWidth(line) + displayWidth(word) + 1 > innerW) {
+        lines.push(`${color}\u2502${NC}  ${DIM}${dpad(line, innerW)}${NC}${color}\u2502${NC}`);
         line = word;
       } else {
         line = line ? `${line} ${word}` : word;
       }
     }
     if (line) {
-      lines.push(`${color}\u2502${NC}  ${DIM}${line.padEnd(maxW)}${NC}${color}\u2502${NC}`);
+      lines.push(`${color}\u2502${NC}  ${DIM}${dpad(line, innerW)}${NC}${color}\u2502${NC}`);
     }
   }
 
@@ -240,6 +274,90 @@ export function renderCompanionCard(
   lines.push(`${color}\u2570${hr}\u256f${NC}`);
 
   return lines.join("\n");
+}
+
+// ─── Markdown-native render (for MCP tool responses) ───────────────────────
+//
+// Claude Code's UI doesn't render raw ANSI escape codes properly — it strips
+// the ESC byte but leaves "[38;2;...m" as literal text, making the output
+// unreadable. This renderer produces pure markdown with unicode rarity dots
+// instead of ANSI colors, so it renders cleanly in any MCP client UI.
+
+const RARITY_DOT: Record<Rarity, string> = {
+  common:    "\u26AA",  // ⚪ white circle
+  uncommon:  "\uD83D\uDFE2",  // 🟢 green circle
+  rare:      "\uD83D\uDD35",  // 🔵 blue circle
+  epic:      "\uD83D\uDFE3",  // 🟣 purple circle
+  legendary: "\uD83D\uDFE1",  // 🟡 yellow circle
+};
+
+export function renderCompanionCardMarkdown(
+  bones: BuddyBones,
+  name: string,
+  personality: string,
+  reaction?: string,
+  frame: number = 0,
+): string {
+  const dot = RARITY_DOT[bones.rarity];
+  const stars = RARITY_STARS[bones.rarity];
+  const shiny = bones.shiny ? " \u2728" : "";
+  const art = getArtFrame(bones.species, bones.eye, frame);
+
+  // Hat: replace first empty art line
+  const hatLine = HAT_ART[bones.hat];
+  if (hatLine && !art[0].trim()) {
+    art[0] = hatLine;
+  }
+
+  // Strip empty lines from art for cleaner rendering
+  const artLines = art.filter((l) => l.trim().length > 0);
+
+  const STAT_NAMES: StatName[] = ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"];
+  const statRows = STAT_NAMES.map((stat) => {
+    const val = bones.stats[stat];
+    const filled = Math.round(val / 10);
+    const bar = "\u2588".repeat(filled) + "\u2591".repeat(10 - filled);
+    const marker = stat === bones.peak ? " \u25B2" : stat === bones.dump ? " \u25BC" : "";
+    const label = `**${stat.slice(0, 3)}**${stat.slice(3)}`;
+    return `| ${label} | ${val}${marker} | \`${bar}\` |`;
+  }).join("\n");
+
+  const parts: string[] = [];
+
+  // Header: rarity dot, name, species+rarity, stars, shiny
+  parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
+  parts.push("");
+
+  // ASCII art in a code block (preserves monospaced formatting)
+  parts.push("```");
+  parts.push(artLines.join("\n"));
+  parts.push("```");
+  parts.push("");
+
+  // Identity line
+  parts.push(`**Identity:** eye \`${bones.eye}\` · hat \`${bones.hat}\``);
+  parts.push("");
+
+  // Stats table
+  parts.push("| Stat | Value | Bar |");
+  parts.push("|---|---|---|");
+  parts.push(statRows);
+  parts.push("");
+
+  // Reaction (if any) — reactions often already contain asterisks
+  // for actions like "*blinks slowly*", so render them verbatim to avoid
+  // accidentally turning italics into bold.
+  if (reaction) {
+    parts.push(`\ud83d\udcac ${reaction}`);
+    parts.push("");
+  }
+
+  // Personality as blockquote
+  if (personality) {
+    parts.push(`> ${personality}`);
+  }
+
+  return parts.join("\n");
 }
 
 // ─── Compact status line render ─────────────────────────────────────────────

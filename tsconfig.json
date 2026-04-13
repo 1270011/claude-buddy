@@ -6,10 +6,14 @@
     "types": ["bun-types"],
     "strict": true,
     "skipLibCheck": true,
-    "outDir": "dist",
-    "rootDir": ".",
-    "declaration": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+
+    // Bun runs .ts files natively — we never emit JS, tsc is only used
+    // for typechecking (`tsc --noEmit`). These three options make the
+    // typechecker agree with how Bun actually loads the code.
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force"
   },
   "include": ["server/**/*.ts", "cli/**/*.ts"]
 }

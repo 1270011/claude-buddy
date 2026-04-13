@@ -1,36 +1,56 @@
 {
-  "name": "claude-buddy",
-  "version": "1.0.0",
-  "description": "Permanent coding companion for Claude Code — survives any update",
-  "type": "module",
-  "bin": {
-    "claude-buddy": "./cli/index.ts"
-  },
-  "scripts": {
-    "server": "bun run server/index.ts",
-    "hunt": "bun run cli/hunt.ts",
-    "install-buddy": "bun run cli/install.ts",
-    "show": "bun run cli/show.ts"
-  },
-  "files": [
-    "server/",
-    "cli/",
-    "skills/",
-    "hooks/",
-    "statusline/",
-    ".claude-plugin/"
-  ],
-  "keywords": [
-    "claude-code",
-    "buddy",
-    "companion",
-    "mcp",
-    "terminal-pet",
-    "tamagotchi"
-  ],
-  "license": "MIT",
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@modelcontextprotocol/sdk": "^1.12.1"
-  }
+    "name": "claude-buddy",
+    "version": "0.3.0",
+    "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
+    "type": "module",
+    "bin": {
+        "claude-buddy": "./cli/index.ts"
+    },
+    "scripts": {
+        "server": "bun run server/index.ts",
+        "pick": "bun run cli/pick.ts",
+        "hunt": "bun run cli/hunt.ts",
+        "install-buddy": "bun run cli/install.ts",
+        "show": "bun run cli/show.ts",
+        "doctor": "bun run cli/doctor.ts",
+        "test-statusline": "bun run cli/test-statusline.ts",
+        "backup": "bun run cli/backup.ts",
+        "settings": "bun run cli/settings.ts",
+        "disable": "bun run cli/disable.ts",
+        "enable": "bun run cli/install.ts",
+        "uninstall": "bun run cli/uninstall.ts",
+        "help": "bun run cli/index.ts help",
+        "test": "bun test",
+        "typecheck": "tsc --noEmit"
+    },
+    "files": [
+        "server/",
+        "cli/",
+        "skills/",
+        "hooks/",
+        "statusline/",
+        ".claude-plugin/",
+        "!**/*.test.ts"
+    ],
+    "keywords": [
+        "claude-code",
+        "buddy",
+        "companion",
+        "mcp",
+        "terminal-pet",
+        "tamagotchi"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/1270011/claude-buddy.git"
+    },
+    "homepage": "https://github.com/1270011/claude-buddy#readme",
+    "license": "MIT",
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.12.1"
+    },
+    "devDependencies": {
+        "bun-types": "^1.3.11",
+        "typescript": "^6.0.2"
+    }
 }

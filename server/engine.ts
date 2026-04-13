@@ -6,49 +6,101 @@
 export const SALT = "friend-2026-401";
 
 export const SPECIES = [
-  "duck", "goose", "blob", "cat", "dragon", "octopus", "owl", "penguin",
-  "turtle", "snail", "ghost", "axolotl", "capybara", "cactus", "robot",
-  "rabbit", "mushroom", "chonk",
+  "duck",
+  "goose",
+  "blob",
+  "cat",
+  "dragon",
+  "octopus",
+  "owl",
+  "penguin",
+  "turtle",
+  "snail",
+  "ghost",
+  "axolotl",
+  "capybara",
+  "cactus",
+  "robot",
+  "rabbit",
+  "mushroom",
+  "chonk",
 ] as const;
 
-export type Species = typeof SPECIES[number];
+export type Species = (typeof SPECIES)[number];
 
-export const RARITIES = ["common", "uncommon", "rare", "epic", "legendary"] as const;
-export type Rarity = typeof RARITIES[number];
+export const RARITIES = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+] as const;
+export type Rarity = (typeof RARITIES)[number];
 
 export const RARITY_WEIGHTS: Record<Rarity, number> = {
-  common: 60, uncommon: 25, rare: 10, epic: 4, legendary: 1,
+  common: 60,
+  uncommon: 25,
+  rare: 10,
+  epic: 4,
+  legendary: 1,
 };
 
-export const STAT_NAMES = ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"] as const;
-export type StatName = typeof STAT_NAMES[number];
+export const STAT_NAMES = [
+  "DEBUGGING",
+  "PATIENCE",
+  "CHAOS",
+  "WISDOM",
+  "SNARK",
+] as const;
+export type StatName = (typeof STAT_NAMES)[number];
 
 export const RARITY_FLOOR: Record<Rarity, number> = {
-  common: 5, uncommon: 15, rare: 25, epic: 35, legendary: 50,
+  common: 5,
+  uncommon: 15,
+  rare: 25,
+  epic: 35,
+  legendary: 50,
 };
 
 export const RARITY_STARS: Record<Rarity, string> = {
-  common: "\u2605", uncommon: "\u2605\u2605", rare: "\u2605\u2605\u2605",
-  epic: "\u2605\u2605\u2605\u2605", legendary: "\u2605\u2605\u2605\u2605\u2605",
+  common: "\u2605",
+  uncommon: "\u2605\u2605",
+  rare: "\u2605\u2605\u2605",
+  epic: "\u2605\u2605\u2605\u2605",
+  legendary: "\u2605\u2605\u2605\u2605\u2605",
 };
 
-export const EYES = ["\u00b7", "\u2726", "\u00d7", "\u25c9", "@", "\u00b0"] as const;
-export type Eye = typeof EYES[number];
+export const EYES = [
+  "\u00b7",
+  "\u2726",
+  "\u00d7",
+  "\u25c9",
+  "@",
+  "\u00b0",
+] as const;
+export type Eye = (typeof EYES)[number];
 
 export const HATS = [
-  "none", "crown", "tophat", "propeller", "halo", "wizard", "beanie", "tinyduck",
+  "none",
+  "crown",
+  "tophat",
+  "propeller",
+  "halo",
+  "wizard",
+  "beanie",
+  "tinyduck",
 ] as const;
-export type Hat = typeof HATS[number];
+export type Hat = (typeof HATS)[number];
 
 export const HAT_ART: Record<Hat, string> = {
-  none:      "",
-  crown:     "  \\^^^/  ",
-  tophat:    "  [___]  ",
+  none: "",
+  crown: "  \\^^^/  ",
+  tophat: "  [___]  ",
   propeller: "   -+-   ",
-  halo:      "  (   )  ",
-  wizard:    "   /^\\   ",
-  beanie:    "  (___)  ",
-  tinyduck:  "   ,>    ",
+  halo: "  (   )  ",
+  wizard: "   /^\\   ",
+  beanie: "  (___)  ",
+  tinyduck: "   ,>    ",
 };
 
 export interface BuddyStats {
@@ -78,19 +130,113 @@ export interface Companion {
   userId: string;
 }
 
-// ─── Hash: wyhash via Bun.hash, FNV-1a fallback ─────────────────────────────
+// ─── Hash: wyhash via Bun.hash, pure JS fallback ───────────────────────────
+// Matches Zig stdlib wyhash v4.2 (used by Bun.hash). The pure JS implementation
+// uses BigInt for 128-bit multiplication — slower than native, but produces
+// identical hashes so every user gets the same buddy regardless of runtime.
+
+const MASK64 = (1n << 64n) - 1n;
+const WY_SECRET: readonly bigint[] = [
+  0xa0761d6478bd642fn,
+  0xe7037ed1a0b428dbn,
+  0x8ebc6af09c88c6e3n,
+  0x589965cc75374cc3n,
+];
+
+function wyMum(a: bigint, b: bigint): [bigint, bigint] {
+  const x = (a & MASK64) * (b & MASK64);
+  return [x & MASK64, (x >> 64n) & MASK64];
+}
+
+function wyMix(a: bigint, b: bigint): bigint {
+  const [lo, hi] = wyMum(a, b);
+  return (lo ^ hi) & MASK64;
+}
+
+function wyR8(buf: Uint8Array, off: number): bigint {
+  let v = 0n;
+  for (let i = 0; i < 8; i++) v |= BigInt(buf[off + i]) << BigInt(i * 8);
+  return v;
+}
+
+function wyR4(buf: Uint8Array, off: number): bigint {
+  let v = 0n;
+  for (let i = 0; i < 4; i++) v |= BigInt(buf[off + i]) << BigInt(i * 8);
+  return v;
+}
+
+function wyhash(input: string, seed = 0n): bigint {
+  const buf = new TextEncoder().encode(input);
+  const len = buf.length;
+
+  let s0 =
+    (seed ^ wyMix((seed ^ WY_SECRET[0]) & MASK64, WY_SECRET[1])) & MASK64;
+  let s1 = s0,
+    s2 = s0;
+  let a: bigint, b: bigint;
+
+  if (len <= 16) {
+    if (len >= 4) {
+      const q = (len >> 3) << 2;
+      a = ((wyR4(buf, 0) << 32n) | wyR4(buf, q)) & MASK64;
+      b = ((wyR4(buf, len - 4) << 32n) | wyR4(buf, len - 4 - q)) & MASK64;
+    } else if (len > 0) {
+      a =
+        (BigInt(buf[0]) << 16n) |
+        (BigInt(buf[len >> 1]) << 8n) |
+        BigInt(buf[len - 1]);
+      b = 0n;
+    } else {
+      a = 0n;
+      b = 0n;
+    }
+  } else {
+    let i = 0;
+    if (len >= 48) {
+      while (i + 48 < len) {
+        for (let j = 0; j < 3; j++) {
+          const ra = wyR8(buf, i + 16 * j);
+          const rb = wyR8(buf, i + 16 * j + 8);
+          const states = [s0, s1, s2];
+          states[j] = wyMix(
+            (ra ^ WY_SECRET[j + 1]) & MASK64,
+            (rb ^ states[j]) & MASK64,
+          );
+          s0 = states[0];
+          s1 = states[1];
+          s2 = states[2];
+        }
+        i += 48;
+      }
+      s0 = (s0 ^ s1 ^ s2) & MASK64;
+    }
+    const rem = buf.subarray(i);
+    let ri = 0;
+    while (ri + 16 < rem.length) {
+      s0 = wyMix(
+        (wyR8(rem, ri) ^ WY_SECRET[1]) & MASK64,
+        (wyR8(rem, ri + 8) ^ s0) & MASK64,
+      );
+      ri += 16;
+    }
+    a = wyR8(buf, len - 16);
+    b = wyR8(buf, len - 8);
+  }
+
+  a = (a ^ WY_SECRET[1]) & MASK64;
+  b = (b ^ s0) & MASK64;
+  [a, b] = wyMum(a, b);
+  return wyMix(
+    (a ^ WY_SECRET[0] ^ BigInt(len)) & MASK64,
+    (b ^ WY_SECRET[1]) & MASK64,
+  );
+}
 
 export function hashString(s: string): number {
   if (typeof Bun !== "undefined") {
     return Number(BigInt(Bun.hash(s)) & 0xffffffffn);
   }
-  // FNV-1a fallback for Node.js
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
+  return Number(wyhash(s) & 0xffffffffn);
 }
 
 // ─── PRNG: Mulberry32 ───────────────────────────────────────────────────────
@@ -122,8 +268,8 @@ function rollRarity(rng: () => number): Rarity {
   return "common";
 }
 
-export function generateBones(userId: string): BuddyBones {
-  const rng = mulberry32(hashString(userId + SALT));
+export function generateBones(userId: string, salt: string = SALT): BuddyBones {
+  const rng = mulberry32(hashString(userId + salt));
 
   const rarity = rollRarity(rng);
   const species = pick(rng, SPECIES);
@@ -153,24 +299,24 @@ export function generateBones(userId: string): BuddyBones {
 // ─── ASCII Art ──────────────────────────────────────────────────────────────
 
 const FACE_TEMPLATES: Record<Species, string> = {
-  duck:     "({E}>",
-  goose:    "({E}>",
-  blob:     "({E}{E})",
-  cat:      "={E}\u03c9{E}=",
-  dragon:   "<{E}~{E}>",
-  octopus:  "~({E}{E})~",
-  owl:      "({E})({E})",
-  penguin:  "({E}>)",
-  turtle:   "[{E}_{E}]",
-  snail:    "{E}(@)",
-  ghost:    "/{E}{E}\\",
-  axolotl:  "}{E}.{E}{",
+  duck: "({E}>",
+  goose: "({E}>",
+  blob: "({E}{E})",
+  cat: "={E}\u03c9{E}=",
+  dragon: "<{E}~{E}>",
+  octopus: "~({E}{E})~",
+  owl: "({E})({E})",
+  penguin: "({E}>)",
+  turtle: "[{E}_{E}]",
+  snail: "{E}(@)",
+  ghost: "/{E}{E}\\",
+  axolotl: "}{E}.{E}{",
   capybara: "({E}oo{E})",
-  cactus:   "|{E}  {E}|",
-  robot:    "[{E}{E}]",
-  rabbit:   "({E}..{E})",
+  cactus: "|{E}  {E}|",
+  robot: "[{E}{E}]",
+  rabbit: "({E}..{E})",
   mushroom: "|{E}  {E}|",
-  chonk:    "({E}.{E})",
+  chonk: "({E}.{E})",
 };
 
 export function renderFace(species: Species, eye: Eye): string {
@@ -192,9 +338,12 @@ export function renderBuddy(bones: BuddyBones): string {
 
   for (const stat of STAT_NAMES) {
     const val = bones.stats[stat];
-    const bar = "\u2588".repeat(Math.floor(val / 5)) + "\u2591".repeat(20 - Math.floor(val / 5));
+    const bar =
+      "\u2588".repeat(Math.floor(val / 5)) +
+      "\u2591".repeat(20 - Math.floor(val / 5));
     const label = stat.padEnd(9);
-    const marker = stat === bones.peak ? " \u25b2" : stat === bones.dump ? " \u25bc" : "";
+    const marker =
+      stat === bones.peak ? " \u25b2" : stat === bones.dump ? " \u25bc" : "";
     lines.push(`  ${label} ${bar} ${String(val).padStart(3)}${marker}`);
   }
 
@@ -203,7 +352,11 @@ export function renderBuddy(bones: BuddyBones): string {
 
 // ─── Compact render for status line ─────────────────────────────────────────
 
-export function renderCompact(bones: BuddyBones, name: string, reaction?: string): string {
+export function renderCompact(
+  bones: BuddyBones,
+  name: string,
+  reaction?: string,
+): string {
   const face = renderFace(bones.species, bones.eye);
   const shiny = bones.shiny ? "\u2728" : "";
   const stars = RARITY_STARS[bones.rarity];
@@ -265,8 +418,10 @@ export function searchBuddy(
     const floor = RARITY_FLOOR[rarity];
     const stats = {} as BuddyStats;
     for (const name of STAT_NAMES) {
-      if (name === peak) stats[name] = Math.min(100, floor + 50 + Math.floor(rng() * 30));
-      else if (name === dump) stats[name] = Math.max(1, floor - 10 + Math.floor(rng() * 15));
+      if (name === peak)
+        stats[name] = Math.min(100, floor + 50 + Math.floor(rng() * 30));
+      else if (name === dump)
+        stats[name] = Math.max(1, floor - 10 + Math.floor(rng() * 15));
       else stats[name] = floor + Math.floor(rng() * 40);
     }
 
@@ -281,7 +436,10 @@ export function searchBuddy(
       if (!valid) continue;
     }
 
-    results.push({ userId: id, bones: { rarity, species, eye, hat, shiny, stats, peak, dump } });
+    results.push({
+      userId: id,
+      bones: { rarity, species, eye, hat, shiny, stats, peak, dump },
+    });
 
     if (results.length >= 20) break;
   }
