@@ -100,18 +100,26 @@ row("Status script exists", existsSync(STATUS_SCRIPT) ? "yes" : `${RED}no${NC}`)
 // ─── claude-buddy state ─────────────────────────────────────────────────────
 
 section("claude-buddy state");
-const companion = tryParseJson(tryRead(join(HOME, ".claude-buddy", "companion.json")));
+const menagerie = tryParseJson(tryRead(join(HOME, ".claude-buddy", "menagerie.json")));
 const status = tryParseJson(tryRead(join(HOME, ".claude-buddy", "status.json")));
 
-if (companion) {
-  row("Companion name", companion.name ?? "(none)");
-  row("Species", companion.bones?.species ?? "(none)");
-  row("Rarity", companion.bones?.rarity ?? "(none)");
-  row("Hat", companion.bones?.hat ?? "(none)");
-  row("Eye", companion.bones?.eye ?? "(none)");
-  row("Shiny", String(companion.bones?.shiny ?? false));
+if (menagerie) {
+  const activeSlot = menagerie.active ?? "buddy";
+  const companion = menagerie.companions?.[activeSlot];
+  row("Active slot", activeSlot);
+  row("Total slots", String(Object.keys(menagerie.companions ?? {}).length));
+  if (companion) {
+    row("Companion name", companion.name ?? "(none)");
+    row("Species", companion.bones?.species ?? "(none)");
+    row("Rarity", companion.bones?.rarity ?? "(none)");
+    row("Hat", companion.bones?.hat ?? "(none)");
+    row("Eye", companion.bones?.eye ?? "(none)");
+    row("Shiny", String(companion.bones?.shiny ?? false));
+  } else {
+    err(`No companion found in active slot "${activeSlot}"`);
+  }
 } else {
-  err("No companion data found at ~/.claude-buddy/companion.json");
+  err("No manifest found at ~/.claude-buddy/menagerie.json");
 }
 
 if (status) {

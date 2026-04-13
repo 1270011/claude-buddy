@@ -13,7 +13,8 @@
     // typechecker agree with how Bun actually loads the code.
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "moduleDetection": "force"
+    "moduleDetection": "force",
+    "jsx": "react-jsx"
   },
-  "include": ["server/**/*.ts", "cli/**/*.ts"]
+  "include": ["server/**/*.ts", "cli/**/*.ts", "cli/**/*.tsx"]
 }

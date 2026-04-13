@@ -12,6 +12,7 @@ REACTION_FILE="$STATE_DIR/reaction.$SID.json"
 STATUS_FILE="$STATE_DIR/status.json"
 COOLDOWN_FILE="$STATE_DIR/.last_reaction.$SID"
 CONFIG_FILE="$STATE_DIR/config.json"
+EVENTS_FILE="$STATE_DIR/events.json"
 
 [ -f "$STATUS_FILE" ] || exit 0
 
@@ -181,6 +182,23 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
     # Update status.json with reaction
     TMP=$(mktemp)
     jq --arg r "$REACTION" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
+
+    # Increment achievement event counter
+    if command -v jq >/dev/null 2>&1; then
+        if [ ! -f "$EVENTS_FILE" ]; then
+            echo '{}' > "$EVENTS_FILE"
+        fi
+        case "$REASON" in
+            "test-fail")  KEY="tests_failed" ;;
+            "error")      KEY="errors_seen" ;;
+            "large-diff") KEY="large_diffs" ;;
+            *)            KEY="" ;;
+        esac
+        if [ -n "$KEY" ]; then
+            TMP=$(mktemp)
+            jq --arg k "$KEY" 'if .[$k] then .[$k] += 1 else .[$k] = 1 end' "$EVENTS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$EVENTS_FILE"
+        fi
+    fi
 fi
 
 exit 0
