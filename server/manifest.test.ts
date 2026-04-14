@@ -14,9 +14,9 @@ import { join } from "path";
 const REPO_ROOT = join(import.meta.dir, "..");
 
 describe("shipped plugin manifests", () => {
-  test("hooks/hooks.json: every hook command uses ${CLAUDE_PLUGIN_ROOT}", () => {
+  test("adapters/claude/hooks/hooks.json: every hook command uses a plugin-root or project-local path", () => {
     const manifest = JSON.parse(
-      readFileSync(join(REPO_ROOT, "hooks", "hooks.json"), "utf8"),
+      readFileSync(join(REPO_ROOT, "adapters", "claude", "hooks", "hooks.json"), "utf8"),
     );
 
     const commands: string[] = [];
@@ -30,13 +30,13 @@ describe("shipped plugin manifests", () => {
 
     expect(commands.length).toBeGreaterThan(0);
     for (const cmd of commands) {
-      expect(cmd).toContain("${CLAUDE_PLUGIN_ROOT}");
+      expect(cmd.startsWith("${CLAUDE_PLUGIN_ROOT}") || cmd.startsWith("./adapters/claude/")).toBe(true);
     }
   });
 
-  test(".claude-plugin/plugin.json: MCP server command resolves plugin-root-absolute", () => {
+  test("adapters/claude/plugin/plugin.json: MCP server command resolves plugin-root-absolute", () => {
     const manifest = JSON.parse(
-      readFileSync(join(REPO_ROOT, ".claude-plugin", "plugin.json"), "utf8"),
+      readFileSync(join(REPO_ROOT, "adapters", "claude", "plugin", "plugin.json"), "utf8"),
     );
     const entry = manifest.mcpServers?.["claude-buddy"];
     expect(entry).toBeDefined();

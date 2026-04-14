@@ -18,43 +18,43 @@ const command = args[0] || "install";
 
 switch (command) {
   case "install":
-    await import("./install.ts");
+    await import("../adapters/claude/install/install.ts");
     break;
   case "show":
-    await import("./show.ts");
+    await import("../adapters/claude/install/show.ts");
     break;
   case "pick":
-    await import("./pick.ts");
+    await import("../adapters/claude/install/pick.ts");
     break;
   case "hunt":
-    await import("./hunt.ts");
+    await import("../adapters/claude/install/hunt.ts");
     break;
   case "uninstall":
-    await import("./uninstall.ts");
+    await import("../adapters/claude/install/uninstall.ts");
     break;
   case "verify":
     await import("./verify.ts");
     break;
   case "doctor":
-    await import("./doctor.ts");
+    await import("../adapters/claude/install/doctor.ts");
     break;
   case "test-statusline":
-    await import("./test-statusline.ts");
+    await import("../adapters/claude/install/test-statusline.ts");
     break;
   case "backup":
-    await import("./backup.ts");
+    await import("../adapters/claude/install/backup.ts");
     break;
   case "settings":
-    await import("./settings.ts");
+    await import("../adapters/claude/install/settings.ts");
     break;
   case "disable":
-    await import("./disable.ts");
+    await import("../adapters/claude/install/disable.ts");
     break;
   case "upgrade":
     await import("./upgrade.ts");
     break;
   case "enable":
-    await import("./install.ts");
+    await import("../adapters/claude/install/install.ts");
     break;
   case "help":
   case "--help":

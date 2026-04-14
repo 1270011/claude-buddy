@@ -10,11 +10,11 @@
 import {
   searchBuddy, renderBuddy, SPECIES, RARITIES, STAT_NAMES,
   type Species, type Rarity, type StatName, type SearchCriteria,
-} from "../server/engine.ts";
+} from "../../../core/engine.ts";
 import {
   saveCompanionSlot, saveActiveSlot, writeStatusState,
   slugify, unusedName, listCompanionSlots,
-} from "../server/state.ts";
+} from "../storage/state.ts";
 import { createInterface } from "readline";
 
 const CYAN  = "\x1b[36m";
@@ -67,8 +67,8 @@ ${CYAN}╚═══════════════════════�
   const statsAns = await ask(`\n  Configure stats? [Y/n]: `);
   if (statsAns.toLowerCase() !== "n") {
     wantPeak = await pickFromList("Peak stat (highest):", STAT_NAMES);
-    const dumpOptions = STAT_NAMES.filter((s) => s !== wantPeak);
-    wantDump = await pickFromList("Dump stat (lowest):", dumpOptions as any);
+    const dumpOptions = STAT_NAMES.filter((s): s is Exclude<StatName, typeof wantPeak> => s !== wantPeak);
+    wantDump = await pickFromList("Dump stat (lowest):", dumpOptions);
     console.log(`${GREEN}✓${NC} peak=${wantPeak} dump=${wantDump}`);
   }
 

@@ -8,12 +8,28 @@
  * Re-enable with: bun run install-buddy
  */
 
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import {
-  buddyStateDir,
-  claudeSettingsPath,
-  claudeUserConfigPath,
-} from "../server/path.ts";
+import { readFileSync, writeFileSync } from "fs";
+import { getBuddyStateDir, getClaudeJsonPath, getClaudeSettingsPath } from "../storage/paths.ts";
+
+interface HookCommand {
+  type: "command";
+  command: string;
+}
+
+interface HookMatcherEntry {
+  matcher?: string;
+  hooks?: HookCommand[];
+}
+
+interface ClaudeSettings {
+  statusLine?: { command?: string };
+  hooks?: Record<string, HookMatcherEntry[]>;
+  [key: string]: unknown;
+}
+
+function hasBuddyHook(entry: HookMatcherEntry): boolean {
+  return (entry.hooks ?? []).some((hook) => hook.command.includes("claude-buddy"));
+}
 
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
@@ -24,13 +40,12 @@ const NC = "\x1b[0m";
 function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 
-const CLAUDE_JSON = claudeUserConfigPath();
-const SETTINGS = claudeSettingsPath();
-const STATE_DIR = buddyStateDir();
+const CLAUDE_JSON = getClaudeJsonPath();
+const SETTINGS = getClaudeSettingsPath();
+const STATE_DIR = getBuddyStateDir();
 
 console.log(`\n${BOLD}Disabling claude-buddy...${NC}\n`);
 
-// 1. Remove MCP server from ~/.claude.json
 try {
   const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
   if (claudeJson.mcpServers?.["claude-buddy"]) {
@@ -45,9 +60,8 @@ try {
   warn(`Could not update ${CLAUDE_JSON}`);
 }
 
-// 2. Remove status line + hooks from settings.json
 try {
-  const settings = JSON.parse(readFileSync(SETTINGS, "utf8"));
+  const settings = JSON.parse(readFileSync(SETTINGS, "utf8")) as ClaudeSettings;
   let changed = false;
 
   if (settings.statusLine?.command?.includes("buddy")) {
@@ -60,9 +74,7 @@ try {
     for (const hookType of ["PostToolUse", "Stop", "SessionStart", "SessionEnd", "UserPromptSubmit"]) {
       if (settings.hooks[hookType]) {
         const before = settings.hooks[hookType].length;
-        settings.hooks[hookType] = settings.hooks[hookType].filter(
-          (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
-        );
+        settings.hooks[hookType] = settings.hooks[hookType].filter((h) => !hasBuddyHook(h));
         if (settings.hooks[hookType].length < before) changed = true;
         if (settings.hooks[hookType].length === 0) delete settings.hooks[hookType];
       }
@@ -78,13 +90,14 @@ try {
   warn("Could not update settings.json");
 }
 
-// 3. Stop tmux popup if running
 try {
   if (process.env.TMUX) {
     const { execSync } = await import("child_process");
     execSync("tmux display-popup -C 2>/dev/null", { stdio: "ignore" });
   }
-} catch { /* not in tmux */ }
+} catch {
+  // noop
+}
 
 console.log(`
 ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}

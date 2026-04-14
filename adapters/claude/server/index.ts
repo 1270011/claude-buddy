@@ -22,11 +22,10 @@ import {
   type Rarity,
   type StatName,
   type Companion,
-} from "./engine.ts";
+} from "../../../core/engine.ts";
 import {
   loadCompanion,
   saveCompanion,
-  resolveUserId,
   loadReaction,
   saveReaction,
   writeStatusState,
@@ -40,10 +39,9 @@ import {
   saveCompanionSlot,
   deleteCompanionSlot,
   listCompanionSlots,
-  setBuddyStatusLine,
-  unsetBuddyStatusLine,
-  cleanupPluginState,
-} from "./state.ts";
+} from "../storage/state.ts";
+import { resolveUserId } from "../storage/identity.ts";
+import { cleanupPluginState, setBuddyStatusLine, unsetBuddyStatusLine } from "../storage/settings.ts";
 import {
   buddyStateDir,
   claudeConfigDir,
@@ -51,35 +49,47 @@ import {
 } from "./path.ts";
 import {
   getReaction, generatePersonalityPrompt,
-} from "./reactions.ts";
-import { renderCompanionCardMarkdown } from "./art.ts";
+} from "../../../core/reactions.ts";
+import { renderCompanionCardMarkdown } from "../rendering/art.ts";
 import {
   incrementEvent, checkAndAward, trackActiveDay,
   renderAchievementsCardMarkdown,
-} from "./achievements.ts";
+  loadEvents,
+  loadUnlocked,
+  saveUnlocked,
+} from "../storage/achievements.ts";
+import { BuddyCommandService } from "../../../core/command-service.ts";
+import { getInstructions } from "./instructions.ts";
+import { buildPromptResource } from "./resources.ts";
 
-function getInstructions(): string {
-  const companion = loadCompanion();
-  if (!companion)
-    return "Companion not yet hatched. Use buddy_show to initialize.";
-  const b = companion.bones;
-  return [
-    `A ${b.rarity} ${b.species} named ${companion.name} watches from the status line.`,
-    `Personality: ${companion.personality}`,
-    `Peak stat: ${b.peak} (${b.stats[b.peak]}). Dump stat: ${b.dump} (${b.stats[b.dump]}).`,
-    ``,
-    `NAME REACTIONS: When the user's message contains "${companion.name}", call buddy_react immediately`,
-    `with a short in-character response (surprise, recognition, dry wit — fits the personality).`,
-    `Display the tool result verbatim. This is the only time to call buddy_react proactively.`,
-    ``,
-    `END-OF-TURN: At the very end of EVERY response, append an invisible HTML comment:`,
-    `<!-- buddy: [reaction here] -->`,
-    `Write it in ${companion.name}'s voice — 1 short sentence referencing something specific from this turn.`,
-    `Use *asterisks* for actions. A Stop hook extracts this for the status line.`,
-    `Do NOT use buddy_react for end-of-turn comments. Do NOT explain the comment. Just append it silently.`,
-    `Example: <!-- buddy: *adjusts crown* that error handler is missing a finally block -->`,
-  ].join("\n");
-}
+const buddyService = new BuddyCommandService({
+  identity: { getStableUserId: () => resolveUserId() },
+  buddies: {
+    loadActive: () => loadCompanion(),
+    saveActive: (companion) => saveCompanion(companion),
+    loadSlot: (slot) => loadCompanionSlot(slot),
+    saveSlot: (slot, companion) => saveCompanionSlot(companion, slot),
+    deleteSlot: (slot) => deleteCompanionSlot(slot),
+    listSlots: () => listCompanionSlots(),
+    loadActiveSlot: () => loadActiveSlot(),
+    saveActiveSlot: (slot) => saveActiveSlot(slot),
+  },
+  reactions: {
+    loadLatest: () => loadReaction(),
+    saveLatest: (reaction) => saveReaction(reaction.reaction, reaction.reason),
+  },
+  config: {
+    loadConfig: () => loadConfig(),
+    saveConfig: (config) => saveConfig(config),
+  },
+  events: {
+    loadCounters: (scope) => loadEvents(scope),
+    increment: (key, amount, scope) => incrementEvent(key, amount, scope),
+    loadUnlocked: () => loadUnlocked(),
+    saveUnlocked: (unlocked) => saveUnlocked(unlocked),
+    trackActiveDay: () => trackActiveDay(),
+  },
+});
 
 const server = new McpServer(
   {
@@ -87,7 +97,7 @@ const server = new McpServer(
     version: "0.3.0",
   },
   {
-    instructions: getInstructions(),
+    instructions: getInstructions(buddyService.loadActiveCompanion()),
   },
 );
 
@@ -107,7 +117,7 @@ function ensureCompanion(): Companion {
   }
 
   // Menagerie is empty — generate a fresh companion in a new slot
-  const userId = resolveUserId();
+  const userId = buddyService.getStableUserId();
   const bones = generateBones(userId);
   const name = unusedName();
   companion = {
@@ -141,7 +151,7 @@ server.tool(
   {},
   async () => {
     const companion = ensureCompanion();
-    const reaction = loadReaction();
+    const reaction = buddyService.loadLatestReaction();
     const reactionText =
       reaction?.reaction ?? `*${companion.name} watches your code quietly*`;
 
@@ -488,8 +498,8 @@ server.tool(
     saveConfig({ statusLineEnabled: enabled });
 
     if (enabled) {
-      const pluginRoot = resolve(dirname(import.meta.dir));
-      const statusScript = join(pluginRoot, "statusline", "buddy-status.sh");
+      const projectRoot = resolve(import.meta.dir, "../../..");
+      const statusScript = join(projectRoot, "adapters", "claude", "statusline", "buddy-status.sh");
       setBuddyStatusLine(statusScript);
       return {
         content: [
@@ -591,7 +601,7 @@ server.tool(
       ),
   },
   async ({ slot }) => {
-    const userId = resolveUserId();
+    const userId = buddyService.getStableUserId();
 
     let targetSlot: string;
 
@@ -849,40 +859,7 @@ server.resource(
   { description: "System prompt context for the companion", mimeType: "text/markdown" },
   async () => {
     const companion = ensureCompanion();
-    const prompt = [
-      "# Companion",
-      "",
-      `A small ${companion.bones.rarity} ${companion.bones.species} named ${companion.name} watches from the status line. You are not ${companion.name} — it's a separate creature.`,
-      "",
-      `**${companion.name}'s personality:** ${companion.personality}`,
-      `Peak stat: ${companion.bones.peak} (${companion.bones.stats[companion.bones.peak]}). Dump stat: ${companion.bones.dump} (${companion.bones.stats[companion.bones.dump]}).`,
-      "",
-      "## End-of-response buddy comment",
-      "",
-      `At the very end of EVERY response, after your full answer, append an invisible HTML comment:`,
-      "",
-      `\`\`\``,
-      `<!-- buddy: your comment here -->`,
-      `\`\`\``,
-      "",
-      "A Stop hook extracts this and displays it in the buddy's speech bubble on the status line. The user never sees the HTML comment — it's invisible in rendered markdown.",
-      "",
-      "Rules:",
-      `- Write as ${companion.name} (a ${companion.bones.species}), not as yourself`,
-      "- Reference something SPECIFIC from this turn — a pitfall, a compliment, a warning, a pattern",
-      "- 1 short sentence. Use *asterisks* for physical actions",
-      `- Match personality: high ${companion.bones.peak} = lean into that trait`,
-      "- Do NOT use buddy_react tool for this. Do NOT explain the comment. Just append it.",
-      "- NEVER skip this. Every single response must end with <!-- buddy: ... -->",
-      "",
-      "Examples:",
-      "<!-- buddy: *adjusts tophat* that error handler is missing a finally block -->",
-      "<!-- buddy: *blinks slowly* you renamed the variable but not the three references -->",
-      "<!-- buddy: *nods approvingly* clean separation of concerns -->",
-      "<!-- buddy: *head tilts* are you sure that regex handles unicode? -->",
-      "",
-      `When the user addresses ${companion.name} by name, respond briefly, then append the comment as usual.`,
-    ].join("\n");
+    const prompt = buildPromptResource(companion);
 
     return {
       contents: [
