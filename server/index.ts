@@ -326,7 +326,6 @@ server.tool(
       "  /buddy list       List all saved buddies",
       "  /buddy pick       Generate a new random buddy (optional: species, rarity)",
       "  /buddy dismiss    Remove a saved buddy slot",
-      "  /buddy pick       Launch interactive TUI picker (! bun run pick)",
       "  /buddy frequency  Show or set comment cooldown (tmux only)",
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
@@ -765,7 +764,7 @@ server.tool(
     ),
   },
   async ({ species, rarity, name }) => {
-    const { randomBytes } = require("crypto") as typeof import("crypto");
+    const { randomBytes } = await import("crypto");
 
     const maxAttempts =
       rarity === "legendary" ? 5_000_000 :
