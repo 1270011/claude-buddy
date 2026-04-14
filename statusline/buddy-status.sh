@@ -83,7 +83,7 @@ for _ in 1 2 3 4 5; do
 
     # macOS: /proc doesn't exist — get TTY name from process table
     TTY_NAME=$(ps -o tty= -p "$PID" 2>/dev/null | tr -d ' ')
-    if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ]; then
+    if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ] && [ "$TTY_NAME" != "?" ]; then
         TTY_DEV="/dev/$TTY_NAME"
         if [ -c "$TTY_DEV" ] 2>/dev/null; then
             COLS=$(stty size < "$TTY_DEV" 2>/dev/null | awk '{print $2}')
