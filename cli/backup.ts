@@ -18,9 +18,12 @@
  *   - settings.json (full file)
  *   - .claude.json mcpServers["claude-buddy"] block (only our entry)
  *   - skills/buddy/SKILL.md
- *   - <state-dir>/companion.json
+ *   - <state-dir>/menagerie.json
+ *   - <state-dir>/config.json
  *   - <state-dir>/status.json
- *   - <state-dir>/reaction.json
+ *   - <state-dir>/events.json
+ *   - <state-dir>/unlocked.json
+ *   - <state-dir>/active_days.json
  */
 
 import {
@@ -120,10 +123,10 @@ function createBackup(): string {
     warn(`Skipped: ${SKILL} (not found)`);
   }
 
-  // 4-6. ~/.claude-buddy/ state files (don't back up the backups dir itself)
+  // 4+. ~/.claude-buddy/ state files (don't back up the backups dir itself)
   const stateDestDir = join(dir, "claude-buddy");
   mkdirSync(stateDestDir, { recursive: true });
-  const stateFiles = ["companion.json", "status.json", "reaction.json"];
+  const stateFiles = ["menagerie.json", "config.json", "status.json", "events.json", "unlocked.json", "active_days.json"];
   for (const f of stateFiles) {
     const src = join(STATE_DIR, f);
     if (existsSync(src)) {
@@ -330,9 +333,12 @@ ${BOLD}What gets backed up:${NC}
   - ${SETTINGS}
   - ${CLAUDE_JSON} mcpServers["claude-buddy"] (only our entry)
   - ${SKILL}
-  - ${STATE_DIR}/companion.json
+  - ${STATE_DIR}/menagerie.json
+  - ${STATE_DIR}/config.json
   - ${STATE_DIR}/status.json
-  - ${STATE_DIR}/reaction.json
+  - ${STATE_DIR}/events.json
+  - ${STATE_DIR}/unlocked.json
+  - ${STATE_DIR}/active_days.json
 
 ${BOLD}Backup location:${NC}
   ${BACKUPS_DIR}/<timestamp>/
