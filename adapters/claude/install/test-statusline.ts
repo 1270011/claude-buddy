@@ -8,7 +8,8 @@
  * The test status line outputs multiple padding strategies side-by-side
  * so you can see in actual Claude Code which one renders correctly.
  *
- * Your original statusLine config is backed up to <state-dir>/statusline.bak.
+ * Your original statusLine config is backed up to <state-dir>/statusline.bak,
+ * where <state-dir> resolves via adapters/claude/storage/paths.ts.
  */
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync, chmodSync, mkdirSync } from "fs";
@@ -33,6 +34,8 @@ function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 function err(msg: string) { console.log(`${RED}✗${NC}  ${msg}`); }
 
 const action = process.argv[2] || "install";
+
+// ─── Install ────────────────────────────────────────────────────────────────
 
 if (action === "install") {
   console.log(`\n${BOLD}claude-buddy test status line installer${NC}\n`);
@@ -87,6 +90,8 @@ ${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━�
 `);
   process.exit(0);
 }
+
+// ─── Restore ────────────────────────────────────────────────────────────────
 
 if (action === "restore") {
   console.log(`\n${BOLD}claude-buddy test status line restore${NC}\n`);

@@ -46,6 +46,7 @@ const STATE_DIR = getBuddyStateDir();
 
 console.log(`\n${BOLD}Disabling claude-buddy...${NC}\n`);
 
+// 1. Remove the MCP server registration from Claude's user config
 try {
   const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
   if (claudeJson.mcpServers?.["claude-buddy"]) {
@@ -60,6 +61,7 @@ try {
   warn(`Could not update ${CLAUDE_JSON}`);
 }
 
+// 2. Remove the status line and hooks from settings.json
 try {
   const settings = JSON.parse(readFileSync(SETTINGS, "utf8")) as ClaudeSettings;
   let changed = false;
@@ -90,6 +92,7 @@ try {
   warn("Could not update settings.json");
 }
 
+// 3. Stop any legacy tmux popup if one is still running
 try {
   if (process.env.TMUX) {
     const { execSync } = await import("child_process");

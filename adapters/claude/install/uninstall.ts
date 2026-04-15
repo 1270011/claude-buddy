@@ -1,6 +1,9 @@
 #!/usr/bin/env bun
 /**
  * claude-buddy uninstall — remove all integrations
+ *
+ * Companion data and backups are intentionally left in the buddy state dir so
+ * you can reinstall later without losing them.
  */
 
 import { readFileSync, writeFileSync, existsSync, rmSync, readdirSync } from "fs";
@@ -42,6 +45,7 @@ const CLAUDE_JSON = getClaudeJsonPath();
 
 console.log("\nclaude-buddy uninstall\n");
 
+// Stop legacy popup helpers before removing config that might try to restart them.
 try {
   if (existsSync(STATE_DIR)) {
     for (const f of readdirSync(STATE_DIR).filter((f) => f.startsWith("popup-reopen-pid."))) {
@@ -62,6 +66,7 @@ try {
   // noop
 }
 
+// Remove the MCP server registration from Claude's user config.
 try {
   const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
   if (claudeJson.mcpServers?.["claude-buddy"]) {
@@ -74,6 +79,7 @@ try {
   warn(`Could not update ${CLAUDE_JSON}`);
 }
 
+// Remove hooks and the status line from settings.json.
 try {
   const settings = JSON.parse(readFileSync(SETTINGS_FILE, "utf8")) as ClaudeSettings;
   let changed = false;
@@ -104,11 +110,13 @@ try {
   warn("Could not update settings.json");
 }
 
+// Clear transient session files that should not survive an uninstall.
 const cleanup = cleanupPluginState(SETTINGS_FILE, STATE_DIR);
 if (cleanup.transientFilesRemoved > 0) {
   ok(`Removed ${cleanup.transientFilesRemoved} transient session files`);
 }
 
+// Remove the installed skill files.
 if (existsSync(SKILL_DIR)) {
   rmSync(SKILL_DIR, { recursive: true });
   ok("Skill removed");
@@ -116,6 +124,8 @@ if (existsSync(SKILL_DIR)) {
   warn("Skill not found (already removed)");
 }
 
+// Keep the state dir (profile-scoped when CLAUDE_CONFIG_DIR is set) so the
+// buddy can be restored or reinstalled later without losing its data.
 if (existsSync(STATE_DIR)) {
   warn(`Companion data kept at ${STATE_DIR} — delete manually if not needed`);
 }

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# claude-buddy MCP server launcher — preflight checks bun, then execs the
+# adapter-scoped server entrypoint. Failing here with a clear stderr message is
+# much easier to debug than a silent "MCP tools not available" from Claude Code.
+
 set -eu
 if ! command -v bun >/dev/null 2>&1; then
   cat >&2 <<'MSG'

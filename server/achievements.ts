@@ -1,3 +1,7 @@
+// Compatibility layer for legacy server/* imports.
+// Static achievement definitions live in core/achievements.ts, while the
+// Claude-specific persistence and rendering helpers now live under
+// adapters/claude/storage/achievements.ts.
 export {
   ACHIEVEMENTS,
   COUNTER_KEYS,

@@ -1,3 +1,7 @@
+// Compatibility wrapper for legacy server/path.ts imports.
+// Path normalization plus Claude profile/state resolution now live in
+// adapters/claude/storage/paths.ts, and scripts/paths.sh remains the shell
+// counterpart that should stay in sync with those resolvers.
 import {
   getBuddySkillDir,
   getBuddyStateDir,
