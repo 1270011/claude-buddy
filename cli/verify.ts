@@ -2,8 +2,8 @@
  * claude-buddy verify — show what buddy a user ID produces
  */
 
-import { generateBones, renderBuddy, STAT_NAMES } from "../server/engine.ts";
-import { resolveUserId } from "../server/state.ts";
+import { generateBones, renderBuddy, STAT_NAMES } from "../core/engine.ts";
+import { resolveUserId } from "../adapters/claude/storage/identity.ts";
 
 const userId = process.argv[3] || resolveUserId();
 

@@ -18,12 +18,12 @@
 import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
   loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
-} from "../server/state.ts";
+} from "../storage/state.ts";
 import {
   generateBones, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS,
   type Species, type Rarity, type StatName, type BuddyBones, type Companion,
-} from "../server/engine.ts";
-import { renderCompanionCard } from "../server/art.ts";
+} from "../../../core/engine.ts";
+import { renderCompanionCard } from "../rendering/art.ts";
 import { randomBytes } from "crypto";
 
 // ─── ANSI ─────────────────────────────────────────────────────────────────────

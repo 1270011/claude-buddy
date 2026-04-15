@@ -8,16 +8,16 @@
  * The test status line outputs multiple padding strategies side-by-side
  * so you can see in actual Claude Code which one renders correctly.
  *
- * Your original statusLine config is backed up to <state-dir>/statusline.bak
- * (state dir resolves via server/paths.ts).
+ * Your original statusLine config is backed up to <state-dir>/statusline.bak,
+ * where <state-dir> resolves via adapters/claude/storage/paths.ts.
  */
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync, chmodSync, mkdirSync } from "fs";
 import { join, dirname, resolve } from "path";
-import { buddyStateDir, claudeSettingsPath } from "../server/path.ts";
+import { getBuddyStateDir, getClaudeSettingsPath } from "../storage/paths.ts";
 
-const SETTINGS = claudeSettingsPath();
-const STATE_DIR = buddyStateDir();
+const SETTINGS = getClaudeSettingsPath();
+const STATE_DIR = getBuddyStateDir();
 const BACKUP = join(STATE_DIR, "statusline.bak");
 const TEST_SCRIPT = join(STATE_DIR, "test-statusline.sh");
 const SOURCE_SCRIPT = resolve(import.meta.dir, "test-statusline.sh");
@@ -30,7 +30,6 @@ const BOLD = "\x1b[1m";
 const NC = "\x1b[0m";
 
 function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
-function info(msg: string) { console.log(`${CYAN}→${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 function err(msg: string) { console.log(`${RED}✗${NC}  ${msg}`); }
 
@@ -42,15 +41,13 @@ if (action === "install") {
   console.log(`\n${BOLD}claude-buddy test status line installer${NC}\n`);
 
   if (!existsSync(SETTINGS)) {
-    err(`${SETTINGS} not found`);
+    err(`Claude settings not found: ${SETTINGS}`);
     process.exit(1);
   }
   if (!existsSync(SOURCE_SCRIPT)) {
     err(`Source test script missing: ${SOURCE_SCRIPT}`);
     process.exit(1);
   }
-
-  // Backup
   if (existsSync(BACKUP)) {
     warn(`Backup already exists at ${BACKUP}`);
     warn("Run 'bun run test-statusline restore' first to revert");
@@ -61,12 +58,10 @@ if (action === "install") {
   copyFileSync(SETTINGS, BACKUP);
   ok(`Backed up settings to ${BACKUP}`);
 
-  // Copy the test script (no inline TS interpolation issues)
   copyFileSync(SOURCE_SCRIPT, TEST_SCRIPT);
   chmodSync(TEST_SCRIPT, 0o755);
   ok(`Test script copied to ${TEST_SCRIPT}`);
 
-  // Update settings to use test script
   const settings = JSON.parse(readFileSync(SETTINGS, "utf8"));
   settings.statusLine = {
     type: "command",
@@ -111,13 +106,13 @@ if (action === "restore") {
   ok("Original settings.json restored");
 
   const { unlinkSync } = require("fs");
-  try { unlinkSync(BACKUP); ok("Backup file removed"); } catch { /* noop */ }
-  try { unlinkSync(TEST_SCRIPT); ok("Test script removed"); } catch { /* noop */ }
+  try { unlinkSync(BACKUP); ok("Backup file removed"); } catch {}
+  try { unlinkSync(TEST_SCRIPT); ok("Test script removed"); } catch {}
 
   console.log(`\n${GREEN}Done.${NC} Restart Claude Code to apply.\n`);
   process.exit(0);
 }
 
 err(`Unknown action: ${action}`);
-console.log(`Usage: bun run test-statusline [install|restore]`);
+console.log("Usage: bun run test-statusline [install|restore]");
 process.exit(1);

@@ -7,7 +7,7 @@
  *   bun run settings cooldown 0     Set comment cooldown (0-300 seconds)
  */
 
-import { loadConfig, saveConfig } from "../server/state.ts";
+import { loadConfig, saveConfig } from "../storage/state.ts";
 
 const args = process.argv.slice(2);
 const key = args[0];
