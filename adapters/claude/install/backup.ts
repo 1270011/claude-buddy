@@ -1,6 +1,30 @@
 #!/usr/bin/env bun
 /**
  * claude-buddy backup — snapshot all claude-buddy related state
+ *
+ * Usage:
+ *   bun run backup                 Create a new snapshot
+ *   bun run backup list            List all backups
+ *   bun run backup show <ts>       Show what's in a backup
+ *   bun run backup restore         Restore the latest backup
+ *   bun run backup restore <ts>    Restore a specific backup
+ *   bun run backup delete <ts>     Delete a specific backup
+ *
+ * Backups are stored in <state-dir>/backups/YYYY-MM-DD-HHMMSS/, where
+ * <state-dir> resolves via adapters/claude/storage/paths.ts
+ * ($CLAUDE_CONFIG_DIR/buddy-state when that env var is set, else
+ * ~/.claude-buddy).
+ *
+ * What gets backed up:
+ *   - settings.json (full file)
+ *   - .claude.json mcpServers["claude-buddy"] block (only our entry)
+ *   - skills/buddy/SKILL.md
+ *   - <state-dir>/menagerie.json
+ *   - <state-dir>/config.json
+ *   - <state-dir>/status.json
+ *   - <state-dir>/events.json
+ *   - <state-dir>/unlocked.json
+ *   - <state-dir>/active_days.json
  */
 
 import {
@@ -47,6 +71,8 @@ function listBackups(): string[] {
     .sort();
 }
 
+// ─── Create backup ──────────────────────────────────────────────────────────
+
 function createBackup(): string {
   const ts = timestamp();
   const dir = join(BACKUPS_DIR, ts);
@@ -54,6 +80,7 @@ function createBackup(): string {
 
   const manifest: { timestamp: string; files: string[] } = { timestamp: ts, files: [] };
 
+  // 1. settings.json
   const settings = tryRead(SETTINGS);
   if (settings) {
     writeFileSync(join(dir, "settings.json"), settings);
@@ -63,6 +90,7 @@ function createBackup(): string {
     warn(`Skipped: ${SETTINGS} (not found)`);
   }
 
+  // 2. .claude.json mcpServers["claude-buddy"]
   const claudeJsonRaw = tryRead(CLAUDE_JSON);
   if (claudeJsonRaw) {
     try {
@@ -80,6 +108,7 @@ function createBackup(): string {
     }
   }
 
+  // 3. SKILL.md
   const skill = tryRead(SKILL);
   if (skill) {
     writeFileSync(join(dir, "SKILL.md"), skill);
@@ -89,6 +118,7 @@ function createBackup(): string {
     warn(`Skipped: ${SKILL} (not found)`);
   }
 
+  // 4+. Buddy state files (the backups dir itself is intentionally excluded)
   const stateDestDir = join(dir, "claude-buddy");
   mkdirSync(stateDestDir, { recursive: true });
   const stateFiles = ["menagerie.json", "config.json", "status.json", "events.json", "unlocked.json", "active_days.json"];
@@ -104,6 +134,8 @@ function createBackup(): string {
   writeFileSync(join(dir, "manifest.json"), JSON.stringify(manifest, null, 2));
   return ts;
 }
+
+// ─── List backups ───────────────────────────────────────────────────────────
 
 function cmdList() {
   const backups = listBackups();
@@ -127,6 +159,8 @@ function cmdList() {
   console.log("");
 }
 
+// ─── Show backup contents ───────────────────────────────────────────────────
+
 function cmdShow(ts: string) {
   const dir = join(BACKUPS_DIR, ts);
   if (!existsSync(dir)) {
@@ -145,6 +179,8 @@ function cmdShow(ts: string) {
   console.log("");
 }
 
+// ─── Restore backup ─────────────────────────────────────────────────────────
+
 function restoreBackup(ts: string) {
   const dir = join(BACKUPS_DIR, ts);
   if (!existsSync(dir)) {
@@ -154,6 +190,7 @@ function restoreBackup(ts: string) {
 
   info(`Restoring backup ${ts}...\n`);
 
+  // 1. settings.json — overwrite
   const settingsBak = join(dir, "settings.json");
   if (existsSync(settingsBak)) {
     mkdirSync(dirname(SETTINGS), { recursive: true });
@@ -161,6 +198,7 @@ function restoreBackup(ts: string) {
     ok(`Restored: ${SETTINGS}`);
   }
 
+  // 2. .claude.json mcpServers — merge our entry back in
   const mcpBak = join(dir, "mcpserver.json");
   if (existsSync(mcpBak)) {
     const ourMcp = JSON.parse(readFileSync(mcpBak, "utf8"));
@@ -175,6 +213,7 @@ function restoreBackup(ts: string) {
     ok(`Restored: ${CLAUDE_JSON} → mcpServers["claude-buddy"]`);
   }
 
+  // 3. SKILL.md
   const skillBak = join(dir, "SKILL.md");
   if (existsSync(skillBak)) {
     mkdirSync(dirname(SKILL), { recursive: true });
@@ -182,6 +221,7 @@ function restoreBackup(ts: string) {
     ok(`Restored: ${SKILL}`);
   }
 
+  // 4. Buddy state files
   const stateDir = join(dir, "claude-buddy");
   if (existsSync(stateDir)) {
     mkdirSync(STATE_DIR, { recursive: true });
