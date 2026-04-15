@@ -288,8 +288,36 @@ switch (action) {
     }
     cmdDelete(arg);
     break;
+  case "--help":
+  case "-h":
+    console.log(`
+${BOLD}claude-buddy backup${NC} — snapshot and restore all claude-buddy state
+
+${BOLD}Commands:${NC}
+  bun run backup                 Create a new snapshot
+  bun run backup list            List all backups
+  bun run backup show <ts>       Show what's in a backup
+  bun run backup restore         Restore the latest backup
+  bun run backup restore <ts>    Restore a specific backup
+  bun run backup delete <ts>     Delete a specific backup
+
+${BOLD}What gets backed up:${NC}
+  - ${SETTINGS}
+  - ${CLAUDE_JSON} mcpServers["claude-buddy"] (only our entry)
+  - ${SKILL}
+  - ${STATE_DIR}/menagerie.json
+  - ${STATE_DIR}/config.json
+  - ${STATE_DIR}/status.json
+  - ${STATE_DIR}/events.json
+  - ${STATE_DIR}/unlocked.json
+  - ${STATE_DIR}/active_days.json
+
+${BOLD}Backup location:${NC}
+  ${BACKUPS_DIR}/<timestamp>/
+`);
+    break;
   default:
     err(`Unknown action: ${action}`);
-    console.log("Usage: bun run backup [list|show <ts>|restore [ts]|delete <ts>]");
+    console.log("Run 'bun run backup --help' for usage.");
     process.exit(1);
 }
