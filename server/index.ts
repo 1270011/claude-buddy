@@ -42,7 +42,13 @@ import {
   listCompanionSlots,
   setBuddyStatusLine,
   unsetBuddyStatusLine,
+  cleanupPluginState,
 } from "./state.ts";
+import {
+  buddyStateDir,
+  claudeConfigDir,
+  claudeSettingsPath,
+} from "./path.ts";
 import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
@@ -318,8 +324,8 @@ server.tool(
       "  /buddy summon     Summon a saved buddy (omit slot for random)",
       "  /buddy save       Save current buddy to a named slot",
       "  /buddy list       List all saved buddies",
+      "  /buddy pick       Generate a new random buddy (optional: species, rarity)",
       "  /buddy dismiss    Remove a saved buddy slot",
-      "  /buddy pick       Launch interactive TUI picker (! bun run pick)",
       "  /buddy frequency  Show or set comment cooldown (tmux only)",
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
@@ -375,7 +381,7 @@ server.tool(
 
 server.tool(
   "buddy_style",
-  "Configure the popup appearance. Returns current settings if called without arguments.",
+  "Configure the buddy bubble appearance. Returns current settings if called without arguments.",
   {
     style: z
       .enum(["classic", "round"])
@@ -392,7 +398,7 @@ server.tool(
     showRarity: z
       .boolean()
       .optional()
-      .describe("Show or hide the stars + rarity line in the popup"),
+      .describe("Show or hide the stars + rarity line in the status line"),
   },
   async ({ style, position, showRarity }) => {
     if (
@@ -489,7 +495,10 @@ server.tool(
         content: [
           {
             type: "text",
-            text: "Status line enabled! Restart Claude Code to see your buddy in the status line.",
+            text:
+              "Status line enabled! Restart Claude Code to see your buddy in the status line.\n\n" +
+              `Note: this writes an entry to ${claudeSettingsPath()} that \`claude plugin uninstall\` does not remove. ` +
+              "Run `/buddy uninstall` before uninstalling the plugin to clean it up.",
           },
         ],
       };
@@ -504,6 +513,51 @@ server.tool(
         ],
       };
     }
+  },
+);
+
+// ─── Tool: buddy_uninstall ───────────────────────────────────────────────────
+
+server.tool(
+  "buddy_uninstall",
+  "Clean up claude-buddy's writes to Claude Code's settings.json and transient session files in the buddy state dir (resolved via CLAUDE_CONFIG_DIR), in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
+  {},
+  async () => {
+    const result = cleanupPluginState();
+
+    const settingsPath = claudeSettingsPath();
+    const stateDir = buddyStateDir();
+    const pluginsCacheDir = join(claudeConfigDir(), "plugins", "cache", "claude-buddy");
+
+    const lines: string[] = [];
+    lines.push("claude-buddy: settings.json cleanup complete.");
+    lines.push("");
+    lines.push(
+      result.statusLineRemoved
+        ? `  \u2713 statusLine entry removed from ${settingsPath}`
+        : "  \u2014 no buddy statusLine was present (nothing to remove)",
+    );
+    if (result.foreignStatusLineKept) {
+      lines.push(
+        "  \u2713 a non-buddy statusLine was detected and left untouched",
+      );
+    }
+    lines.push(
+      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ${stateDir}`,
+    );
+    lines.push(`  \u2014 companion data at ${stateDir} preserved`);
+    lines.push("");
+    lines.push("Now run these commands via the Bash tool, in order:");
+    lines.push("");
+    lines.push("  claude plugin uninstall claude-buddy@claude-buddy");
+    lines.push("  claude plugin marketplace remove claude-buddy");
+    lines.push(`  rm -rf ${pluginsCacheDir}`);
+    lines.push("");
+    lines.push(
+      "After those three commands the plugin is fully removed. Restart Claude Code to apply.",
+    );
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
   },
 );
 
@@ -690,6 +744,80 @@ server.tool(
         { type: "text", text: `${companion.name} [${targetSlot}] dismissed.` },
       ],
     };
+  },
+);
+
+// ─── Tool: buddy_pick ────────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_pick",
+  "Generate a new random buddy and add it to the menagerie. Optionally filter by species and/or rarity. The new buddy becomes the active one.",
+  {
+    species: z.enum(SPECIES).optional().describe(
+      "Desired species (e.g. 'turtle', 'cat', 'dragon'). If omitted, any species.",
+    ),
+    rarity: z.enum(RARITIES).optional().describe(
+      "Desired rarity (e.g. 'legendary', 'epic', 'rare'). If omitted, any rarity. Higher rarities need more attempts and may take a moment.",
+    ),
+    name: z.string().min(1).max(14).optional().describe(
+      "Name for the new buddy (1-14 chars). If omitted, a random name is chosen.",
+    ),
+  },
+  async ({ species, rarity, name }) => {
+    const { randomBytes } = await import("crypto");
+
+    const maxAttempts =
+      rarity === "legendary" ? 5_000_000 :
+      rarity === "epic"      ? 2_000_000 :
+      rarity === "rare"      ? 1_000_000 : 500_000;
+
+    let bones = null;
+    let userId = "";
+
+    for (let i = 0; i < maxAttempts; i++) {
+      userId = randomBytes(16).toString("hex");
+      const candidate = generateBones(userId);
+      if (species && candidate.species !== species) continue;
+      if (rarity && candidate.rarity !== rarity) continue;
+      bones = candidate;
+      break;
+    }
+
+    if (!bones) {
+      return {
+        content: [{ type: "text", text: `No match found after ${maxAttempts.toLocaleString()} attempts. Try broader criteria (e.g. drop the rarity filter, or pick a different species).` }],
+      };
+    }
+
+    const buddyName = name ?? unusedName();
+    const slot = slugify(buddyName);
+
+    if (loadCompanionSlot(slot)) {
+      return {
+        content: [{ type: "text", text: `A buddy in slot "${slot}" already exists. Pick a different name.` }],
+      };
+    }
+
+    const companion: Companion = {
+      bones,
+      name: buddyName,
+      personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
+      hatchedAt: Date.now(),
+      userId,
+    };
+
+    saveCompanionSlot(companion, slot);
+    saveActiveSlot(slot);
+    writeStatusState(companion, `*${buddyName} hatches*`);
+
+    const card = renderCompanionCardMarkdown(
+      companion.bones,
+      companion.name,
+      companion.personality,
+      `*${buddyName} hatches*`,
+    );
+
+    return { content: [{ type: "text", text: card }] };
   },
 );
 

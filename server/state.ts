@@ -1,8 +1,12 @@
 /**
- * State management — reads/writes companion data to ~/.claude-buddy/
+ * State management — reads/writes companion data to the buddy state dir.
+ *
+ * The state dir resolves via server/paths.ts (honors CLAUDE_CONFIG_DIR).
+ * Default: ~/.claude-buddy/. With CLAUDE_CONFIG_DIR set:
+ * $CLAUDE_CONFIG_DIR/buddy-state/.
  *
  * Storage layout (v3 — single manifest):
- *   ~/.claude-buddy/
+ *   <state-dir>/
  *     menagerie.json   <- SSOT: { active, companions: { [slot]: Companion } }
  *     reaction.$SID.json  <- transient reaction state (session-scoped)
  *     status.json      <- compact state for the status-line shell script
@@ -23,12 +27,18 @@ import {
   existsSync,
   readdirSync,
   renameSync,
+  rmSync,
 } from "fs";
 import { join } from "path";
-import { homedir } from "os";
 import type { Companion } from "./engine.ts";
+import {
+  buddyStateDir,
+  claudeSettingsPath,
+  claudeUserConfigPath,
+  toUnixPath,
+} from "./path.ts";
 
-const STATE_DIR = join(homedir(), ".claude-buddy");
+export const STATE_DIR = buddyStateDir();
 const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
 const CONFIG_FILE = join(STATE_DIR, "config.json");
 
@@ -140,6 +150,19 @@ export function saveCompanionSlot(companion: Companion, slot: string): void {
   const m = loadManifest();
   if (m.companions[slot]) {
     throw new Error(`Slot "${slot}" already exists. Choose a different name.`);
+  }
+  m.companions[slot] = companion;
+  saveManifest(m);
+}
+
+/**
+ * UPDATE an existing (possibly non-active) companion slot.
+ * Throws if the slot does not exist.
+ */
+export function updateCompanionSlot(slot: string, companion: Companion): void {
+  const m = loadManifest();
+  if (!m.companions[slot]) {
+    throw new Error(`Slot "${slot}" does not exist.`);
   }
   m.companions[slot] = companion;
   saveManifest(m);
@@ -271,9 +294,7 @@ export function saveReaction(reaction: string, reason: string): void {
 
 export function resolveUserId(): string {
   try {
-    const claudeJson = JSON.parse(
-      readFileSync(join(homedir(), ".claude.json"), "utf8"),
-    );
+    const claudeJson = JSON.parse(readFileSync(claudeUserConfigPath(), "utf8"));
     return claudeJson.oauthAccount?.accountUuid ?? claudeJson.userID ?? "anon";
   } catch {
     return "anon";
@@ -360,7 +381,7 @@ export function writeStatusState(
 
 // ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
 
-export const CLAUDE_SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
+export const CLAUDE_SETTINGS_PATH = claudeSettingsPath();
 
 /**
  * Write settings.statusLine pointing to the given buddy-status script.
@@ -374,7 +395,7 @@ export function setBuddyStatusLine(
     const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
     settings.statusLine = {
       type: "command",
-      command: statusScript,
+      command: toUnixPath(statusScript),
       padding: 1,
       refreshInterval: 1,
     };
@@ -406,4 +427,65 @@ export function unsetBuddyStatusLine(
   } catch {
     return false;
   }
+}
+
+// ─── Plugin uninstall cleanup ───────────────────────────────────────────────
+
+export interface CleanupResult {
+  statusLineRemoved: boolean;
+  foreignStatusLineKept: boolean;
+  transientFilesRemoved: number;
+}
+
+const TRANSIENT_PREFIXES = [
+  "popup-stop.",
+  "popup-resize.",
+  "popup-env.",
+  "popup-scroll.",
+  "popup-reopen-pid.",
+  "reaction.",
+  ".last_reaction.",
+  ".last_comment.",
+];
+
+/**
+ * Clean up plugin-owned writes to the user's global state so that
+ * `claude plugin uninstall` leaves no orphaned entries behind. Specifically:
+ *   - remove settings.statusLine if it points to buddy-status.sh
+ *   - delete session-scoped transient files under ~/.claude-buddy/
+ *
+ * Companion data (menagerie.json, status.json, config.json) is intentionally
+ * kept — users reinstalling get their buddy back. Call-sites that want a full
+ * wipe should delete STATE_DIR themselves after calling this.
+ */
+export function cleanupPluginState(
+  settingsPath: string = CLAUDE_SETTINGS_PATH,
+  stateDir: string = STATE_DIR,
+): CleanupResult {
+  const statusLineRemoved = unsetBuddyStatusLine(settingsPath);
+
+  let foreignStatusLineKept = false;
+  try {
+    const settings = JSON.parse(readFileSync(settingsPath, "utf8"));
+    const cmd = settings.statusLine?.command;
+    if (cmd && !cmd.includes("buddy-status.sh")) foreignStatusLineKept = true;
+  } catch {
+    /* missing settings.json is fine */
+  }
+
+  let transientFilesRemoved = 0;
+  try {
+    if (existsSync(stateDir)) {
+      for (const f of readdirSync(stateDir)) {
+        if (TRANSIENT_PREFIXES.some(p => f.startsWith(p))) {
+          rmSync(join(stateDir, f), { force: true });
+          transientFilesRemoved++;
+        }
+      }
+    }
+  } catch {
+    /* state dir unreadable is fine */
+  }
+
+  return { statusLineRemoved, foreignStatusLineKept, transientFilesRemoved };
 }

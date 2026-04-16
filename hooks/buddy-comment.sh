@@ -5,7 +5,10 @@
 # This hook extracts it and updates the status line bubble.
 # The HTML comment is invisible in rendered markdown output.
 
-STATE_DIR="$HOME/.claude-buddy"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE_DIR="$BUDDY_STATE_DIR"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"
 SID="${SID:-default}"

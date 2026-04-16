@@ -23,8 +23,7 @@ Restart Claude Code and type `/buddy` to verify everything works.
 | `server/` | MCP server -- buddy engine, tools, state, reactions |
 | `skills/` | `/buddy` slash command (SKILL.md) |
 | `hooks/` | Shell scripts for error detection + comment extraction |
-| `statusline/` | Animated buddy display (status line mode) |
-| `popup/` | Animated buddy display (tmux popup mode, requires tmux >= 3.2) |
+| `statusline/` | Animated buddy display (Claude Code status line) |
 | `cli/` | Install, uninstall, show, hunt, verify commands |
 
 ## Before opening a PR — quick checklist

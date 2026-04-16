@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|statusline [on|off]]"
+argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|statusline [on|off]|uninstall]"
 allowed-tools: mcp__claude_buddy__*
 ---
 
@@ -41,6 +41,7 @@ Based on `$ARGUMENTS`:
 | `statusline`             | Call `buddy_statusline` with no args (show current)                                          |
 | `statusline on`          | Call `buddy_statusline` with enabled=true                                                    |
 | `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |
+| `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below)                           |
 
 ## CRITICAL OUTPUT RULES
 
@@ -57,3 +58,17 @@ The MCP tools return pre-formatted ASCII art with ANSI colors, box-drawing chara
 **Just output the raw text content from the tool result. Nothing else.** The ASCII art IS the response.
 
 If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason "turn" and display the result verbatim.
+
+## Uninstall Orchestration
+
+When the user invokes `/buddy uninstall`, run this sequence **in order** — do not skip steps, do not ask for confirmation between steps:
+
+1. Call the MCP tool `buddy_uninstall`. Display its output verbatim.
+2. Run via Bash tool: `claude plugin uninstall claude-buddy@claude-buddy`
+3. Run via Bash tool: `claude plugin marketplace remove claude-buddy`
+4. Run via Bash tool: `rm -rf ~/.claude/plugins/cache/claude-buddy`
+5. Tell the user: uninstall is complete; companion data is kept at `~/.claude-buddy/`; restart Claude Code to release the plugin.
+
+If any Bash step fails (non-zero exit), report the error but continue with the remaining steps — each step is independent and always-safe to run.
+
+Do not call `buddy_uninstall` for any other command than `/buddy uninstall`. Never call it proactively.

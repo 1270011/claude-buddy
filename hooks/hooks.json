@@ -6,7 +6,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "./hooks/react.sh"
+                        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/react.sh"
                     }
                 ]
             }
@@ -16,7 +16,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "./hooks/buddy-comment.sh"
+                        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/buddy-comment.sh"
                     }
                 ]
             }
@@ -26,7 +26,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "./hooks/name-react.sh"
+                        "command": "${CLAUDE_PLUGIN_ROOT}/hooks/name-react.sh"
                     }
                 ]
             }

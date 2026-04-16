@@ -11,10 +11,20 @@
 import { readFileSync, existsSync, statSync } from "fs";
 import { execSync } from "child_process";
 import { join, resolve, dirname } from "path";
-import { homedir } from "os";
+import {
+  buddyStateDir,
+  claudeConfigDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+} from "../server/path.ts";
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
-const HOME = homedir();
+const CLAUDE_DIR = claudeConfigDir();
+const CLAUDE_JSON = claudeUserConfigPath();
+const STATE_DIR = buddyStateDir();
+const SETTINGS = claudeSettingsPath();
+const SKILL_DIR = claudeSkillDir("buddy");
 const STATUS_SCRIPT = join(PROJECT_ROOT, "statusline", "buddy-status.sh");
 
 const RED = "\x1b[31m";
@@ -91,17 +101,18 @@ row("tput cols", tryExec("tput cols 2>/dev/null", "(failed)"));
 section("Filesystem");
 const procExists = existsSync("/proc");
 row("/proc exists", procExists ? `${GREEN}yes${NC} (Linux)` : `${RED}no${NC} (macOS/BSD)`);
-row("~/.claude/ exists", existsSync(join(HOME, ".claude")) ? "yes" : "no");
-row("~/.claude.json exists", existsSync(join(HOME, ".claude.json")) ? "yes" : "no");
-row("~/.claude-buddy/ exists", existsSync(join(HOME, ".claude-buddy")) ? "yes" : "no");
+row("CLAUDE_CONFIG_DIR", process.env.CLAUDE_CONFIG_DIR ?? "(unset)");
+row(`${CLAUDE_DIR} exists`, existsSync(CLAUDE_DIR) ? "yes" : "no");
+row(`${CLAUDE_JSON} exists`, existsSync(CLAUDE_JSON) ? "yes" : "no");
+row(`${STATE_DIR} exists`, existsSync(STATE_DIR) ? "yes" : "no");
 row("Project root", PROJECT_ROOT);
 row("Status script exists", existsSync(STATUS_SCRIPT) ? "yes" : `${RED}no${NC}`);
 
 // ─── claude-buddy state ─────────────────────────────────────────────────────
 
 section("claude-buddy state");
-const menagerie = tryParseJson(tryRead(join(HOME, ".claude-buddy", "menagerie.json")));
-const status = tryParseJson(tryRead(join(HOME, ".claude-buddy", "status.json")));
+const menagerie = tryParseJson(tryRead(join(STATE_DIR, "menagerie.json")));
+const status = tryParseJson(tryRead(join(STATE_DIR, "status.json")));
 
 if (menagerie) {
   const activeSlot = menagerie.active ?? "buddy";
@@ -119,27 +130,27 @@ if (menagerie) {
     err(`No companion found in active slot "${activeSlot}"`);
   }
 } else {
-  err("No manifest found at ~/.claude-buddy/menagerie.json");
+  err(`No manifest found at ${join(STATE_DIR, "menagerie.json")}`);
 }
 
 if (status) {
   row("Status muted", String(status.muted ?? false));
   row("Current reaction", status.reaction || "(none)");
 } else {
-  warn("No status state at ~/.claude-buddy/status.json");
+  warn(`No status state at ${join(STATE_DIR, "status.json")}`);
 }
 
 // ─── settings.json ──────────────────────────────────────────────────────────
 
 section("Claude Code config");
-const settings = tryParseJson(tryRead(join(HOME, ".claude", "settings.json")));
-const claudeJson = tryParseJson(tryRead(join(HOME, ".claude.json")));
+const settings = tryParseJson(tryRead(SETTINGS));
+const claudeJson = tryParseJson(tryRead(CLAUDE_JSON));
 
 if (settings?.statusLine) {
   console.log(`  ${DIM}statusLine:${NC}`);
   console.log(`    ${JSON.stringify(settings.statusLine, null, 2).split("\n").join("\n    ")}`);
 } else {
-  warn("No statusLine in ~/.claude/settings.json");
+  warn(`No statusLine in ${SETTINGS}`);
 }
 
 if (settings?.hooks) {
@@ -153,13 +164,13 @@ if (settings?.hooks) {
 }
 
 if (claudeJson?.mcpServers?.["claude-buddy"]) {
-  ok("MCP server registered in ~/.claude.json");
+  ok(`MCP server registered in ${CLAUDE_JSON}`);
   console.log(`    ${JSON.stringify(claudeJson.mcpServers["claude-buddy"], null, 2).split("\n").join("\n    ")}`);
 } else {
-  err("MCP server NOT registered in ~/.claude.json");
+  err(`MCP server NOT registered in ${CLAUDE_JSON}`);
 }
 
-const skillPath = join(HOME, ".claude", "skills", "buddy", "SKILL.md");
+const skillPath = join(SKILL_DIR, "SKILL.md");
 if (existsSync(skillPath)) {
   ok(`Skill installed: ${skillPath}`);
 } else {

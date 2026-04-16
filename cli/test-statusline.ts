@@ -8,17 +8,18 @@
  * The test status line outputs multiple padding strategies side-by-side
  * so you can see in actual Claude Code which one renders correctly.
  *
- * Your original statusLine config is backed up to ~/.claude-buddy/statusline.bak
+ * Your original statusLine config is backed up to <state-dir>/statusline.bak
+ * (state dir resolves via server/paths.ts).
  */
 
 import { readFileSync, writeFileSync, existsSync, copyFileSync, chmodSync, mkdirSync } from "fs";
 import { join, dirname, resolve } from "path";
-import { homedir } from "os";
+import { buddyStateDir, claudeSettingsPath } from "../server/path.ts";
 
-const HOME = homedir();
-const SETTINGS = join(HOME, ".claude", "settings.json");
-const BACKUP = join(HOME, ".claude-buddy", "statusline.bak");
-const TEST_SCRIPT = join(HOME, ".claude-buddy", "test-statusline.sh");
+const SETTINGS = claudeSettingsPath();
+const STATE_DIR = buddyStateDir();
+const BACKUP = join(STATE_DIR, "statusline.bak");
+const TEST_SCRIPT = join(STATE_DIR, "test-statusline.sh");
 const SOURCE_SCRIPT = resolve(import.meta.dir, "test-statusline.sh");
 
 const RED = "\x1b[31m";
@@ -41,7 +42,7 @@ if (action === "install") {
   console.log(`\n${BOLD}claude-buddy test status line installer${NC}\n`);
 
   if (!existsSync(SETTINGS)) {
-    err("~/.claude/settings.json not found");
+    err(`${SETTINGS} not found`);
     process.exit(1);
   }
   if (!existsSync(SOURCE_SCRIPT)) {

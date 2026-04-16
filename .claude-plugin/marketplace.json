@@ -4,14 +4,14 @@
         "name": "1270011"
     },
     "metadata": {
-        "description": "Permanent coding companion for Claude Code",
+        "description": "Permanent coding companion for Claude Code (requires bun: https://bun.sh/install)",
         "version": "0.3.0"
     },
     "plugins": [
         {
             "name": "claude-buddy",
             "source": "./",
-            "description": "Permanent coding companion for Claude Code \u2014 survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality.",
+            "description": "Permanent coding companion for Claude Code \u2014 survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality. Requires bun runtime (https://bun.sh/install).",
             "version": "0.3.0",
             "author": {
                 "name": "1270011"

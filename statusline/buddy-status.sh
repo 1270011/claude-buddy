@@ -8,8 +8,15 @@
 #   - refreshInterval: 1s in settings.json cycles the animation
 #
 # Uses Braille Blank (U+2800) for padding — survives JS .trim()
+#
+# When running inside buddy-shell (the PTY wrapper), skip status line rendering
+# so the buddy doesn't show up twice (once in status line, once in wrapper panel).
+[ "$BUDDY_SHELL" = "1" ] && exit 0
 
-STATE="$HOME/.claude-buddy/status.json"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE="$BUDDY_STATE_DIR/status.json"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"
 SID="${SID:-default}"
@@ -66,10 +73,22 @@ PID=$$
 for _ in 1 2 3 4 5; do
     PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
     [ -z "$PID" ] || [ "$PID" = "1" ] && break
+
+    # Linux: read PTY device from /proc
     PTY=$(readlink "/proc/${PID}/fd/0" 2>/dev/null)
     if [ -c "$PTY" ] 2>/dev/null; then
         COLS=$(stty size < "$PTY" 2>/dev/null | awk '{print $2}')
         [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+    fi
+
+    # macOS: /proc doesn't exist — get TTY name from process table
+    TTY_NAME=$(ps -o tty= -p "$PID" 2>/dev/null | tr -d ' ')
+    if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ] && [ "$TTY_NAME" != "?" ]; then
+        TTY_DEV="/dev/$TTY_NAME"
+        if [ -c "$TTY_DEV" ] 2>/dev/null; then
+            COLS=$(stty size < "$TTY_DEV" 2>/dev/null | awk '{print $2}')
+            [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+        fi
     fi
 done
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=${COLUMNS:-0}
@@ -215,9 +234,9 @@ BUBBLE=""
 if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
     BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
-REACTION_FILE="$HOME/.claude-buddy/reaction.$SID.json"
+REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION_TTL=0
-CONFIG_FILE="$HOME/.claude-buddy/config.json"
+CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
 if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac

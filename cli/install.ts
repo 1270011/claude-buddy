@@ -1,16 +1,24 @@
 /**
  * claude-buddy installer
  *
- * Registers: MCP server (in ~/.claude.json), skill, hooks, status line (in settings.json)
- * Checks: bun, jq, ~/.claude/ directory
+ * Registers: MCP server (in Claude's user config), skill, hooks, status line
+ * (in settings.json). All paths resolve via server/paths.ts, so the installer
+ * targets the active Claude profile ($CLAUDE_CONFIG_DIR) or the default
+ * ~/.claude/ layout when the env var is unset.
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from "fs";
 import { execSync } from "child_process";
-import { join, resolve, dirname } from "path";
-import { homedir } from "os";
+import { resolve, dirname, join } from "path";
 
 import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
+import {
+  claudeConfigDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+  toUnixPath,
+} from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
 import { generateFallbackName } from "../server/reactions.ts";
 
@@ -22,9 +30,10 @@ const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 const NC = "\x1b[0m";
 
-const CLAUDE_DIR = join(homedir(), ".claude");
-const SETTINGS_FILE = join(CLAUDE_DIR, "settings.json");
-const BUDDY_DIR = join(CLAUDE_DIR, "skills", "buddy");
+const CLAUDE_DIR = claudeConfigDir();
+const SETTINGS_FILE = claudeSettingsPath();
+const BUDDY_DIR = claudeSkillDir("buddy");
+const CLAUDE_JSON_PATH = claudeUserConfigPath();
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 
 function banner() {
@@ -65,26 +74,25 @@ function preflight(): boolean {
       execSync("sudo apt-get install -y jq 2>/dev/null || brew install jq 2>/dev/null", { stdio: "ignore" });
       ok("jq installed");
     } catch {
-      err("Could not install jq. Install manually: apt install jq / brew install jq");
+      err("Could not install jq. Install manually: apt install jq / brew install jq / windows: install from https://github.com/jqlang/jq/releases/latest and add to PATH");
       pass = false;
     }
   }
 
-  // Check ~/.claude/ exists
+  // Check Claude config dir exists
   if (!existsSync(CLAUDE_DIR)) {
-    err("~/.claude/ not found. Start Claude Code once first, then re-run.");
+    err(`${CLAUDE_DIR} not found. Start Claude Code once first, then re-run.`);
     pass = false;
   } else {
-    ok("~/.claude/ found");
+    ok(`${CLAUDE_DIR} found`);
   }
 
-  // Check ~/.claude.json exists
-  const claudeJson = join(homedir(), ".claude.json");
-  if (!existsSync(claudeJson)) {
-    err("~/.claude.json not found. Start Claude Code once first, then re-run.");
+  // Check Claude user config (.claude.json) exists
+  if (!existsSync(CLAUDE_JSON_PATH)) {
+    err(`${CLAUDE_JSON_PATH} not found. Start Claude Code once first, then re-run.`);
     pass = false;
   } else {
-    ok("~/.claude.json found");
+    ok(`${CLAUDE_JSON_PATH} found`);
   }
 
   return pass;
@@ -109,23 +117,22 @@ function saveSettings(settings: Record<string, any>) {
 
 function installMcp() {
   const serverPath = join(PROJECT_ROOT, "server", "index.ts");
-  const claudeJsonPath = join(homedir(), ".claude.json");
 
   let claudeJson: Record<string, any> = {};
   try {
-    claudeJson = JSON.parse(readFileSync(claudeJsonPath, "utf8"));
+    claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
   } catch { /* fresh config */ }
 
   if (!claudeJson.mcpServers) claudeJson.mcpServers = {};
 
   claudeJson.mcpServers["claude-buddy"] = {
     command: "bun",
-    args: [serverPath],
-    cwd: PROJECT_ROOT,
+    args: [toUnixPath(serverPath)],
+    cwd: toUnixPath(PROJECT_ROOT),
   };
 
-  writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2));
-  ok("MCP server registered in ~/.claude.json");
+  writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
+  ok(`MCP server registered in ${CLAUDE_JSON_PATH}`);
 }
 
 // ─── Step 2: Install skill ──────────────────────────────────────────────────
@@ -134,7 +141,7 @@ function installSkill() {
   const srcSkill = join(PROJECT_ROOT, "skills", "buddy", "SKILL.md");
   mkdirSync(BUDDY_DIR, { recursive: true });
   cpSync(srcSkill, join(BUDDY_DIR, "SKILL.md"), { force: true });
-  ok("Skill installed: ~/.claude/skills/buddy/SKILL.md");
+  ok(`Skill installed: ${join(BUDDY_DIR, "SKILL.md")}`);
 }
 
 // ─── Step 3: Configure status line (with animation refresh) ─────────────────
@@ -144,7 +151,7 @@ function installStatusLine(settings: Record<string, any>) {
 
   settings.statusLine = {
     type: "command",
-    command: statusScript,
+    command: toUnixPath(statusScript),
     padding: 1,
     refreshInterval: 1,  // 1 second — drives the buddy animation
   };
@@ -152,45 +159,23 @@ function installStatusLine(settings: Record<string, any>) {
   ok("Status line configured (with animation refresh)");
 }
 
-// ─── Step 3b: Configure tmux popup mode (if in tmux) ────────────────────────
+// The tmux popup mode was removed in favour of the status line / buddy-shell
+// — its modal `tmux display-popup` intercepted the `Ctrl+b` prefix, breaking
+// every tmux binding while the buddy was visible (issue #57). For backwards
+// compatibility any legacy SessionStart/SessionEnd hooks that reference the
+// popup manager are stripped out below when re-installing.
 
-function detectTmux(): boolean {
-  if (!process.env.TMUX) return false;
-  try {
-    const ver = execSync("tmux -V 2>/dev/null", { encoding: "utf8" }).trim();
-    const match = ver.match(/(\d+)\.(\d+)/);
-    if (!match) return false;
-    const major = parseInt(match[1]), minor = parseInt(match[2]);
-    return major > 3 || (major === 3 && minor >= 2);
-  } catch {
-    return false;
+function stripLegacyPopupHooks(settings: Record<string, any>) {
+  if (!settings.hooks) return;
+  for (const hookType of ["SessionStart", "SessionEnd"] as const) {
+    if (!settings.hooks[hookType]) continue;
+    settings.hooks[hookType] = settings.hooks[hookType].filter(
+      (h: any) => !h.hooks?.some((hh: any) =>
+        hh.command?.includes("popup-manager") || hh.command?.includes("claude-buddy/popup"),
+      ),
+    );
+    if (settings.hooks[hookType].length === 0) delete settings.hooks[hookType];
   }
-}
-
-function installPopupHooks(settings: Record<string, any>) {
-  const popupManager = join(PROJECT_ROOT, "popup", "popup-manager.sh");
-
-  if (!settings.hooks) settings.hooks = {};
-
-  // SessionStart: open popup
-  if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];
-  settings.hooks.SessionStart = settings.hooks.SessionStart.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
-  );
-  settings.hooks.SessionStart.push({
-    hooks: [{ type: "command", command: `${popupManager} start` }],
-  });
-
-  // SessionEnd: close popup
-  if (!settings.hooks.SessionEnd) settings.hooks.SessionEnd = [];
-  settings.hooks.SessionEnd = settings.hooks.SessionEnd.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
-  );
-  settings.hooks.SessionEnd.push({
-    hooks: [{ type: "command", command: `${popupManager} stop` }],
-  });
-
-  ok("Popup hooks registered: SessionStart + SessionEnd");
 }
 
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
@@ -209,7 +194,7 @@ function installHooks(settings: Record<string, any>) {
   );
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
-    hooks: [{ type: "command", command: reactHook }],
+    hooks: [{ type: "command", command: toUnixPath(reactHook) }],
   });
 
   // Stop: extract <!-- buddy: --> comment from Claude's response
@@ -218,7 +203,7 @@ function installHooks(settings: Record<string, any>) {
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
   );
   settings.hooks.Stop.push({
-    hooks: [{ type: "command", command: commentHook }],
+    hooks: [{ type: "command", command: toUnixPath(commentHook) }],
   });
 
   // UserPromptSubmit: detect buddy's name in user message → instant status line reaction
@@ -227,7 +212,7 @@ function installHooks(settings: Record<string, any>) {
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
   );
   settings.hooks.UserPromptSubmit.push({
-    hooks: [{ type: "command", command: nameHook }],
+    hooks: [{ type: "command", command: toUnixPath(nameHook) }],
   });
 
   ok("Hooks registered: PostToolUse + Stop + UserPromptSubmit");
@@ -280,6 +265,11 @@ function initCompanion() {
 
 banner();
 
+const profileSource = process.env.CLAUDE_CONFIG_DIR
+  ? "from CLAUDE_CONFIG_DIR"
+  : "CLAUDE_CONFIG_DIR unset — single-profile default";
+info(`Target profile: ${CLAUDE_DIR}  ${DIM}(${profileSource})${NC}\n`);
+
 info("Checking requirements...\n");
 if (!preflight()) {
   console.log(`\n${RED}Installation aborted. Fix the issues above and retry.${NC}\n`);
@@ -294,18 +284,8 @@ const settings = loadSettings();
 installMcp();
 installSkill();
 
-const useTmuxPopup = detectTmux();
-if (useTmuxPopup) {
-  info("tmux detected (>= 3.2) -- using popup overlay mode");
-  installPopupHooks(settings);
-  // Disable status line to avoid duplicate buddy rendering
-  if (settings.statusLine?.command?.includes("buddy")) {
-    delete settings.statusLine;
-    ok("Status line disabled (popup replaces it)");
-  }
-} else {
-  installStatusLine(settings);
-}
+stripLegacyPopupHooks(settings);
+installStatusLine(settings);
 
 installHooks(settings);
 ensurePermissions(settings);
@@ -320,10 +300,9 @@ console.log("");
 console.log(`  ${BOLD}${companion.name}${NC} -- ${companion.personality}`);
 console.log("");
 
-const modeMsg = useTmuxPopup ? "popup overlay" : "status line";
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log(`${GREEN}  Done! Restart Claude Code and type /buddy${NC}`);
-console.log(`${GREEN}  Display mode: ${modeMsg}${NC}`);
+console.log(`${GREEN}  Display mode: status line${NC}`);
 console.log(`${GREEN}  Your companion is now permanent -- survives any update.${NC}`);
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log("");
