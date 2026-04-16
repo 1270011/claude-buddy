@@ -372,8 +372,15 @@ if [ $BUBBLE_COUNT -gt 2 ]; then
 fi
 
 # ─── Output: merged bubble box + connector + art per line ─────────────────────
-for (( i=0; i<ART_COUNT; i++ )); do
-    art_part="${ALL_COLORS[$i]}${ALL_LINES[$i]}${NC}"
+TOTAL_BUBBLE=$(( BUBBLE_START + BUBBLE_COUNT ))
+MAX_LINES=$(( ART_COUNT > TOTAL_BUBBLE ? ART_COUNT : TOTAL_BUBBLE ))
+for (( i=0; i<MAX_LINES; i++ )); do
+    # Art part: actual art line or blank filler
+    if [ $i -lt $ART_COUNT ]; then
+        art_part="${ALL_COLORS[$i]}${ALL_LINES[$i]}${NC}"
+    else
+        art_part=$(printf '%*s' "$ART_W" '')
+    fi
 
     if [ $BUBBLE_COUNT -gt 0 ]; then
         bi=$(( i - BUBBLE_START ))
