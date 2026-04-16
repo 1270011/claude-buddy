@@ -92,6 +92,11 @@ for _ in 1 2 3 4 5; do
     fi
 done
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=${COLUMNS:-0}
+# Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
+if [ "${COLS:-0}" -lt 40 ] 2>/dev/null; then
+    _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
+    case "$_ps_cols" in ''|*[!0-9]*) ;; *) [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$_ps_cols ;; esac
+fi
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=125
 
 # ─── Species art: 3 frames each (F0, F1, F2) ────────────────────────────────

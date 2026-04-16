@@ -38,3 +38,19 @@ else
 fi
 
 export CLAUDE_CFG_DIR CLAUDE_SETTINGS_FILE CLAUDE_USER_CONFIG BUDDY_STATE_DIR
+
+# Windows: Chocolatey installs a PowerShell shim for jq that doesn't work in
+# Git Bash. If jq is not found on PATH, check the real Chocolatey binary path
+# and common Windows locations, then prepend to PATH so all scripts find it.
+if ! command -v jq >/dev/null 2>&1; then
+    for _jq_candidate in \
+        "/c/ProgramData/chocolatey/lib/jq/tools/jq.exe" \
+        "/c/tools/jq/jq.exe" \
+        "$HOME/bin/jq.exe" \
+        "/usr/local/bin/jq.exe"; do
+        if [ -x "$_jq_candidate" ]; then
+            export PATH="$(dirname "$_jq_candidate"):$PATH"
+            break
+        fi
+    done
+fi
