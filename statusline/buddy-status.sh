@@ -92,6 +92,11 @@ for _ in 1 2 3 4 5; do
     fi
 done
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=${COLUMNS:-0}
+# Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
+if [ "${COLS:-0}" -lt 40 ] 2>/dev/null; then
+    _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
+    case "$_ps_cols" in ''|*[!0-9]*) ;; *) [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$_ps_cols ;; esac
+fi
 [ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=125
 
 # ─── Species art: 3 frames each (F0, F1, F2) ────────────────────────────────
@@ -296,7 +301,7 @@ if [ -n "$BUBBLE" ]; then
 fi
 
 # ─── Word-wrap bubble text ────────────────────────────────────────────────────
-INNER_W=28
+INNER_W=44
 TEXT_LINES=()
 if [ -n "$BUBBLE_TEXT" ]; then
     WORDS=($BUBBLE_TEXT)
@@ -352,7 +357,12 @@ MARGIN=8
 PAD=$(( COLS - TOTAL_W - MARGIN ))
 [ "$PAD" -lt 0 ] && PAD=0
 
-SPACER=$(printf "${B}%${PAD}s" "")
+# On Windows (Git Bash / MSYS2), Braille Blank (U+2800) renders as double-width,
+# which doubles the spacer and pushes content off-screen. Use regular spaces instead.
+case "$(uname -s)" in
+    MINGW*|CYGWIN*|MSYS*) SPACER=$(printf '%*s' "$PAD" '') ;;
+    *)                     SPACER=$(printf "${B}%${PAD}s" "") ;;
+esac
 GAP_STR=$(printf '%*s' "$GAP" '')
 
 # Vertically center bubble box on the art

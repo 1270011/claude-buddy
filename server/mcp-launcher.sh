@@ -11,7 +11,11 @@ if ! command -v bun >/dev/null 2>&1; then
 
 claude-buddy's MCP server runs on bun. Install it with:
 
+  Linux / macOS:
     curl -fsSL https://bun.sh/install | bash
+
+  Windows (PowerShell):
+    powershell -c "irm bun.sh/install.ps1 | iex"
 
 Then open a new shell (so PATH picks up bun) and restart Claude Code.
 EOF
