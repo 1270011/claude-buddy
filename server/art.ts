@@ -143,21 +143,43 @@ export const RARITY_STARS: Record<Rarity, string> = {
 
 function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
 
-function charWidth(cp: number): number {
-  if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
-  if (cp === 0x200D) return 0;
-  if (cp >= 0x1F000) return 2;
-  if (cp === 0x2728) return 2; // ✨
-  if (cp >= 0x2600 && cp <= 0x27BF) return 1;
+// Unicode property escapes (ES2018) are the source of truth for which
+// codepoints terminals render 2 cols wide. The statusline (bash) can't use
+// these directly, so scripts/gen-emoji-widths.ts exports the subset that
+// bash needs into statusline/emoji-widths.data — regenerate on version bumps.
+const EMOJI_PRES_RE = /\p{Emoji_Presentation}/u;
+const EMOJI_RE = /\p{Emoji}/u;
+
+// Precondition: ch is neither a variation selector (U+FE00-U+FE0F) nor ZWJ
+// (U+200D); displayWidth filters those before calling in.
+function charWidth(ch: string): number {
+  if (EMOJI_PRES_RE.test(ch)) return 2;
+  const cp = ch.codePointAt(0)!;
   if (cp >= 0x2500 && cp <= 0x259F) return 1;
   if (cp >= 0x3000 && cp <= 0x9FFF) return 2;
   if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
   return 1;
 }
 
-function displayWidth(s: string): number {
+export function displayWidth(s: string): number {
   let w = 0;
-  for (const ch of stripAnsi(s)) w += charWidth(ch.codePointAt(0)!);
+  let upgradable = false;
+  for (const ch of stripAnsi(s)) {
+    const cp = ch.codePointAt(0)!;
+    if (cp === 0xFE0F) {
+      // VS16 forces emoji presentation on the previous codepoint; upgrade
+      // its width from 1 to 2 if it was narrow-but-emoji (e.g. ❤ + VS16).
+      if (upgradable) { w += 1; upgradable = false; }
+      continue;
+    }
+    if ((cp >= 0xFE00 && cp <= 0xFE0E) || cp === 0x200D) {
+      upgradable = false;
+      continue;
+    }
+    const cw = charWidth(ch);
+    w += cw;
+    upgradable = cw === 1 && EMOJI_RE.test(ch);
+  }
   return w;
 }
 

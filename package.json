@@ -24,7 +24,8 @@
     "buddy-shell": "npx tsx cli/buddy-shell.ts",
     "tui": "bun run cli/tui.tsx",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts"
   },
   "files": [
     "server/",
