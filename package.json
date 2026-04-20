@@ -1,6 +1,6 @@
 {
   "name": "claude-buddy",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
   "type": "module",
   "bin": {

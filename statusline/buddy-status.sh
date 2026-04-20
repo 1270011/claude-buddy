@@ -247,20 +247,20 @@ case "$SPECIES" in
       0) L0="}       {"; 
 	 L1="|\\^\`\`\`^/|"; 
 	 L2="\\ ${E}' '${E} /"; 
-	 L3=" \\ } { /";  
-	 L4=" ~(° °)~"; 
+	 L3=" \\ } { /";
+	 L4=" ≈(° °)≈";
 	 L5="   '-'" ;;
       1) L0="}       {"; 
 	 L1="|\\^\`\`\`^/|"; 
 	 L2="\\ ${E}' '${E} /"; 
-	 L3=" \\ } { /"; 
-	 L4=" ~(° °)~";
-	 L5="  //|\\\\" ;;
+	 L3=" \\ } { /";
+	 L4=" ≈(° °)≈";
+	 L5=$'  \033[38;2;255;120;0m//|\\\\\033[0m' ;;
       2) L0="}       {"; 
 	 L1="|\\^\`\`\`^/|";
 	 L2="\\ ${E}' '${E} /"; 
 	 L3=" \\ } { /";
-	 L4=" ~(° °)~";
+	 L4=" ≈(° °)≈";
 	 L5="   'v'" ;;
     esac ;;
   *)
@@ -310,12 +310,12 @@ if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != 
 fi
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION_TTL=0
-INNER_W=28
+INNER_W=44
 MARGIN=8
 if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
-    _bw=$(jq -r '.bubbleWidth // 28' "$CONFIG_FILE" 2>/dev/null || echo 28)
+    _bw=$(jq -r '.bubbleWidth // 44' "$CONFIG_FILE" 2>/dev/null || echo 44)
     case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
     _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
     case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
@@ -434,7 +434,6 @@ dwidth() {
 }
 
 # ─── Word-wrap bubble text ────────────────────────────────────────────────────
-INNER_W=44
 TEXT_LINES=()
 if [ -n "$BUBBLE_TEXT" ]; then
     WORDS=($BUBBLE_TEXT)
