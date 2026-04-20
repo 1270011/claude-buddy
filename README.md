@@ -48,7 +48,7 @@
 </td>
 <td align="center" width="25%">
 <h3>🎨</h3>
-<b>18 Species</b><br>
+<b>19 Species</b><br>
 <sub>From ducks to dragons — each with animated ASCII art and rarity colors.</sub>
 </td>
 <td align="center" width="25%">
@@ -113,11 +113,11 @@ The installer prints `Target profile: <path>` at the top so you can see at a gla
 <!-- ============================================================ -->
 
 <details>
-<summary><b>🐙 &nbsp; Meet the 18 Species</b></summary>
+<summary><b>🐙 &nbsp; Meet the 19 Species</b></summary>
 
 <br>
 
-Every buddy is uniquely generated from your Claude Code account — same species, same stats, same personality every time. 18 species, each with 3 idle animation frames + a blink.
+Every buddy is uniquely generated from your Claude Code account — same species, same stats, same personality every time. 19 species, each with 3 idle animation frames + a blink.
 
 <!-- Later replace with: docs/species-grid.png -->
 <p align="center">
@@ -382,7 +382,7 @@ bun run cli/uninstall.ts    # full clean removal
 - [ ] **Mood system** — shifts based on code quality, tests, time of day
 - [x] **Achievement badges** — "1000 lines reviewed", "week streak", etc. 💜[ndcorder](https://github.com/ndcorder)💜
 - [ ] **Light theme colors** — auto-detect and match light theme RGB
-- [ ] **New species + community art** — submit your own designs
+- [x] **New species + community art** — wyvern added 💜[@jpmalone0](https://github.com/jpmalone0)💜 (community contributions welcome)
 - [ ] **`npx claude-buddy`** — one-command install without cloning
 
 <br>
