@@ -1,7 +1,20 @@
 # Emotion Animations — Implementation Plan
 
-Status: planned, not implemented.
+Status: step 1 shipped, steps 2–6 pending.
 Branch: `feat/emotion-animations`.
+
+## Progress
+
+- [x] **Step 1** — move art ownership from bash to the server. `getStatusFrames`
+      in `server/art.ts` pre-bakes idle/blink + hat overlay; `writeStatusState`
+      writes `frames` + `frameSequence` into `status.json`; bash becomes a dumb
+      cycler with a small `(°°)` fallback for version skew. Snapshot script
+      added for visual review.
+- [ ] Step 2 — emotion art frames for all species.
+- [ ] Step 3 — reason → emotion mapping.
+- [ ] Step 4 — persist active emotion in status.json.
+- [ ] Step 5 — statusline wiring (mostly no-op thanks to step 1).
+- [ ] Step 6 — docs.
 
 ## Goal
 

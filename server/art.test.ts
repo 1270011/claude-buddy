@@ -8,7 +8,8 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth } from "./art.ts";
+import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import { SPECIES, type BuddyBones } from "./engine.ts";
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -58,6 +59,71 @@ describe("displayWidth", () => {
   test("mixed ASCII + emoji matches terminal columns", () => {
     // "🏆 ✅ Good Buddy" → 2+1+2+1+10 = 16
     expect(displayWidth("\u{1F3C6} \u2705 Good Buddy")).toBe(16);
+  });
+});
+
+describe("getStatusFrames", () => {
+  const bones = (overrides: Partial<BuddyBones> = {}): BuddyBones => ({
+    rarity: "common",
+    species: "capybara",
+    eye: "\u00b0",
+    hat: "none",
+    shiny: false,
+    stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+    peak: "DEBUGGING",
+    dump: "PATIENCE",
+    ...overrides,
+  });
+
+  test("produces 4 frames and a 15-tick sequence", () => {
+    const { frames, frameSequence } = getStatusFrames(bones());
+    expect(frames).toHaveLength(4);
+    expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
+  });
+
+  test("every species produces 4 frames, each with exactly 5 lines", () => {
+    for (const species of SPECIES) {
+      const { frames } = getStatusFrames(bones({ species }));
+      expect(frames).toHaveLength(4);
+      for (const body of frames) {
+        expect(body.split("\n")).toHaveLength(5);
+      }
+    }
+  });
+
+  test("eye is replaced in idle frames", () => {
+    const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
+    expect(frames[0]).toContain("@");
+    expect(frames[0]).not.toContain("{E}");
+  });
+
+  test("blink frame (index 3) replaces the configured eye with '-'", () => {
+    const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
+    expect(frames[3]).not.toContain("@");
+    expect(frames[3]).toContain("-");
+  });
+
+  test("hat overlays line 0 when the species frame has no line-0 content", () => {
+    // duck's frame 0 line 0 is blank — hat should appear there.
+    const { frames } = getStatusFrames(bones({ species: "duck", hat: "crown" }));
+    const line0 = frames[0].split("\n")[0];
+    expect(line0).toContain("\\^^^/");
+  });
+
+  test("hat does not override species line-0 content", () => {
+    // capybara frame 2 has ripples on line 0 — hat should not replace them.
+    const { frames } = getStatusFrames(bones({ species: "capybara", hat: "crown" }));
+    const line0 = frames[2].split("\n")[0];
+    expect(line0).not.toContain("\\^^^/");
+    expect(line0).toContain("~");
+  });
+
+  test("frame sequence references only valid frame indices", () => {
+    const { frames, frameSequence } = getStatusFrames(bones());
+    for (const idx of frameSequence) {
+      expect(idx).toBeGreaterThanOrEqual(0);
+      expect(idx).toBeLessThan(frames.length);
+    }
   });
 });
 
