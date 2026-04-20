@@ -239,6 +239,40 @@ export function getArtFrame(species: Species, eye: Eye, frame: number = 0): stri
   return f.map((line) => line.replace(/\{E\}/g, eye));
 }
 
+// Original 15-tick cycle [0,0,0,0,1,0,0,0,-1,0,0,2,0,0,0]: -1 (blink) becomes
+// index 3 in the pre-baked frames array.
+export const STATUS_FRAME_SEQUENCE: readonly number[] = [
+  0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 2, 0, 0, 0,
+];
+
+// Pre-resolves eye, hat overlay, and blink so the statusline shell does no art
+// work — it just cycles whatever frames the server writes. Each frame is a
+// \n-joined 5-line string (one jq call + mapfile in bash).
+export function getStatusFrames(bones: BuddyBones): {
+  frames: string[];
+  frameSequence: number[];
+} {
+  const resolveFrame = (frameIdx: number, eye: string): string => {
+    const raw = SPECIES_ART[bones.species][frameIdx];
+    const art = raw.map((line) => line.replace(/\{E\}/g, eye));
+    const hatLine = HAT_ART[bones.hat];
+    if (hatLine && !art[0].trim()) {
+      art[0] = hatLine;
+    }
+    return art.join("\n");
+  };
+
+  return {
+    frames: [
+      resolveFrame(0, bones.eye),
+      resolveFrame(1, bones.eye),
+      resolveFrame(2, bones.eye),
+      resolveFrame(0, "-"),
+    ],
+    frameSequence: [...STATUS_FRAME_SEQUENCE],
+  };
+}
+
 export function renderCompanionCard(
   bones: BuddyBones,
   name: string,

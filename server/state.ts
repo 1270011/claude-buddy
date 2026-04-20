@@ -359,6 +359,8 @@ export interface StatusState {
   reaction: string;
   muted: boolean;
   achievement: string;
+  frames: string[];
+  frameSequence: number[];
 }
 
 export function writeStatusState(
@@ -370,6 +372,9 @@ export function writeStatusState(
   mkdirSync(STATE_DIR, { recursive: true });
   const { renderFace, RARITY_STARS } =
     require("./engine.ts") as typeof import("./engine.ts");
+  const { getStatusFrames } =
+    require("./art.ts") as typeof import("./art.ts");
+  const { frames, frameSequence } = getStatusFrames(companion.bones);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -382,6 +387,8 @@ export function writeStatusState(
     reaction: reaction ?? "",
     muted: muted ?? false,
     achievement: achievement ?? "",
+    frames,
+    frameSequence,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
 }
