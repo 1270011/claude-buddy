@@ -101,6 +101,26 @@ export const SPECIES_ART: Record<Species, string[][]> = {
     ["            ", "  /\\    /|  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'  "],
     ["            ", "  /\\    /\\  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'~ "],
   ],
+  wyvern: [
+    ["}       {", 
+     "|\\^```^/|",
+     "\\ {E}' '{E} /", 
+     " \\ } { /",
+     " ≈(° °)≈",
+     "   '-'"],
+    ["}       {", 
+     "|\\^```^/|",
+     "\\ {E}' '{E} /", 
+     " \\ } { /",
+     " ≈(° °)≈",
+     "  \x1b[38;2;255;120;0m//|\\\\\x1b[0m"],
+    ["}       {", 
+     "|\\^```^/|",
+     "\\ {E}' '{E} /", 
+     " \\ } { /",
+     " ≈(° °)≈",
+     "   'v'"],
+  ]
 };
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
@@ -115,6 +135,28 @@ export const HAT_ART: Record<Hat, string> = {
   beanie:    "   (___)    ",
   tinyduck:  "    ,>      ",
 };
+
+// Wyvern line 0 is `}       {` (7 inner chars between horns).
+// These replace that line so the hat sits between the horns.
+const WYVERN_HAT: Partial<Record<Hat, string>> = {
+  crown:     "} \\^^^/ {",  // \^^^/ (5) centered in 7
+  tophat:    "} [___] {",   // [___] (5) centered in 7
+  propeller: "}  -+-  {",   // -+- (3) centered in 7
+  halo:      "} (   ) {",   // (   ) (5) centered in 7
+  wizard:    "}  /^\\  {",  // /^\ (3) centered in 7
+  beanie:    "} (___) {",   // (___) (5) centered in 7
+  tinyduck:  "}  ,>   {",   // ,> (2) slightly left of center
+};
+
+function applyHat(species: Species, hat: Hat, art: string[]): void {
+  if (hat === "none") return;
+  if (species === "wyvern") {
+    const wyvernLine = WYVERN_HAT[hat];
+    if (wyvernLine) art[0] = wyvernLine;
+  } else if (!art[0].trim()) {
+    art[0] = HAT_ART[hat];
+  }
+}
 
 // ─── Rarity ANSI colors ────────────────────────────────────────────────────
 
@@ -209,12 +251,7 @@ export function renderCompanionCard(
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? `${SHINY_COLOR}\u2728 ${NC}` : "";
   const art = getArtFrame(bones.species, bones.eye, frame);
-
-  // Hat: replace first empty art line
-  const hatLine = HAT_ART[bones.hat];
-  if (hatLine && !art[0].trim()) {
-    art[0] = hatLine;
-  }
+  applyHat(bones.species, bones.hat, art);
 
   // Build the card
   const W = Math.max(24, width);
@@ -324,12 +361,7 @@ export function renderCompanionCardMarkdown(
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? " \u2728" : "";
   const art = getArtFrame(bones.species, bones.eye, frame);
-
-  // Hat: replace first empty art line
-  const hatLine = HAT_ART[bones.hat];
-  if (hatLine && !art[0].trim()) {
-    art[0] = hatLine;
-  }
+  applyHat(bones.species, bones.hat, art);
 
   // Strip empty lines from art for cleaner rendering
   const artLines = art.filter((l) => l.trim().length > 0);

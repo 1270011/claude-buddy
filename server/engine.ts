@@ -24,6 +24,7 @@ export const SPECIES = [
   "rabbit",
   "mushroom",
   "chonk",
+  "wyvern",
 ] as const;
 
 export type Species = (typeof SPECIES)[number];
@@ -395,6 +396,7 @@ const FACE_TEMPLATES: Record<Species, string> = {
   rabbit: "({E}..{E})",
   mushroom: "|{E}  {E}|",
   chonk: "({E}.{E})",
+  wyvern: "\\ {E}' '{E} /",
 };
 
 export function renderFace(species: Species, eye: Eye): string {

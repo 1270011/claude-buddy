@@ -210,16 +210,39 @@ case "$SPECIES" in
       1) L1=" /\\    /|";  L2="( ${E}    ${E} )"; L3="(   ..   )"; L4=" \`------'" ;;
       2) L1=" /\\    /\\"; L2="( ${E}    ${E} )"; L3="(   ..   )"; L4=" \`------'~" ;;
     esac ;;
+  wyvern)
+    case $FRAME in
+      0) L0="}       {"; 
+	 L1="|\\^\`\`\`^/|"; 
+	 L2="\\ ${E}' '${E} /"; 
+	 L3=" \\ } { /";   
+	 L4=" ≈(° °)≈";
+	 L5="   '-'" ;;
+      1) L0="}       {"; 
+	 L1="|\\^\`\`\`^/|"; 
+	 L2="\\ ${E}' '${E} /"; 
+	 L3=" \\ } { /";
+	 L4=" ≈(° °)≈";
+	 L5=$'  \033[38;2;255;120;0m//|\\\\\033[0m' ;;
+      2) L0="}       {"; 
+	 L1="|\\^\`\`\`^/|";
+	 L2="\\ ${E}' '${E} /"; 
+	 L3=" \\ } { /";
+	 L4=" ≈(° °)≈";
+	 L5="   'v'" ;;
+    esac ;;
   *)
     L1="(${E}${E})"; L2="(  )"; L3=""; L4="" ;;
 esac
 
 # ─── Blink: replace eyes with "-" ────────────────────────────────────────────
 if [ "$BLINK" -eq 1 ]; then
+    L0="${L0//${E}/-}"
     L1="${L1//${E}/-}"
     L2="${L2//${E}/-}"
     L3="${L3//${E}/-}"
     L4="${L4//${E}/-}"
+    L5="${L5//${E}/-}"
 fi
 
 # ─── Hat ──────────────────────────────────────────────────────────────────────
@@ -233,6 +256,20 @@ case "$HAT" in
   beanie)    HAT_LINE=" (___)" ;;
   tinyduck)  HAT_LINE="  ,>" ;;
 esac
+
+# ─── Wyvern: embed hat between horns on L0 instead of a separate line ────────
+if [ "$SPECIES" = "wyvern" ] && [ -n "$HAT_LINE" ]; then
+    case "$HAT" in
+        crown)     L0="} \^^^/ {" ;;
+        tophat)    L0="} [___] {" ;;
+        propeller) L0="}  -+-  {" ;;
+        halo)      L0="} (   ) {" ;;
+        wizard)    L0="}  /^\\  {" ;;
+        beanie)    L0="} (___) {" ;;
+        tinyduck)  L0="}  ,>   {" ;;
+    esac
+    HAT_LINE=""
+fi
 
 # ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
@@ -268,8 +305,13 @@ if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; the
 fi
 
 # ─── Build art lines ─────────────────────────────────────────────────────────
-ART_LINES=("$L1" "$L2" "$L3")
+
+INNER_W=44
+ART_LINES=()
+[ -n "$L0" ] && ART_LINES+=("$L0")
+ART_LINES+=("$L1" "$L2" "$L3")
 [ -n "$L4" ] && ART_LINES+=("$L4")
+[ -n "$L5" ] && ART_LINES+=("$L5")
 
 # Center the name
 NAME_LEN=${#NAME}
@@ -341,7 +383,6 @@ dwidth() {
 }
 
 # ─── Word-wrap bubble text ────────────────────────────────────────────────────
-INNER_W=44
 TEXT_LINES=()
 if [ -n "$BUBBLE_TEXT" ]; then
     WORDS=($BUBBLE_TEXT)
