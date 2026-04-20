@@ -538,7 +538,7 @@ server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
 
 server.tool(
   "buddy_statusline",
-  "Enable or disable the buddy status line. When enabled, configures Claude Code's status line to show your buddy with animation and reactions. When disabled, the status line is released for other use. Returns current status if called without arguments.",
+  "Enable or disable the buddy status line, and toggle combined mode (shows rate-limit usage bars alongside the buddy). Returns current status if called without arguments.",
   {
     enabled: z
       .boolean()
@@ -546,32 +546,49 @@ server.tool(
       .describe(
         "true to enable, false to disable. Omit to show current status.",
       ),
+    combined: z
+      .boolean()
+      .optional()
+      .describe(
+        "true to show rate-limit usage bars alongside buddy (requires python3), false for buddy-only mode.",
+      ),
   },
-  async ({ enabled }) => {
-    if (enabled === undefined) {
+  async ({ enabled, combined }) => {
+    if (enabled === undefined && combined === undefined) {
       const cfg = loadConfig();
       const state = cfg.statusLineEnabled ? "enabled" : "disabled";
+      const mode = cfg.useCombinedStatus ? "combined (with rate-limit bars)" : "basic (buddy only)";
       return {
         content: [
           {
             type: "text",
-            text: `Status line: ${state}\nUse /buddy statusline on or /buddy statusline off to change.\nRestart Claude Code after enabling for it to take effect.`,
+            text: `Status line: ${state}\nMode: ${mode}\nUse /buddy statusline on|off to toggle, /buddy statusline combined to add rate-limit bars.\nRestart Claude Code after changes for them to take effect.`,
           },
         ],
       };
     }
-    saveConfig({ statusLineEnabled: enabled });
 
-    if (enabled) {
+    if (combined !== undefined) {
+      saveConfig({ useCombinedStatus: combined });
+    }
+
+    if (enabled !== undefined) {
+      saveConfig({ statusLineEnabled: enabled });
+    }
+
+    const cfg = loadConfig();
+
+    if (cfg.statusLineEnabled) {
       const pluginRoot = resolve(dirname(import.meta.dir));
-      const statusScript = join(pluginRoot, "statusline", "buddy-status.sh");
+      const scriptName = cfg.useCombinedStatus ? "combined-status.sh" : "buddy-status.sh";
+      const statusScript = join(pluginRoot, "statusline", scriptName);
       setBuddyStatusLine(statusScript);
       return {
         content: [
           {
             type: "text",
             text:
-              "Status line enabled! Restart Claude Code to see your buddy in the status line.\n\n" +
+              `Status line enabled (${cfg.useCombinedStatus ? "combined" : "basic"} mode)! Restart Claude Code to apply.\n\n` +
               `Note: this writes an entry to ${claudeSettingsPath()} that \`claude plugin uninstall\` does not remove. ` +
               "Run `/buddy uninstall` before uninstalling the plugin to clean it up.",
           },

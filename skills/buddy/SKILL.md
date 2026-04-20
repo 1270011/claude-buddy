@@ -68,6 +68,8 @@ Based on `$ARGUMENTS`:
 | `statusline`             | Call `buddy_statusline` with no args (show current)                                          |
 | `statusline on`          | Call `buddy_statusline` with enabled=true                                                    |
 | `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |
+| `statusline combined`    | Call `buddy_statusline` with combined=true (adds rate-limit usage bars, needs python3)       |
+| `statusline basic`       | Call `buddy_statusline` with combined=false (buddy only, no rate-limit bars)                 |
 | `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below)                           |
 
 ## CRITICAL OUTPUT RULES
