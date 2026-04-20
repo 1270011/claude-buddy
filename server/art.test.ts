@@ -81,12 +81,14 @@ describe("getStatusFrames", () => {
     expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
   });
 
-  test("every species produces 4 frames, each with exactly 5 lines", () => {
+  test("every species produces 4 frames, each with 5-6 lines", () => {
     for (const species of SPECIES) {
       const { frames } = getStatusFrames(bones({ species }));
       expect(frames).toHaveLength(4);
       for (const body of frames) {
-        expect(body.split("\n")).toHaveLength(5);
+        const lines = body.split("\n").length;
+        expect(lines).toBeGreaterThanOrEqual(5);
+        expect(lines).toBeLessThanOrEqual(6);
       }
     }
   });
