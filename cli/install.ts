@@ -1,17 +1,24 @@
 /**
  * claude-buddy installer
  *
- * Registers: MCP server (in ~/.claude.json), skill, hooks, status line (in settings.json)
- * Checks: bun, jq, ~/.claude/ directory
+ * Registers: MCP server (in Claude's user config), skill, hooks, status line
+ * (in settings.json). All paths resolve via server/paths.ts, so the installer
+ * targets the active Claude profile ($CLAUDE_CONFIG_DIR) or the default
+ * ~/.claude/ layout when the env var is unset.
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from "fs";
 import { execSync } from "child_process";
-import { join, resolve, dirname } from "path";
-import { homedir } from "os";
+import { resolve, dirname, join } from "path";
 
 import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
-import { toUnixPath } from "../server/path.ts";
+import {
+  claudeConfigDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+  toUnixPath,
+} from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
 import { generateFallbackName } from "../server/reactions.ts";
 
@@ -23,9 +30,10 @@ const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
 const NC = "\x1b[0m";
 
-const CLAUDE_DIR = join(homedir(), ".claude");
-const SETTINGS_FILE = join(CLAUDE_DIR, "settings.json");
-const BUDDY_DIR = join(CLAUDE_DIR, "skills", "buddy");
+const CLAUDE_DIR = claudeConfigDir();
+const SETTINGS_FILE = claudeSettingsPath();
+const BUDDY_DIR = claudeSkillDir("buddy");
+const CLAUDE_JSON_PATH = claudeUserConfigPath();
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 
 function banner() {
@@ -71,21 +79,20 @@ function preflight(): boolean {
     }
   }
 
-  // Check ~/.claude/ exists
+  // Check Claude config dir exists
   if (!existsSync(CLAUDE_DIR)) {
-    err("~/.claude/ not found. Start Claude Code once first, then re-run.");
+    err(`${CLAUDE_DIR} not found. Start Claude Code once first, then re-run.`);
     pass = false;
   } else {
-    ok("~/.claude/ found");
+    ok(`${CLAUDE_DIR} found`);
   }
 
-  // Check ~/.claude.json exists
-  const claudeJson = join(homedir(), ".claude.json");
-  if (!existsSync(claudeJson)) {
-    err("~/.claude.json not found. Start Claude Code once first, then re-run.");
+  // Check Claude user config (.claude.json) exists
+  if (!existsSync(CLAUDE_JSON_PATH)) {
+    err(`${CLAUDE_JSON_PATH} not found. Start Claude Code once first, then re-run.`);
     pass = false;
   } else {
-    ok("~/.claude.json found");
+    ok(`${CLAUDE_JSON_PATH} found`);
   }
 
   return pass;
@@ -110,11 +117,10 @@ function saveSettings(settings: Record<string, any>) {
 
 function installMcp() {
   const serverPath = join(PROJECT_ROOT, "server", "index.ts");
-  const claudeJsonPath = join(homedir(), ".claude.json");
 
   let claudeJson: Record<string, any> = {};
   try {
-    claudeJson = JSON.parse(readFileSync(claudeJsonPath, "utf8"));
+    claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
   } catch { /* fresh config */ }
 
   if (!claudeJson.mcpServers) claudeJson.mcpServers = {};
@@ -125,8 +131,8 @@ function installMcp() {
     cwd: toUnixPath(PROJECT_ROOT),
   };
 
-  writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2));
-  ok("MCP server registered in ~/.claude.json");
+  writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
+  ok(`MCP server registered in ${CLAUDE_JSON_PATH}`);
 }
 
 // ─── Step 2: Install skill ──────────────────────────────────────────────────
@@ -135,7 +141,7 @@ function installSkill() {
   const srcSkill = join(PROJECT_ROOT, "skills", "buddy", "SKILL.md");
   mkdirSync(BUDDY_DIR, { recursive: true });
   cpSync(srcSkill, join(BUDDY_DIR, "SKILL.md"), { force: true });
-  ok("Skill installed: ~/.claude/skills/buddy/SKILL.md");
+  ok(`Skill installed: ${join(BUDDY_DIR, "SKILL.md")}`);
 }
 
 // ─── Step 3: Configure status line (with animation refresh) ─────────────────
@@ -175,13 +181,16 @@ function stripLegacyPopupHooks(settings: Record<string, any>) {
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
 
 function installHooks(settings: Record<string, any>) {
-  const reactHook    = join(PROJECT_ROOT, "hooks", "react.sh");
-  const commentHook  = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
-  const nameHook     = join(PROJECT_ROOT, "hooks", "name-react.sh");
+  const reactHook     = join(PROJECT_ROOT, "hooks", "react.sh");
+  const fileTypeHook  = join(PROJECT_ROOT, "hooks", "file-type-react.sh");
+  const commentHook   = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
+  const nameHook      = join(PROJECT_ROOT, "hooks", "name-react.sh");
+  const moodHook      = join(PROJECT_ROOT, "hooks", "mood-react.sh");
 
   if (!settings.hooks) settings.hooks = {};
 
-  // PostToolUse: detect errors/test failures/successes in Bash output
+  // PostToolUse: detect errors/test failures/successes in Bash output,
+  // plus file-type specific reactions on Write/Edit.
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
   settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
@@ -189,6 +198,10 @@ function installHooks(settings: Record<string, any>) {
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
     hooks: [{ type: "command", command: toUnixPath(reactHook) }],
+  });
+  settings.hooks.PostToolUse.push({
+    matcher: "Write|Edit",
+    hooks: [{ type: "command", command: toUnixPath(fileTypeHook) }],
   });
 
   // Stop: extract <!-- buddy: --> comment from Claude's response
@@ -200,7 +213,8 @@ function installHooks(settings: Record<string, any>) {
     hooks: [{ type: "command", command: toUnixPath(commentHook) }],
   });
 
-  // UserPromptSubmit: detect buddy's name in user message → instant status line reaction
+  // UserPromptSubmit: detect buddy's name in user message → instant status line
+  // reaction, plus mood-react based on prompt content.
   if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
   settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
@@ -208,8 +222,11 @@ function installHooks(settings: Record<string, any>) {
   settings.hooks.UserPromptSubmit.push({
     hooks: [{ type: "command", command: toUnixPath(nameHook) }],
   });
+  settings.hooks.UserPromptSubmit.push({
+    hooks: [{ type: "command", command: toUnixPath(moodHook) }],
+  });
 
-  ok("Hooks registered: PostToolUse + Stop + UserPromptSubmit");
+  ok("Hooks registered: PostToolUse (Bash + Write/Edit) + Stop + UserPromptSubmit (name + mood)");
 }
 
 // ─── Step 5: Ensure MCP tools are allowed ───────────────────────────────────
@@ -258,6 +275,11 @@ function initCompanion() {
 // ─── Main ───────────────────────────────────────────────────────────────────
 
 banner();
+
+const profileSource = process.env.CLAUDE_CONFIG_DIR
+  ? "from CLAUDE_CONFIG_DIR"
+  : "CLAUDE_CONFIG_DIR unset — single-profile default";
+info(`Target profile: ${CLAUDE_DIR}  ${DIM}(${profileSource})${NC}\n`);
 
 info("Checking requirements...\n");
 if (!preflight()) {

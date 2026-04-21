@@ -113,6 +113,7 @@ In Claude Code:
   /buddy style      Show or set bubble style (tmux only)
   /buddy position   Show or set bubble position (tmux only)
   /buddy rarity     Show or hide rarity stars (tmux only)
+  /buddy width      Set bubble text width in chars (10-60, tmux only)
 
 Usage:
   bun run <command>           e.g. bun run show, bun run doctor

@@ -220,10 +220,10 @@ describe("generateBones", () => {
   // The whole point of claude-buddy is that the same user always gets the
   // same companion, forever. That's only true if these stay green.
 
-  test("golden snapshot: 'golden-user-alpha' (common ghost)", () => {
+  test("golden snapshot: 'golden-user-alpha' (common axolotl)", () => {
     expect(generateBones("golden-user-alpha")).toEqual({
       rarity: "common",
-      species: "ghost",
+      species: "axolotl",
       eye: "\u00b7",
       hat: "none",
       shiny: false,
@@ -239,10 +239,10 @@ describe("generateBones", () => {
     });
   });
 
-  test("golden snapshot: 'golden-user-beta' (common rabbit)", () => {
+  test("golden snapshot: 'golden-user-beta' (common mushroom)", () => {
     expect(generateBones("golden-user-beta")).toEqual({
       rarity: "common",
-      species: "rabbit",
+      species: "mushroom",
       eye: "@",
       hat: "none",
       shiny: false,

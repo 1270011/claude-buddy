@@ -1,13 +1,37 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|statusline [on|off]|uninstall]"
-allowed-tools: mcp__claude_buddy__*
+argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
+allowed-tools: mcp__claude_buddy__*, Bash
 ---
 
 # Buddy — Your Coding Companion
 
 Handle the user's `/buddy` command using the claude-buddy MCP tools.
+
+## Fallback: MCP Tools Unavailable
+
+**Before routing any command, check whether `mcp__claude_buddy__*` tools are registered in this session.** If they are NOT — Claude Code was unable to start the claude-buddy MCP server — do not attempt to call any buddy tool. The tool calls will fail with an unhelpful "tool not found" error. Instead, run this diagnostic and report the result to the user so they can fix the underlying cause:
+
+1. Check bun availability:
+   ```bash
+   command -v bun && bun --version
+   ```
+   The MCP launcher (`server/mcp-launcher.sh`) requires `bun` on PATH. If this command prints nothing, bun is missing — tell the user to install it (`curl -fsSL https://bun.sh/install | bash`), open a new terminal so PATH picks it up, and restart Claude Code. That is almost always the fix.
+
+2. If bun IS present, run the launcher directly to capture whatever error it emits. The launcher path depends on which marketplace installed the plugin; locate it first:
+   ```bash
+   find ~/.claude/plugins/cache -name mcp-launcher.sh -path '*claude-buddy*' 2>/dev/null
+   ```
+   Then execute the first result with stdin closed so it exits cleanly:
+   ```bash
+   <launcher-path> < /dev/null; echo "exit=$?"
+   ```
+   Report the stdout/stderr and exit code verbatim. Common causes: missing `bun`, corrupted plugin cache (suggest `claude plugin uninstall claude-buddy@claude-buddy && claude plugin install claude-buddy@claude-buddy`), or a `bun`-level error loading `server/index.ts`.
+
+3. If `$CLAUDE_CONFIG_DIR` is set in the environment, use that directory instead of `~/.claude` when searching for the launcher.
+
+4. **Do not proceed with any buddy command in this session.** Tell the user: the MCP server is not running, here is what the diagnostic found, here is the recommended fix, and Claude Code must be restarted after the fix before buddy tools will be available.
 
 ## Command Routing
 
@@ -38,9 +62,14 @@ Based on `$ARGUMENTS`:
 | `position <top\|left>`   | Call `buddy_style` with position arg                                                         |
 | `rarity on`              | Call `buddy_style` with showRarity=true                                                      |
 | `rarity off`             | Call `buddy_style` with showRarity=false                                                     |
+| `rainbow`                | Call `buddy_style` with no args (show current rainbow)                                       |
+| `rainbow <#hex> ...`     | Call `buddy_style` with rainbow=[...hex colors] to set shiny gradient                        |
+| `rainbow reset`          | Call `buddy_style` with rainbow=[] to restore default ROYGBIV                                |
 | `statusline`             | Call `buddy_statusline` with no args (show current)                                          |
 | `statusline on`          | Call `buddy_statusline` with enabled=true                                                    |
 | `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |
+| `statusline combined`    | Call `buddy_statusline` with combined=true (adds rate-limit usage bars, needs python3)       |
+| `statusline basic`       | Call `buddy_statusline` with combined=false (buddy only, no rate-limit bars)                 |
 | `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below)                           |
 
 ## CRITICAL OUTPUT RULES

@@ -1,8 +1,12 @@
 /**
- * State management — reads/writes companion data to ~/.claude-buddy/
+ * State management — reads/writes companion data to the buddy state dir.
+ *
+ * The state dir resolves via server/paths.ts (honors CLAUDE_CONFIG_DIR).
+ * Default: ~/.claude-buddy/. With CLAUDE_CONFIG_DIR set:
+ * $CLAUDE_CONFIG_DIR/buddy-state/.
  *
  * Storage layout (v3 — single manifest):
- *   ~/.claude-buddy/
+ *   <state-dir>/
  *     menagerie.json   <- SSOT: { active, companions: { [slot]: Companion } }
  *     reaction.$SID.json  <- transient reaction state (session-scoped)
  *     status.json      <- compact state for the status-line shell script
@@ -26,11 +30,15 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import { homedir } from "os";
 import type { Companion } from "./engine.ts";
-import { toUnixPath } from "./path.ts";
+import {
+  buddyStateDir,
+  claudeSettingsPath,
+  claudeUserConfigPath,
+  toUnixPath,
+} from "./path.ts";
 
-export const STATE_DIR = join(homedir(), ".claude-buddy");
+export const STATE_DIR = buddyStateDir();
 const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
 const CONFIG_FILE = join(STATE_DIR, "config.json");
 
@@ -286,9 +294,7 @@ export function saveReaction(reaction: string, reason: string): void {
 
 export function resolveUserId(): string {
   try {
-    const claudeJson = JSON.parse(
-      readFileSync(join(homedir(), ".claude.json"), "utf8"),
-    );
+    const claudeJson = JSON.parse(readFileSync(claudeUserConfigPath(), "utf8"));
     return claudeJson.oauthAccount?.accountUuid ?? claudeJson.userID ?? "anon";
   } catch {
     return "anon";
@@ -304,6 +310,10 @@ export interface BuddyConfig {
   bubblePosition: "top" | "left";
   showRarity: boolean;
   statusLineEnabled: boolean;
+  bubbleWidth: number;
+  bubbleMargin: number;
+  useCombinedStatus: boolean;
+  rainbowColors?: string[];
 }
 
 const DEFAULT_CONFIG: BuddyConfig = {
@@ -313,6 +323,9 @@ const DEFAULT_CONFIG: BuddyConfig = {
   bubblePosition: "top",
   showRarity: true,
   statusLineEnabled: false,
+  bubbleWidth: 28,
+  bubbleMargin: 8,
+  useCombinedStatus: false,
 };
 
 export function loadConfig(): BuddyConfig {
@@ -346,6 +359,8 @@ export interface StatusState {
   reaction: string;
   muted: boolean;
   achievement: string;
+  frames: string[];
+  frameSequence: number[];
 }
 
 export function writeStatusState(
@@ -357,6 +372,9 @@ export function writeStatusState(
   mkdirSync(STATE_DIR, { recursive: true });
   const { renderFace, RARITY_STARS } =
     require("./engine.ts") as typeof import("./engine.ts");
+  const { getStatusFrames } =
+    require("./art.ts") as typeof import("./art.ts");
+  const { frames, frameSequence } = getStatusFrames(companion.bones);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -369,13 +387,15 @@ export function writeStatusState(
     reaction: reaction ?? "",
     muted: muted ?? false,
     achievement: achievement ?? "",
+    frames,
+    frameSequence,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
 }
 
 // ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
 
-export const CLAUDE_SETTINGS_PATH = join(homedir(), ".claude", "settings.json");
+export const CLAUDE_SETTINGS_PATH = claudeSettingsPath();
 
 /**
  * Write settings.statusLine pointing to the given buddy-status script.

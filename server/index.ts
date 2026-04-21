@@ -13,6 +13,7 @@ import { join, resolve, dirname } from "path";
 
 import {
   generateBones,
+  generatePersonality,
   renderFace,
   SPECIES,
   RARITIES,
@@ -44,6 +45,11 @@ import {
   unsetBuddyStatusLine,
   cleanupPluginState,
 } from "./state.ts";
+import {
+  buddyStateDir,
+  claudeConfigDir,
+  claudeSettingsPath,
+} from "./path.ts";
 import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
@@ -108,7 +114,7 @@ function ensureCompanion(): Companion {
   companion = {
     bones,
     name,
-    personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
+    personality: generatePersonality(bones, userId),
     hatchedAt: Date.now(),
     userId,
   };
@@ -120,6 +126,7 @@ function ensureCompanion(): Companion {
   checkAndAward(slot);
   trackActiveDay();
   incrementEvent("sessions", 1);
+  incrementEvent("buddies_collected", 1);
 
   return companion;
 }
@@ -152,6 +159,8 @@ server.tool(
 
     writeStatusState(companion, reaction?.reaction);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("shows", 1);
+    checkAndAward(activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -175,9 +184,13 @@ server.tool(
     incrementEvent("pets", 1, activeSlot());
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
     return {
       content: [
-        { type: "text", text: `${face} ${companion.name}: "${reaction}"` },
+        { type: "text", text: `${face} ${companion.name}: "${reaction}"${achNotice}` },
       ],
     };
   },
@@ -200,6 +213,7 @@ server.tool(
       "", // no personality in stats view
     );
     incrementEvent("commands_run", 1, activeSlot());
+    checkAndAward(activeSlot());
 
     return { content: [{ type: "text", text: card }] };
   },
@@ -277,9 +291,15 @@ server.tool(
     saveCompanion(companion);
     writeStatusState(companion);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("renames", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     return {
-      content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}` }],
+      content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}${achNotice}` }],
     };
   },
 );
@@ -301,10 +321,16 @@ server.tool(
     companion.personality = personality;
     saveCompanion(companion);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("personalities_set", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     return {
       content: [
-        { type: "text", text: `Personality updated for ${companion.name}.` },
+        { type: "text", text: `Personality updated for ${companion.name}.${achNotice}` },
       ],
     };
   },
@@ -335,11 +361,13 @@ server.tool(
       "  /buddy list       List all saved buddies",
       "  /buddy pick       Generate a new random buddy (optional: species, rarity)",
       "  /buddy dismiss    Remove a saved buddy slot",
-      "  /buddy pick       Launch interactive TUI picker (! bun run pick)",
       "  /buddy frequency  Show or set comment cooldown (tmux only)",
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
       "  /buddy rarity     Show or hide rarity stars (tmux only)",
+      "  /buddy width      Set bubble text width in chars (10-60, tmux only)",
+      "  /buddy margin     Set right-side margin in chars (0-20, tmux only)",
+      "  /buddy rainbow    Show or set shiny gradient colors (hex, e.g. #ff0000)",
       "  /buddy statusline Enable or disable buddy in the status line",
       "",
       "CLI:",
@@ -352,6 +380,9 @@ server.tool(
       "  bun run enable          Re-enable buddy",
       "  bun run backup          Snapshot/restore state",
     ].join("\n");
+
+    incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("helps", 1);
 
     return { content: [{ type: "text", text: help }] };
   },
@@ -409,33 +440,67 @@ server.tool(
       .boolean()
       .optional()
       .describe("Show or hide the stars + rarity line in the status line"),
+    width: z
+      .number()
+      .int()
+      .min(10)
+      .max(60)
+      .optional()
+      .describe("Bubble inner text width in characters (10–60, default 28)"),
+    margin: z
+      .number()
+      .int()
+      .min(0)
+      .max(20)
+      .optional()
+      .describe("Right-side margin between buddy and terminal edge (0–20, default 3)"),
+    rainbow: z
+      .array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #ff0000"))
+      .min(1)
+      .max(16)
+      .optional()
+      .describe(
+        "Custom rainbow gradient for shiny buddies — array of 1–16 hex colors (e.g. [\"#ff0000\",\"#00ff00\"]). Omit to reset to default ROYGBIV.",
+      ),
   },
-  async ({ style, position, showRarity }) => {
+  async ({ style, position, showRarity, width, margin, rainbow }) => {
     if (
       style === undefined &&
       position === undefined &&
-      showRarity === undefined
+      showRarity === undefined &&
+      width === undefined &&
+      margin === undefined &&
+      rainbow === undefined
     ) {
       const cfg = loadConfig();
+      const rainbowDisplay = cfg.rainbowColors
+        ? cfg.rainbowColors.join(", ")
+        : "default (ROYGBIV)";
       return {
         content: [
           {
             type: "text",
-            text: `Bubble style: ${cfg.bubbleStyle}\nBubble position: ${cfg.bubblePosition}\nShow rarity: ${cfg.showRarity}\nUse /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off> to change.`,
+            text: `Bubble style: ${cfg.bubbleStyle}\nBubble position: ${cfg.bubblePosition}\nShow rarity: ${cfg.showRarity}\nBubble width: ${cfg.bubbleWidth}\nBubble margin: ${cfg.bubbleMargin}\nShiny rainbow: ${rainbowDisplay}\nUse /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] to change.`,
           },
         ],
       };
     }
-    const updates: Record<string, string | boolean> = {};
+    const updates: Partial<import("./state.ts").BuddyConfig> = {};
     if (style !== undefined) updates.bubbleStyle = style;
     if (position !== undefined) updates.bubblePosition = position;
     if (showRarity !== undefined) updates.showRarity = showRarity;
+    if (width !== undefined) updates.bubbleWidth = width;
+    if (margin !== undefined) updates.bubbleMargin = margin;
+    if (rainbow !== undefined) updates.rainbowColors = rainbow.length > 0 ? rainbow : undefined;
     const cfg = saveConfig(updates);
+    const rainbowDisplay = cfg.rainbowColors
+      ? cfg.rainbowColors.join(", ")
+      : "default (ROYGBIV)";
     return {
       content: [
         {
           type: "text",
-          text: `Updated: style=${cfg.bubbleStyle}, position=${cfg.bubblePosition}, showRarity=${cfg.showRarity}\nRestart Claude Code for changes to take effect.`,
+          text: `Updated: style=${cfg.bubbleStyle}, position=${cfg.bubblePosition}, showRarity=${cfg.showRarity}, width=${cfg.bubbleWidth}, margin=${cfg.bubbleMargin}, rainbow=${rainbowDisplay}\nRestart Claude Code for changes to take effect.`,
         },
       ],
     };
@@ -450,11 +515,18 @@ server.tool(
     const companion = ensureCompanion();
     writeStatusState(companion, "", true);
     incrementEvent("commands_run", 1, activeSlot());
+    incrementEvent("mutes", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} goes quiet. /buddy on to unmute.`,
+          text: `${companion.name} goes quiet. /buddy on to unmute.${achNotice}`,
         },
       ],
     };
@@ -466,14 +538,21 @@ server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
   writeStatusState(companion, "*stretches* I'm back!", false);
   saveReaction("*stretches* I'm back!", "pet");
   incrementEvent("commands_run", 1, activeSlot());
-  return { content: [{ type: "text", text: `${companion.name} is back!` }] };
+  incrementEvent("unmutes", 1);
+
+  const newAch = checkAndAward(activeSlot());
+  const achNotice = newAch.length > 0
+    ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+    : "";
+
+  return { content: [{ type: "text", text: `${companion.name} is back!${achNotice}` }] };
 });
 
 // ─── Tool: buddy_statusline ─────────────────────────────────────────────────
 
 server.tool(
   "buddy_statusline",
-  "Enable or disable the buddy status line. When enabled, configures Claude Code's status line to show your buddy with animation and reactions. When disabled, the status line is released for other use. Returns current status if called without arguments.",
+  "Enable or disable the buddy status line, and toggle combined mode (shows rate-limit usage bars alongside the buddy). Returns current status if called without arguments.",
   {
     enabled: z
       .boolean()
@@ -481,33 +560,50 @@ server.tool(
       .describe(
         "true to enable, false to disable. Omit to show current status.",
       ),
+    combined: z
+      .boolean()
+      .optional()
+      .describe(
+        "true to show rate-limit usage bars alongside buddy (requires python3), false for buddy-only mode.",
+      ),
   },
-  async ({ enabled }) => {
-    if (enabled === undefined) {
+  async ({ enabled, combined }) => {
+    if (enabled === undefined && combined === undefined) {
       const cfg = loadConfig();
       const state = cfg.statusLineEnabled ? "enabled" : "disabled";
+      const mode = cfg.useCombinedStatus ? "combined (with rate-limit bars)" : "basic (buddy only)";
       return {
         content: [
           {
             type: "text",
-            text: `Status line: ${state}\nUse /buddy statusline on or /buddy statusline off to change.\nRestart Claude Code after enabling for it to take effect.`,
+            text: `Status line: ${state}\nMode: ${mode}\nUse /buddy statusline on|off to toggle, /buddy statusline combined to add rate-limit bars.\nRestart Claude Code after changes for them to take effect.`,
           },
         ],
       };
     }
-    saveConfig({ statusLineEnabled: enabled });
 
-    if (enabled) {
+    if (combined !== undefined) {
+      saveConfig({ useCombinedStatus: combined });
+    }
+
+    if (enabled !== undefined) {
+      saveConfig({ statusLineEnabled: enabled });
+    }
+
+    const cfg = loadConfig();
+
+    if (cfg.statusLineEnabled) {
       const pluginRoot = resolve(dirname(import.meta.dir));
-      const statusScript = join(pluginRoot, "statusline", "buddy-status.sh");
+      const scriptName = cfg.useCombinedStatus ? "combined-status.sh" : "buddy-status.sh";
+      const statusScript = join(pluginRoot, "statusline", scriptName);
       setBuddyStatusLine(statusScript);
       return {
         content: [
           {
             type: "text",
             text:
-              "Status line enabled! Restart Claude Code to see your buddy in the status line.\n\n" +
-              "Note: this writes an entry to ~/.claude/settings.json that `claude plugin uninstall` does not remove. " +
+              `Status line enabled (${cfg.useCombinedStatus ? "combined" : "basic"} mode)! Restart Claude Code to apply.\n\n` +
+              `Note: this writes an entry to ${claudeSettingsPath()} that \`claude plugin uninstall\` does not remove. ` +
               "Run `/buddy uninstall` before uninstalling the plugin to clean it up.",
           },
         ],
@@ -530,17 +626,21 @@ server.tool(
 
 server.tool(
   "buddy_uninstall",
-  "Clean up claude-buddy's writes to ~/.claude/settings.json and transient session files in ~/.claude-buddy/, in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
+  "Clean up claude-buddy's writes to Claude Code's settings.json and transient session files in the buddy state dir (resolved via CLAUDE_CONFIG_DIR), in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
   {},
   async () => {
     const result = cleanupPluginState();
+
+    const settingsPath = claudeSettingsPath();
+    const stateDir = buddyStateDir();
+    const pluginsCacheDir = join(claudeConfigDir(), "plugins", "cache", "claude-buddy");
 
     const lines: string[] = [];
     lines.push("claude-buddy: settings.json cleanup complete.");
     lines.push("");
     lines.push(
       result.statusLineRemoved
-        ? "  \u2713 statusLine entry removed from ~/.claude/settings.json"
+        ? `  \u2713 statusLine entry removed from ${settingsPath}`
         : "  \u2014 no buddy statusLine was present (nothing to remove)",
     );
     if (result.foreignStatusLineKept) {
@@ -549,15 +649,15 @@ server.tool(
       );
     }
     lines.push(
-      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ~/.claude-buddy/`,
+      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ${stateDir}`,
     );
-    lines.push("  \u2014 companion data at ~/.claude-buddy/ preserved");
+    lines.push(`  \u2014 companion data at ${stateDir} preserved`);
     lines.push("");
     lines.push("Now run these commands via the Bash tool, in order:");
     lines.push("");
     lines.push("  claude plugin uninstall claude-buddy@claude-buddy");
     lines.push("  claude plugin marketplace remove claude-buddy");
-    lines.push("  rm -rf ~/.claude/plugins/cache/claude-buddy");
+    lines.push(`  rm -rf ${pluginsCacheDir}`);
     lines.push("");
     lines.push(
       "After those three commands the plugin is fully removed. Restart Claude Code to apply.",
@@ -576,6 +676,7 @@ server.tool(
   async () => {
     ensureCompanion();
     checkAndAward(activeSlot());
+    incrementEvent("achievement_views", 1);
     const card = renderAchievementsCardMarkdown();
     return { content: [{ type: "text", text: card }] };
   },
@@ -634,6 +735,12 @@ server.tool(
 
     saveActiveSlot(targetSlot);
     writeStatusState(companion, `*${companion.name} arrives*`);
+    incrementEvent("summons", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
 
     // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
     const card = renderCompanionCardMarkdown(
@@ -642,7 +749,7 @@ server.tool(
       companion.personality,
       `*${companion.name} arrives*`,
     );
-    return { content: [{ type: "text", text: card }] };
+    return { content: [{ type: "text", text: `${card}${achNotice}` }] };
   },
 );
 
@@ -666,11 +773,19 @@ server.tool(
     const targetSlot = slot ? slugify(slot) : slugify(companion.name);
     saveCompanionSlot(companion, targetSlot);
     saveActiveSlot(targetSlot);
+    incrementEvent("buddies_collected", 1);
+    incrementEvent("saves", 1);
+
+    const newAch = checkAndAward(activeSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} saved to slot "${targetSlot}".`,
+          text: `${companion.name} saved to slot "${targetSlot}".${achNotice}`,
         },
       ],
     };
@@ -686,6 +801,8 @@ server.tool(
   async () => {
     const saved = listCompanionSlots();
     const activeSlot = loadActiveSlot();
+
+    incrementEvent("lists", 1);
 
     if (saved.length === 0) {
       return {
@@ -745,9 +862,16 @@ server.tool(
     }
 
     deleteCompanionSlot(targetSlot);
+
+    incrementEvent("dismissals", 1);
+    const newAch = checkAndAward(loadActiveSlot());
+    const achNotice = newAch.length > 0
+      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
+      : "";
+
     return {
       content: [
-        { type: "text", text: `${companion.name} [${targetSlot}] dismissed.` },
+        { type: "text", text: `${companion.name} [${targetSlot}] dismissed.${achNotice}` },
       ],
     };
   },
@@ -770,7 +894,7 @@ server.tool(
     ),
   },
   async ({ species, rarity, name }) => {
-    const { randomBytes } = require("crypto") as typeof import("crypto");
+    const { randomBytes } = await import("crypto");
 
     const maxAttempts =
       rarity === "legendary" ? 5_000_000 :
@@ -807,7 +931,7 @@ server.tool(
     const companion: Companion = {
       bones,
       name: buddyName,
-      personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
+      personality: generatePersonality(bones, userId),
       hatchedAt: Date.now(),
       userId,
     };

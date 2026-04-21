@@ -4,7 +4,12 @@
 
 import { readFileSync, writeFileSync, existsSync, rmSync, readdirSync } from "fs";
 import { join } from "path";
-import { homedir } from "os";
+import {
+  buddyStateDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+} from "../server/path.ts";
 
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
@@ -13,10 +18,10 @@ const NC = "\x1b[0m";
 function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 
-const CLAUDE_DIR = join(homedir(), ".claude");
-const SETTINGS_FILE = join(CLAUDE_DIR, "settings.json");
-const SKILL_DIR = join(CLAUDE_DIR, "skills", "buddy");
-const STATE_DIR = join(homedir(), ".claude-buddy");
+const SETTINGS_FILE = claudeSettingsPath();
+const SKILL_DIR = claudeSkillDir("buddy");
+const STATE_DIR = buddyStateDir();
+const CLAUDE_JSON_PATH = claudeUserConfigPath();
 
 console.log("\nclaude-buddy uninstall\n");
 
@@ -47,18 +52,17 @@ try {
   ok("Popup stopped");
 } catch { /* not in tmux or no popup */ }
 
-// Remove MCP server from ~/.claude.json
+// Remove MCP server from Claude's user config
 try {
-  const claudeJsonPath = join(homedir(), ".claude.json");
-  const claudeJson = JSON.parse(readFileSync(claudeJsonPath, "utf8"));
+  const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
   if (claudeJson.mcpServers?.["claude-buddy"]) {
     delete claudeJson.mcpServers["claude-buddy"];
     if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
-    writeFileSync(claudeJsonPath, JSON.stringify(claudeJson, null, 2));
-    ok("MCP server removed from ~/.claude.json");
+    writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
+    ok(`MCP server removed from ${CLAUDE_JSON_PATH}`);
   }
 } catch {
-  warn("Could not update ~/.claude.json");
+  warn(`Could not update ${CLAUDE_JSON_PATH}`);
 }
 
 // Remove hooks and statusline from settings.json
@@ -102,7 +106,9 @@ if (existsSync(SKILL_DIR)) {
   warn("Skill not found (already removed)");
 }
 
-// Keep state dir (companion data) — user might want it back
+// Keep state dir (companion data) — user might want it back.
+// This is profile-scoped when CLAUDE_CONFIG_DIR is set, so other
+// profiles' buddies are unaffected.
 if (existsSync(STATE_DIR)) {
   warn(`Companion data kept at ${STATE_DIR} — delete manually if not needed`);
 }

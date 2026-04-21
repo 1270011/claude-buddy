@@ -17,7 +17,13 @@ import {
 } from "node:fs";
 import { execSync } from "node:child_process";
 import { join, resolve, dirname } from "node:path";
-import { homedir } from "node:os";
+import {
+  buddyStateDir,
+  claudeConfigDir,
+  claudeSettingsPath,
+  claudeSkillDir,
+  claudeUserConfigPath,
+} from "../server/path.ts";
 import {
   listCompanionSlots, loadActiveSlot, saveActiveSlot,
   loadConfig, saveConfig, writeStatusState, loadReaction,
@@ -48,7 +54,11 @@ const RARITY_COLOR: Record<string, string> = {
 };
 
 
-const HOME = homedir();
+const CLAUDE_DIR = claudeConfigDir();
+const CLAUDE_JSON = claudeUserConfigPath();
+const STATE_DIR = buddyStateDir();
+const SETTINGS_PATH = claudeSettingsPath();
+const SKILL_PATH = join(claudeSkillDir("buddy"), "SKILL.md");
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 
 // ─── Sidebar ────────────────────────────────────────────────────────────────
@@ -133,7 +143,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
       "skill, menagerie, status, and config.",
       "",
       "Restore is currently manual (copy from",
-      "~/.claude-buddy/backups/<ts>/ folders).",
+      `${STATE_DIR}/backups/<ts>/ folders).`,
     ],
   },
   {
@@ -296,35 +306,123 @@ const ACHIEVEMENT_PROGRESS: Record<string, { counter: keyof EventCounters; thres
   first_steps: null,
   good_boy: { counter: "pets", threshold: 10 },
   best_friend: { counter: "pets", threshold: 50 },
+  pet_overflow: { counter: "pets", threshold: 100 },
+  pet_legend: { counter: "pets", threshold: 250 },
+  pet_obsessed: { counter: "pets", threshold: 500 },
+  pet_god: { counter: "pets", threshold: 1000 },
   bug_spotter: { counter: "errors_seen", threshold: 1 },
   error_whisperer: { counter: "errors_seen", threshold: 25 },
   battle_scarred: { counter: "errors_seen", threshold: 100 },
+  error_titan: { counter: "errors_seen", threshold: 500 },
+  error_god: { counter: "errors_seen", threshold: 1000 },
+  error_apocalypse: { counter: "errors_seen", threshold: 5000 },
   test_witness: { counter: "tests_failed", threshold: 1 },
   test_veteran: { counter: "tests_failed", threshold: 50 },
+  test_survivor: { counter: "tests_failed", threshold: 200 },
+  test_masochist: { counter: "tests_failed", threshold: 500 },
+  test_immortal: { counter: "tests_failed", threshold: 1000 },
   big_mover: { counter: "large_diffs", threshold: 1 },
   refactor_machine: { counter: "large_diffs", threshold: 10 },
+  massive_mover: { counter: "large_diffs", threshold: 25 },
+  earth_mover: { counter: "large_diffs", threshold: 50 },
+  continental_drift: { counter: "large_diffs", threshold: 100 },
+  tectonic_shift: { counter: "large_diffs", threshold: 250 },
   chatterbox: { counter: "reactions_given", threshold: 100 },
+  social_butterfly: { counter: "reactions_given", threshold: 250 },
+  hypersocial: { counter: "reactions_given", threshold: 500 },
+  never_shuts_up: { counter: "reactions_given", threshold: 1000 },
+  chatterbox_elite: { counter: "reactions_given", threshold: 2500 },
+  no_off_switch: { counter: "reactions_given", threshold: 5000 },
   week_streak: { counter: "days_active", threshold: 7 },
+  two_week_streak: { counter: "days_active", threshold: 14 },
   month_streak: { counter: "days_active", threshold: 30 },
+  quarter_streak: { counter: "days_active", threshold: 90 },
+  hundred_days: { counter: "days_active", threshold: 100 },
+  year_streak: { counter: "days_active", threshold: 365 },
   power_user: { counter: "commands_run", threshold: 50 },
+  commander: { counter: "commands_run", threshold: 200 },
+  command_overlord: { counter: "commands_run", threshold: 500 },
+  command_addict: { counter: "commands_run", threshold: 1000 },
+  command_deity: { counter: "commands_run", threshold: 2500 },
   dedicated: { counter: "turns", threshold: 200 },
   thousand_turns: { counter: "turns", threshold: 1000 },
+  five_thousand_turns: { counter: "turns", threshold: 5000 },
+  ten_thousand_turns: { counter: "turns", threshold: 10000 },
+  twenty_five_k_turns: { counter: "turns", threshold: 25000 },
+  fifty_k_turns: { counter: "turns", threshold: 50000 },
+  session_regular: { counter: "sessions", threshold: 10 },
+  session_veteran: { counter: "sessions", threshold: 50 },
+  session_centurion: { counter: "sessions", threshold: 100 },
+  session_addict: { counter: "sessions", threshold: 250 },
+  session_machine: { counter: "sessions", threshold: 500 },
+  collector: { counter: "buddies_collected", threshold: 3 },
+  zookeeper: { counter: "buddies_collected", threshold: 5 },
+  menagerie: { counter: "buddies_collected", threshold: 10 },
+  buddy_hoarder: { counter: "buddies_collected", threshold: 20 },
+  buddy_tycoon: { counter: "buddies_collected", threshold: 50 },
+  identity_crisis: { counter: "renames", threshold: 1 },
+  name_chameleon: { counter: "renames", threshold: 5 },
+  serial_renamer: { counter: "renames", threshold: 10 },
+  identity_thief: { counter: "renames", threshold: 25 },
+  method_acting: { counter: "personalities_set", threshold: 1 },
+  fashionista: { counter: "personalities_set", threshold: 3 },
+  personality_crisis: { counter: "personalities_set", threshold: 10 },
+  silent_treatment: { counter: "mutes", threshold: 1 },
+  prodigal: { counter: "summons", threshold: 1 },
+  menagerie_hop: { counter: "summons", threshold: 10 },
+  menagerie_hopper: { counter: "summons", threshold: 25 },
+  summoner: { counter: "summons", threshold: 50 },
+  heartbreaker: { counter: "dismissals", threshold: 1 },
+  serial_dumper: { counter: "dismissals", threshold: 5 },
+  cold_blooded: { counter: "dismissals", threshold: 10 },
+  show_off: { counter: "shows", threshold: 10 },
+  exhibitionist: { counter: "shows", threshold: 50 },
+  help_me: { counter: "helps", threshold: 1 },
+  help_addict: { counter: "helps", threshold: 10 },
+  achievement_hunter: { counter: "achievement_views", threshold: 5 },
+  achievement_stalker: { counter: "achievement_views", threshold: 25 },
+  pack_rat: { counter: "saves", threshold: 1 },
+  compulsive_saver: { counter: "saves", threshold: 10 },
+  roster_check: { counter: "lists", threshold: 1 },
+  roster_obsessed: { counter: "lists", threshold: 10 },
+  completionist: { counter: "achievements_unlocked", threshold: ACHIEVEMENTS.length - 1 },
+  // Compound checks (multiple counters) — no single-counter progress bar.
+  on_off: null,
+  indecisive: null,
+  troubled: null,
+  disaster_zone: null,
+  apocalypse_survivor: null,
+  well_rounded: null,
+  renaissance: null,
+  big_and_broken: null,
+  collector_and_destroyer: null,
 };
 
-function AchievementsListPane({ cursor, unlockedIds, focused }: {
-  cursor: number; unlockedIds: Set<string>; focused: boolean;
+function AchievementsListPane({ cursor, unlockedIds, focused, rows }: {
+  cursor: number; unlockedIds: Set<string>; focused: boolean; rows: number;
 }) {
   const total = ACHIEVEMENTS.length;
   const done = ACHIEVEMENTS.filter(a => unlockedIds.has(a.id)).length;
+
+  // Each bordered row costs ~3 lines; header + indicators + chrome ~8.
+  const visibleCount = Math.max(3, Math.min(total, Math.floor((rows - 8) / 3)));
+  let start = cursor - Math.floor(visibleCount / 2);
+  start = Math.max(0, Math.min(start, total - visibleCount));
+  const end = Math.min(total, start + visibleCount);
+  const above = start;
+  const below = total - end;
+
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text bold color={focused ? "cyan" : "gray"}>{" 🏆 Achievements"}</Text>
       <Text dimColor>{"  "}{done}/{total} unlocked</Text>
       <Text>{""}</Text>
-      {ACHIEVEMENTS.map((a, i) => {
+      {above > 0 ? <Text dimColor>{"  ▲ "}{above}{" more"}</Text> : null}
+      {ACHIEVEMENTS.slice(start, end).map((a, i) => {
+        const absIdx = start + i;
         const isUnlocked = unlockedIds.has(a.id);
         const isHidden = a.secret && !isUnlocked;
-        const isCursor = focused && i === cursor;
+        const isCursor = focused && absIdx === cursor;
         const name = isHidden ? "???" : a.name;
         const icon = isHidden ? "🔒" : a.icon;
         return (
@@ -340,6 +438,7 @@ function AchievementsListPane({ cursor, unlockedIds, focused }: {
           </Box>
         );
       })}
+      {below > 0 ? <Text dimColor>{"  ▼ "}{below}{" more"}</Text> : null}
     </Box>
   );
 }
@@ -441,9 +540,9 @@ function runDiagnostics(): DiagCategory[] {
   // Filesystem
   const fs: DiagCheck[] = [];
   const dirs: [string, string][] = [
-    ["~/.claude/", join(HOME, ".claude")],
-    ["~/.claude.json", join(HOME, ".claude.json")],
-    ["~/.claude-buddy/", join(HOME, ".claude-buddy")],
+    [CLAUDE_DIR, CLAUDE_DIR],
+    [CLAUDE_JSON, CLAUDE_JSON],
+    [STATE_DIR, STATE_DIR],
     ["Status script", join(PROJECT_ROOT, "statusline", "buddy-status.sh")],
   ];
   for (const [label, path] of dirs) {
@@ -455,28 +554,28 @@ function runDiagnostics(): DiagCategory[] {
   // MCP & Hooks
   const mcp: DiagCheck[] = [];
   try {
-    const claudeJson = JSON.parse(readFileSync(join(HOME, ".claude.json"), "utf8"));
+    const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
     const registered = !!claudeJson?.mcpServers?.["claude-buddy"];
     mcp.push({ label: "MCP server", value: registered ? "registered" : "NOT registered", status: registered ? "ok" : "err" });
   } catch {
     mcp.push({ label: "MCP server", value: "cannot read config", status: "err" });
   }
   try {
-    const settings = JSON.parse(readFileSync(join(HOME, ".claude", "settings.json"), "utf8"));
+    const settings = JSON.parse(readFileSync(SETTINGS_PATH, "utf8"));
     const hookCount = Object.keys(settings.hooks ?? {}).reduce((n: number, k: string) => n + (settings.hooks[k]?.length ?? 0), 0);
     mcp.push({ label: "Hooks", value: `${hookCount} entries`, status: hookCount > 0 ? "ok" : "warn" });
     mcp.push({ label: "Status line", value: settings.statusLine ? "configured" : "not set", status: settings.statusLine ? "ok" : "warn" });
   } catch {
     mcp.push({ label: "Settings", value: "cannot read", status: "err" });
   }
-  const skillPath = join(HOME, ".claude", "skills", "buddy", "SKILL.md");
+  const skillPath = SKILL_PATH;
   mcp.push({ label: "Skill", value: existsSync(skillPath) ? "installed" : "MISSING", status: existsSync(skillPath) ? "ok" : "err" });
   categories.push({ name: "Integration", icon: "🔌", checks: mcp });
 
   // Buddy state
   const state: DiagCheck[] = [];
   try {
-    const menagerie = JSON.parse(readFileSync(join(HOME, ".claude-buddy", "menagerie.json"), "utf8"));
+    const menagerie = JSON.parse(readFileSync(join(STATE_DIR, "menagerie.json"), "utf8"));
     const slots = Object.keys(menagerie.companions ?? {});
     state.push({ label: "Menagerie", value: `${slots.length} buddy(s)`, status: slots.length > 0 ? "ok" : "warn" });
     state.push({ label: "Active slot", value: menagerie.active ?? "(none)", status: menagerie.active ? "ok" : "warn" });
@@ -487,7 +586,7 @@ function runDiagnostics(): DiagCategory[] {
   } catch {
     state.push({ label: "Menagerie", value: "not found", status: "warn" });
   }
-  const statusJson = join(HOME, ".claude-buddy", "status.json");
+  const statusJson = join(STATE_DIR, "status.json");
   if (existsSync(statusJson)) {
     try {
       const s = JSON.parse(readFileSync(statusJson, "utf8"));
@@ -557,7 +656,7 @@ function DoctorDetailPane({ category }: { category: DiagCategory }) {
 
 // ─── Backup: data ───────────────────────────────────────────────────────────
 
-const BACKUPS_DIR = join(HOME, ".claude-buddy", "backups");
+const BACKUPS_DIR = join(STATE_DIR, "backups");
 
 interface BackupEntry { ts: string; fileCount: number }
 
@@ -588,10 +687,10 @@ function createBackup(): string {
   const manifest: { timestamp: string; files: string[] } = { timestamp: ts, files: [] };
   const tryRead = (p: string) => { try { return readFileSync(p, "utf8"); } catch { return null; } };
 
-  const settingsPath = join(HOME, ".claude", "settings.json");
+  const settingsPath = SETTINGS_PATH;
   if (existsSync(settingsPath)) { writeFileSync(join(dir, "settings.json"), readFileSync(settingsPath)); manifest.files.push("settings.json"); }
 
-  const claudeJsonRaw = tryRead(join(HOME, ".claude.json"));
+  const claudeJsonRaw = tryRead(CLAUDE_JSON);
   if (claudeJsonRaw) {
     try {
       const mcp = JSON.parse(claudeJsonRaw).mcpServers?.["claude-buddy"];
@@ -599,13 +698,13 @@ function createBackup(): string {
     } catch {}
   }
 
-  const skillPath = join(HOME, ".claude", "skills", "buddy", "SKILL.md");
+  const skillPath = SKILL_PATH;
   if (existsSync(skillPath)) { copyFileSync(skillPath, join(dir, "SKILL.md")); manifest.files.push("SKILL.md"); }
 
   const stateDir = join(dir, "claude-buddy");
   mkdirSync(stateDir, { recursive: true });
   for (const f of ["menagerie.json", "status.json", "config.json"]) {
-    const src = join(HOME, ".claude-buddy", f);
+    const src = join(STATE_DIR, f);
     if (existsSync(src)) { copyFileSync(src, join(stateDir, f)); manifest.files.push(`claude-buddy/${f}`); }
   }
 
@@ -793,7 +892,7 @@ function runUninstall(keepState: boolean): InstallResult {
   }
   if (!keepState) {
     try {
-      const stateDir = join(HOME, ".claude-buddy");
+      const stateDir = STATE_DIR;
       if (existsSync(stateDir)) {
         rmSync(stateDir, { recursive: true, force: true });
         ok.push("State directory deleted");
@@ -802,7 +901,7 @@ function runUninstall(keepState: boolean): InstallResult {
       warn.push(`state cleanup: ${e?.message ?? "failed"}`);
     }
   } else {
-    ok.push("State preserved at ~/.claude-buddy/");
+    ok.push(`State preserved at ${STATE_DIR}`);
   }
   return { ok, warn };
 }
@@ -850,7 +949,7 @@ function EnableDetailPane({ result, running }: {
       <Text bold color="green">🔄 Re-Enable claude-buddy</Text>
       <Text>{""}</Text>
       <Text dimColor>This will register:</Text>
-      <Text>{"  "}• MCP server in ~/.claude.json</Text>
+      <Text>{"  "}• MCP server in {CLAUDE_JSON}</Text>
       <Text>{"  "}• Hooks in settings.json</Text>
       <Text>{"  "}• Status line</Text>
       <Text>{"  "}• Skill files</Text>
@@ -909,7 +1008,7 @@ function UninstallDetailPane({ stage, typed, result, keepState }: {
       <Text>{"  "}• MCP server registration</Text>
       <Text>{"  "}• Hooks & status line</Text>
       <Text>{"  "}• Skill files</Text>
-      <Text>{"  "}• Optional: ~/.claude-buddy/ (all buddies + backups!)</Text>
+      <Text>{"  "}• Optional: {STATE_DIR} (all buddies + backups!)</Text>
       <Text>{""}</Text>
       <Text dimColor>An auto-backup will be created before uninstall.</Text>
       <Text>{""}</Text>
@@ -936,7 +1035,7 @@ function DisableConfirmPane({ result, confirming }: {
         {result.warn.map((m, i) => <Text key={i} color="yellow">{" ⚠ "}{m}</Text>)}
         <Text>{""}</Text>
         <Text dimColor>Companion data preserved at</Text>
-        <Text dimColor>~/.claude-buddy/</Text>
+        <Text dimColor>{STATE_DIR}</Text>
         <Text>{""}</Text>
         <Text dimColor>Restart Claude Code to apply.</Text>
         <Text dimColor>Re-enable: bun run install-buddy</Text>
@@ -949,7 +1048,7 @@ function DisableConfirmPane({ result, confirming }: {
       <Text bold color="red">☠ Disable claude-buddy</Text>
       <Text>{""}</Text>
       <Text dimColor>This will remove:</Text>
-      <Text>{"  "}• MCP server from ~/.claude.json</Text>
+      <Text>{"  "}• MCP server from {CLAUDE_JSON}</Text>
       <Text>{"  "}• Hooks from settings.json</Text>
       <Text>{"  "}• Status line configuration</Text>
       <Text>{""}</Text>
@@ -971,8 +1070,8 @@ function DisableConfirmPane({ result, confirming }: {
 
 // ─── Disable helpers ────────────────────────────────────────────────────────
 
-const CLAUDE_JSON_PATH = join(HOME, ".claude.json");
-const CLAUDE_SETTINGS_PATH = join(HOME, ".claude", "settings.json");
+const CLAUDE_JSON_PATH = CLAUDE_JSON;
+const CLAUDE_SETTINGS_PATH = SETTINGS_PATH;
 
 interface DisableResult { ok: string[]; warn: string[] }
 
@@ -991,7 +1090,7 @@ function disableBuddy(): DisableResult {
       warn.push("MCP was not registered");
     }
   } catch {
-    warn.push("Could not update ~/.claude.json");
+    warn.push(`Could not update ${CLAUDE_JSON}`);
   }
 
   try {
@@ -2090,7 +2189,7 @@ function App() {
       middlePane = <SettingsListPane cursor={settCursor} config={config} focused={focus === "list"} />;
       rightPane = <SettingDetailPane settingIndex={settCursor} config={config} editing={focus === "edit"} numInput={numInput} optCursor={optCursor} />;
     } else if (section === "achievements") {
-      middlePane = <AchievementsListPane cursor={listCursor} unlockedIds={unlockedIds} focused={focus === "list"} />;
+      middlePane = <AchievementsListPane cursor={listCursor} unlockedIds={unlockedIds} focused={focus === "list"} rows={rows} />;
       if (ACHIEVEMENTS[listCursor]) {
         rightPane = <AchievementDetailPane
           achievement={ACHIEVEMENTS[listCursor]}

@@ -48,7 +48,7 @@
 </td>
 <td align="center" width="25%">
 <h3>🎨</h3>
-<b>18 Species</b><br>
+<b>19 Species</b><br>
 <sub>From ducks to dragons — each with animated ASCII art and rarity colors.</sub>
 </td>
 <td align="center" width="25%">
@@ -93,6 +93,17 @@ Then restart Claude Code and type `/buddy`. That's it.
 <br>
 <sub>💡 Need help? → `bun run help` or `claude-buddy help` (if linked) in terminal · `/buddy help` in Claude Code</sub>
 
+### Multiple Claude profiles?
+
+If you run Claude Code with `CLAUDE_CONFIG_DIR` set (e.g. separate work and personal accounts), pass the same env var to install so buddy lands in the active profile and gets its own menagerie:
+
+```bash
+CLAUDE_CONFIG_DIR=~/.claude-personal bun run install-buddy
+CLAUDE_CONFIG_DIR=~/.claude-personal bun run uninstall
+```
+
+The installer prints `Target profile: <path>` at the top so you can see at a glance which profile you're targeting. Each profile gets its own MCP entry, skill, hooks, status line, and `$CLAUDE_CONFIG_DIR/buddy-state/` menagerie — installs in one profile don't touch another. With `CLAUDE_CONFIG_DIR` unset, behaviour is identical to single-profile (`~/.claude/`, `~/.claude-buddy/`).
+
 <br>
 
 ---
@@ -102,11 +113,11 @@ Then restart Claude Code and type `/buddy`. That's it.
 <!-- ============================================================ -->
 
 <details>
-<summary><b>🐙 &nbsp; Meet the 18 Species</b></summary>
+<summary><b>🐙 &nbsp; Meet the 19 Species</b></summary>
 
 <br>
 
-Every buddy is uniquely generated from your Claude Code account — same species, same stats, same personality every time. 18 species, each with 3 idle animation frames + a blink.
+Every buddy is uniquely generated from your Claude Code account — same species, same stats, same personality every time. 19 species, each with 3 idle animation frames + a blink.
 
 <!-- Later replace with: docs/species-grid.png -->
 <p align="center">
@@ -235,6 +246,11 @@ claude-buddy/
 | `/buddy style [classic\|round]` | Bubble border style (tmux only) |
 | `/buddy position [top\|left]` | Bubble position (tmux only) |
 | `/buddy rarity [on\|off]` | Show or hide stars + rarity line (tmux only) |
+| `/buddy width [10-60]` | Set bubble text width in chars (tmux only) |
+| `/buddy margin [0-20]` | Set right-side margin (tmux only) |
+| `/buddy statusline [on\|off]` | Enable or disable buddy in the status line |
+| `/buddy statusline combined` | Show rate-limit usage bars alongside buddy (needs python3) |
+| `/buddy statusline basic` | Switch back to buddy-only status line |
 | `/buddy help` | Show all buddy commands |
 
 ### CLI
@@ -371,7 +387,7 @@ bun run cli/uninstall.ts    # full clean removal
 - [ ] **Mood system** — shifts based on code quality, tests, time of day
 - [x] **Achievement badges** — "1000 lines reviewed", "week streak", etc. 💜[ndcorder](https://github.com/ndcorder)💜
 - [ ] **Light theme colors** — auto-detect and match light theme RGB
-- [ ] **New species + community art** — submit your own designs
+- [x] **New species + community art** — wyvern added 💜[@jpmalone0](https://github.com/jpmalone0)💜 (community contributions welcome)
 - [ ] **`npx claude-buddy`** — one-command install without cloning
 
 <br>

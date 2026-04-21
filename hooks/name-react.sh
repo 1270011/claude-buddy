@@ -3,7 +3,10 @@
 # Detects the buddy's name in the user's message → status line reaction.
 # No cooldown — name mentions are intentional.
 
-STATE_DIR="$HOME/.claude-buddy"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE_DIR="$BUDDY_STATE_DIR"
 STATUS_FILE="$STATE_DIR/status.json"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"

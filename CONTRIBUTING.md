@@ -34,6 +34,7 @@ Restart Claude Code and type `/buddy` to verify everything works.
 - [ ] Commit messages are in English and prefixed (`feat:`, `fix:`, `chore:`, `docs:`, `ci:`, `refactor:`, `test:`)
 - [ ] Branch pushed to your fork, PR opened against `main`
 - [ ] CI is green on the PR
+- [ ] If you added new `/buddy` subcommands or CLI commands, update the **Commands Reference** section in `README.md`
 
 If any of these feel unclear, the sections below explain them step by step.
 
@@ -53,6 +54,8 @@ If any of these feel unclear, the sections below explain them step by step.
 
 ### New Species Art
 Species art lives in `server/art.ts` and `statusline/buddy-status.sh`. Each species has 3 animation frames of 4-5 lines, ~12 chars wide. Use `{E}` as the eye placeholder.
+
+> **Note on tests:** Adding a new species changes the deterministic generation output (golden snapshot tests will fail because the species array length affects modulo distribution). Don't worry about fixing these yourself — the maintainers will update the golden snapshots when merging. This will be automated in a future update.
 
 ### New Reactions
 Reaction templates are in `server/reactions.ts`. Species-specific reactions go in `SPECIES_REACTIONS`, general ones in `REACTIONS`.

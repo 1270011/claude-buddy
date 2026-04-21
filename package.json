@@ -1,6 +1,6 @@
 {
   "name": "claude-buddy",
-  "version": "0.3.0",
+  "version": "0.5.2",
   "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
   "type": "module",
   "bin": {
@@ -24,7 +24,8 @@
     "buddy-shell": "npx tsx cli/buddy-shell.ts",
     "tui": "bun run cli/tui.tsx",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts"
   },
   "files": [
     "server/",

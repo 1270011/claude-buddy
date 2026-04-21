@@ -20,8 +20,9 @@ import {
   loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
-  generateBones, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS,
-  type Species, type Rarity, type StatName, type BuddyBones, type Companion,
+  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+  type Species, type Rarity, type StatName, type Eye, type Hat,
+  type BuddyBones, type Companion,
 } from "../server/engine.ts";
 import { renderCompanionCard } from "../server/art.ts";
 import { randomBytes } from "crypto";
@@ -79,32 +80,46 @@ function rpad(s: string, w: number): string {
 
 // ─── Option lists ─────────────────────────────────────────────────────────────
 
-const SP_OPTS = ["any", ...SPECIES]    as const;
-const RA_OPTS = ["any", ...RARITIES]   as const;
-const SH_OPTS = ["any", "yes", "no"]   as const;
-const ST_OPTS = ["any", ...STAT_NAMES] as const;
+const SP_OPTS  = ["any", ...SPECIES]    as const;
+const RA_OPTS  = ["any", ...RARITIES]   as const;
+const SH_OPTS  = ["any", "yes", "no"]   as const;
+const ST_OPTS  = ["any", ...STAT_NAMES] as const;
+const EY_OPTS  = ["any", ...EYES]       as const;
+const HA_OPTS  = ["any", ...HATS]       as const;
+const MIN_OPTS = ["any", "5", "10", "15", "20", "25", "30", "35", "40", "45",
+                  "50", "55", "60", "65", "70", "75", "80", "85", "90", "95"] as const;
+const AVG_OPTS = MIN_OPTS;
 
 const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
-  { label: "Species", opts: SP_OPTS },
-  { label: "Rarity ", opts: RA_OPTS },
-  { label: "Shiny  ", opts: SH_OPTS },
-  { label: "Peak   ", opts: ST_OPTS },
-  { label: "Dump   ", opts: ST_OPTS },
+  { label: "Species", opts: SP_OPTS  },
+  { label: "Rarity ", opts: RA_OPTS  },
+  { label: "Shiny  ", opts: SH_OPTS  },
+  { label: "Peak   ", opts: ST_OPTS  },
+  { label: "Dump   ", opts: ST_OPTS  },
+  { label: "Eye    ", opts: EY_OPTS  },
+  { label: "Hat    ", opts: HA_OPTS  },
+  { label: "Min avg", opts: AVG_OPTS },
+  { label: "Min DBG", opts: MIN_OPTS },
+  { label: "Min PAT", opts: MIN_OPTS },
+  { label: "Min CHA", opts: MIN_OPTS },
+  { label: "Min WIS", opts: MIN_OPTS },
+  { label: "Min SNK", opts: MIN_OPTS },
 ];
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-type Mode = "saved" | "criteria" | "results" | "naming";
+type Mode = "saved" | "criteria" | "searching" | "results" | "naming";
 interface SlotEntry   { slot: string; companion: Companion; }
 interface BuddyResult { userId: string; bones: BuddyBones; }
 
 interface State {
   mode:          Mode;
+  searching:     boolean;
   savedSlots:    SlotEntry[];
   savedCursor:   number;
   activeSlot:    string;
   criteriaFocus: number;
-  ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx]
+  ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
   results:       BuddyResult[];
   resultCursor:  number;
   searchStatus:  string;
@@ -116,12 +131,13 @@ interface State {
 function fresh(): State {
   return {
     mode:          "saved",
+    searching:     false,
     savedSlots:    listCompanionSlots(),
     savedCursor:   0,
     activeSlot:    loadActiveSlot(),
     criteriaFocus: 0,
-    // Default criteria: legendary, any species
-    ci: [0, RA_OPTS.indexOf("legendary"), 0, 0, 0],
+    // Default criteria: legendary, any species/shiny/peak/dump/eye/hat/avg/stats
+    ci: [0, RA_OPTS.indexOf("legendary"), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     results:       [],
     resultCursor:  0,
     searchStatus:  "",
@@ -185,6 +201,16 @@ function criteriaPane(s: State): string[] {
   return lines;
 }
 
+function searchingPane(s: State): string[] {
+  const lines: string[] = [];
+  lines.push(`${B}  Searching...${N}`);
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  lines.push(`  ${YL}${s.searchStatus || "starting..."}${N}`);
+  lines.push(`  ${GR}any key to stop${N}`);
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  return lines;
+}
+
 function resultsPane(s: State): string[] {
   const lines: string[] = [];
   lines.push(`${B}  Results${N}  ${GR}${s.results.length} found${N}`);
@@ -236,14 +262,14 @@ function previewPane(s: State): string[] {
     const r = s.results[s.resultCursor];
     if (r) c = {
       bones: r.bones, name: "???",
-      personality: `A ${r.bones.rarity} ${r.bones.species}`,
+      personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
     };
   } else if (s.mode === "naming" && s.pendingResult) {
     const r = s.pendingResult;
     c = {
       bones: r.bones, name: s.nameInput || "???",
-      personality: `A ${r.bones.rarity} ${r.bones.species} who watches code with quiet intensity.`,
+      personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
     };
   }
@@ -261,9 +287,10 @@ function drawScreen(s: State): void {
   const cols = Math.max(80, process.stdout.columns || 80);
   const rows = Math.max(20, process.stdout.rows    || 24);
 
-  const leftLines  = s.mode === "saved"    ? savedPane(s)
-                   : s.mode === "criteria" ? criteriaPane(s)
-                   : s.mode === "results"  ? resultsPane(s)
+  const leftLines  = s.mode === "saved"      ? savedPane(s)
+                   : s.mode === "criteria"   ? criteriaPane(s)
+                   : s.mode === "searching"  ? searchingPane(s)
+                   : s.mode === "results"    ? resultsPane(s)
                    : namingPane(s);
   const rightLines = previewPane(s);
   const contentH   = rows - 2;
@@ -284,10 +311,11 @@ function drawScreen(s: State): void {
 
   // Footer — mode-specific help
   const helpText =
-    s.mode === "saved"    ? "↑↓ navigate  enter summon  r random  s search  q quit" :
-    s.mode === "criteria" ? "↑↓ field  ←→ value  enter search  esc back" :
-    s.mode === "results"  ? "↑↓ navigate  enter name+save  esc back  q quit" :
-    s.mode === "naming"   ? "type name  enter save  esc cancel" : "";
+    s.mode === "saved"     ? "↑↓ navigate  enter summon  r random  s search  q quit" :
+    s.mode === "criteria"  ? "↑↓ field  ←→ value  enter search  esc back" :
+    s.mode === "searching" ? "any key to stop and show results so far" :
+    s.mode === "results"   ? "↑↓ navigate  enter name+save  esc back  q quit" :
+    s.mode === "naming"    ? "type name  enter save  esc cancel" : "";
   out += `${GR}─${N} ${GR}${helpText}${N} ${GR}${"─".repeat(Math.max(0, cols - helpText.length - 4))}${N}`;
 
   // Message overlay on last line
@@ -300,13 +328,26 @@ function drawScreen(s: State): void {
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 
-function runSearch(s: State): void {
-  const wantSp    = SP_OPTS[s.ci[0]] !== "any" ? SP_OPTS[s.ci[0]] as Species  : null;
-  const wantRa    = RA_OPTS[s.ci[1]] !== "any" ? RA_OPTS[s.ci[1]] as Rarity   : null;
-  const wantShiny = SH_OPTS[s.ci[2]] === "yes" ? true
-                  : SH_OPTS[s.ci[2]] === "no"  ? false : null;
-  const wantPeak  = ST_OPTS[s.ci[3]] !== "any" ? ST_OPTS[s.ci[3]] as StatName : null;
-  const wantDump  = ST_OPTS[s.ci[4]] !== "any" ? ST_OPTS[s.ci[4]] as StatName : null;
+function avgStat(bones: BuddyBones): number {
+  const vals = Object.values(bones.stats) as number[];
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+async function runSearch(s: State): Promise<void> {
+  const wantSp    = SP_OPTS[s.ci[0]]  !== "any" ? SP_OPTS[s.ci[0]]  as Species  : null;
+  const wantRa    = RA_OPTS[s.ci[1]]  !== "any" ? RA_OPTS[s.ci[1]]  as Rarity   : null;
+  const wantShiny = SH_OPTS[s.ci[2]] === "yes"  ? true
+                  : SH_OPTS[s.ci[2]] === "no"   ? false : null;
+  const wantPeak  = ST_OPTS[s.ci[3]]  !== "any" ? ST_OPTS[s.ci[3]]  as StatName : null;
+  const wantDump  = ST_OPTS[s.ci[4]]  !== "any" ? ST_OPTS[s.ci[4]]  as StatName : null;
+  const wantEye   = EY_OPTS[s.ci[5]]  !== "any" ? EY_OPTS[s.ci[5]]  as Eye      : null;
+  const wantHat   = HA_OPTS[s.ci[6]]  !== "any" ? HA_OPTS[s.ci[6]]  as Hat      : null;
+  const minAvg    = AVG_OPTS[s.ci[7]] !== "any" ? Number(AVG_OPTS[s.ci[7]])      : null;
+  const minDBG    = MIN_OPTS[s.ci[8]]  !== "any" ? Number(MIN_OPTS[s.ci[8]])     : null;
+  const minPAT    = MIN_OPTS[s.ci[9]]  !== "any" ? Number(MIN_OPTS[s.ci[9]])     : null;
+  const minCHA    = MIN_OPTS[s.ci[10]] !== "any" ? Number(MIN_OPTS[s.ci[10]])    : null;
+  const minWIS    = MIN_OPTS[s.ci[11]] !== "any" ? Number(MIN_OPTS[s.ci[11]])    : null;
+  const minSNK    = MIN_OPTS[s.ci[12]] !== "any" ? Number(MIN_OPTS[s.ci[12]])    : null;
 
   // Scale attempt budget to rarity difficulty
   const maxAttempts =
@@ -315,32 +356,47 @@ function runSearch(s: State): void {
     wantRa === "rare"      ?  20_000_000 : 10_000_000;
 
   const results: BuddyResult[] = [];
-  const progressRow = (process.stdout.rows || 24) - 1;
+  const YIELD_EVERY    = 5_000_000;
+  const PROGRESS_EVERY = 1_000_000;
 
   for (let i = 0; i < maxAttempts && results.length < 20; i++) {
-    if (i > 0 && i % 1_000_000 === 0) {
-      s.searchStatus = `${(i / 1e6).toFixed(0)}M checked — ${results.length} found`;
-      process.stdout.write(
-        `\x1b[${progressRow};1H  ${YL}${s.searchStatus}${N}   \x1b[K`,
-      );
+    if (!s.searching) break;
+
+    if (i > 0 && i % YIELD_EVERY === 0) {
+      await new Promise<void>(resolve => setImmediate(resolve));
+    }
+
+    if (i > 0 && i % PROGRESS_EVERY === 0) {
+      s.searchStatus = `${(i / 1e6).toFixed(1)}M checked — ${results.length} found`;
+      drawScreen(s);
     }
 
     const userId = randomBytes(16).toString("hex");
     const bones  = generateBones(userId);
 
-    if (wantSp    !== null && bones.species !== wantSp)    continue;
-    if (wantRa    !== null && bones.rarity  !== wantRa)    continue;
-    if (wantShiny !== null && bones.shiny   !== wantShiny) continue;
-    if (wantPeak  !== null && bones.peak    !== wantPeak)  continue;
-    if (wantDump  !== null && bones.dump    !== wantDump)  continue;
+    if (wantSp    !== null && bones.species !== wantSp)              continue;
+    if (wantRa    !== null && bones.rarity  !== wantRa)              continue;
+    if (wantShiny !== null && bones.shiny   !== wantShiny)           continue;
+    if (wantPeak  !== null && bones.peak    !== wantPeak)            continue;
+    if (wantDump  !== null && bones.dump    !== wantDump)            continue;
+    if (wantEye   !== null && bones.eye     !== wantEye)             continue;
+    if (wantHat   !== null && bones.hat     !== wantHat)             continue;
+    if (minAvg    !== null && avgStat(bones) < minAvg)               continue;
+    if (minDBG    !== null && bones.stats.DEBUGGING < minDBG)        continue;
+    if (minPAT    !== null && bones.stats.PATIENCE  < minPAT)        continue;
+    if (minCHA    !== null && bones.stats.CHAOS     < minCHA)        continue;
+    if (minWIS    !== null && bones.stats.WISDOM    < minWIS)        continue;
+    if (minSNK    !== null && bones.stats.SNARK     < minSNK)        continue;
 
     results.push({ userId, bones });
   }
 
+  s.searching    = false;
   s.searchStatus = `${results.length} found`;
   s.results      = results;
   s.resultCursor = 0;
   s.mode         = "results";
+  drawScreen(s);
 }
 
 // ─── Key handlers ─────────────────────────────────────────────────────────────
@@ -367,7 +423,7 @@ function onKey(key: string, s: State): boolean {
         const r    = s.pendingResult!;
         const companion: Companion = {
           bones: r.bones, name,
-          personality: `A ${r.bones.rarity} ${r.bones.species} who watches code with quiet intensity.`,
+          personality: generatePersonality(r.bones, r.userId),
           hatchedAt: Date.now(), userId: r.userId,
         };
         saveCompanionSlot(companion, slot);
@@ -422,10 +478,17 @@ function onKey(key: string, s: State): boolean {
         const len = CRITERIA_ROWS[s.criteriaFocus].opts.length;
         s.ci[s.criteriaFocus] = (s.ci[s.criteriaFocus] - 1 + len) % len;
       } else if (key === "\r" || key === "\n") {
-        s.searchStatus = "Starting search...";
+        s.mode         = "searching";
+        s.searching    = true;
+        s.searchStatus = "starting...";
         drawScreen(s);
-        runSearch(s);
+        runSearch(s);  // fire-and-forget async; updates state and redraws when done
       }
+      break;
+    }
+
+    case "searching": {
+      s.searching = false;  // any key stops; runSearch will drain and switch to results
       break;
     }
 
