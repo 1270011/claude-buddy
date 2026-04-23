@@ -369,6 +369,7 @@ server.tool(
       "  /buddy margin     Set right-side margin in chars (0-20, tmux only)",
       "  /buddy rainbow    Show or set shiny gradient colors (hex, e.g. #ff0000)",
       "  /buddy statusline Enable or disable buddy in the status line",
+      "  /buddy weather    Show current weather + buddy reaction (optional: city name)",
       "",
       "CLI:",
       "  bun run help            Show full CLI help",
@@ -1023,6 +1024,124 @@ server.resource(
         },
       ],
     };
+  },
+);
+
+// ─── Tool: buddy_weather ─────────────────────────────────────────────────────
+
+const WMO_CONDITION: Record<number, { label: string; emoji: string; reason: "weather-sunny" | "weather-cloudy" | "weather-rain" | "weather-snow" | "weather-storm" | "weather-fog" | "weather-extreme" }> = {
+  0:  { label: "Clear sky",           emoji: "☀️",  reason: "weather-sunny"   },
+  1:  { label: "Mainly clear",        emoji: "🌤️", reason: "weather-sunny"   },
+  2:  { label: "Partly cloudy",       emoji: "⛅",  reason: "weather-cloudy"  },
+  3:  { label: "Overcast",            emoji: "☁️",  reason: "weather-cloudy"  },
+  45: { label: "Foggy",               emoji: "🌫️", reason: "weather-fog"     },
+  48: { label: "Icy fog",             emoji: "🌫️", reason: "weather-fog"     },
+  51: { label: "Light drizzle",       emoji: "🌦️", reason: "weather-rain"    },
+  53: { label: "Drizzle",             emoji: "🌦️", reason: "weather-rain"    },
+  55: { label: "Heavy drizzle",       emoji: "🌧️", reason: "weather-rain"    },
+  61: { label: "Light rain",          emoji: "🌧️", reason: "weather-rain"    },
+  63: { label: "Rain",                emoji: "🌧️", reason: "weather-rain"    },
+  65: { label: "Heavy rain",          emoji: "🌧️", reason: "weather-rain"    },
+  71: { label: "Light snow",          emoji: "🌨️", reason: "weather-snow"    },
+  73: { label: "Snow",                emoji: "❄️",  reason: "weather-snow"    },
+  75: { label: "Heavy snow",          emoji: "❄️",  reason: "weather-snow"    },
+  77: { label: "Snow grains",         emoji: "🌨️", reason: "weather-snow"    },
+  80: { label: "Light showers",       emoji: "🌦️", reason: "weather-rain"    },
+  81: { label: "Showers",             emoji: "🌧️", reason: "weather-rain"    },
+  82: { label: "Heavy showers",       emoji: "⛈️",  reason: "weather-rain"    },
+  85: { label: "Snow showers",        emoji: "🌨️", reason: "weather-snow"    },
+  86: { label: "Heavy snow showers",  emoji: "❄️",  reason: "weather-snow"    },
+  95: { label: "Thunderstorm",        emoji: "⛈️",  reason: "weather-storm"   },
+  96: { label: "Thunderstorm w/ hail",emoji: "⛈️",  reason: "weather-storm"   },
+  99: { label: "Severe thunderstorm", emoji: "🌪️", reason: "weather-extreme"  },
+};
+
+function resolveWmoCondition(code: number) {
+  return WMO_CONDITION[code] ?? { label: `Condition ${code}`, emoji: "🌡️", reason: "weather-cloudy" as const };
+}
+
+server.tool(
+  "buddy_weather",
+  "Show current weather for a location, with your buddy's in-character reaction",
+  {
+    location: z.string().min(1).max(100).optional().describe("City name or region (e.g. 'Seoul', 'New York'). Omit for automatic detection via IP."),
+    unit: z.enum(["celsius", "fahrenheit"]).optional().describe("Temperature unit (default: celsius)"),
+  },
+  async ({ location, unit = "celsius" }) => {
+    const companion = ensureCompanion();
+
+    let lat: number;
+    let lon: number;
+    let displayName: string;
+
+    try {
+      if (location) {
+        const geoRes = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`,
+        );
+        if (!geoRes.ok) throw new Error(`Geocoding failed: ${geoRes.status}`);
+        const geoData = await geoRes.json() as { results?: { latitude: number; longitude: number; name: string; country: string }[] };
+        const place = geoData.results?.[0];
+        if (!place) {
+          return { content: [{ type: "text", text: `*tilts head* couldn't find "${location}" on the map.` }] };
+        }
+        lat = place.latitude;
+        lon = place.longitude;
+        displayName = `${place.name}, ${place.country}`;
+      } else {
+        const ipRes = await fetch("https://ipapi.co/json/");
+        if (!ipRes.ok) throw new Error(`IP geolocation failed: ${ipRes.status}`);
+        const ipData = await ipRes.json() as { latitude?: number; longitude?: number; city?: string; country_name?: string };
+        if (!ipData.latitude || !ipData.longitude) throw new Error("No coordinates in IP response");
+        lat = ipData.latitude;
+        lon = ipData.longitude;
+        displayName = [ipData.city, ipData.country_name].filter(Boolean).join(", ") || "your location";
+      }
+
+      const weatherRes = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,weathercode,windspeed_10m,relative_humidity_2m&temperature_unit=${unit}&windspeed_unit=kmh&timezone=auto`,
+      );
+      if (!weatherRes.ok) throw new Error(`Weather API failed: ${weatherRes.status}`);
+      const weatherData = await weatherRes.json() as {
+        current: {
+          temperature_2m: number;
+          apparent_temperature: number;
+          weathercode: number;
+          windspeed_10m: number;
+          relative_humidity_2m: number;
+        };
+      };
+
+      const c = weatherData.current;
+      const condition = resolveWmoCondition(c.weathercode);
+      const tempUnit = unit === "celsius" ? "°C" : "°F";
+
+      const reaction = getReaction(
+        condition.reason,
+        companion.bones.species,
+        companion.bones.rarity,
+      );
+
+      const lines = [
+        `${condition.emoji} **${displayName}** — ${condition.label}`,
+        "",
+        `| | |`,
+        `|---|---|`,
+        `| 🌡️ Temperature | ${c.temperature_2m}${tempUnit} (feels like ${c.apparent_temperature}${tempUnit}) |`,
+        `| 💧 Humidity | ${c.relative_humidity_2m}% |`,
+        `| 💨 Wind | ${c.windspeed_10m} km/h |`,
+        "",
+        `💬 *${companion.name}*: ${reaction}`,
+      ];
+
+      incrementEvent("commands_run", 1, activeSlot());
+      checkAndAward(activeSlot());
+
+      return { content: [{ type: "text", text: lines.join("\n") }] };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { content: [{ type: "text", text: `*checks outside* couldn't fetch weather: ${msg}` }] };
+    }
   },
 );
 

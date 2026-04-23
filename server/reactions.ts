@@ -24,6 +24,8 @@ export type ReactionReason =
   | "streak-3" | "streak-5" | "streak-10" | "streak-20"
   | "new-year" | "valentines" | "pi-day" | "april-fools"
   | "halloween" | "christmas" | "new-years-eve" | "spooky-season"
+  | "weather-sunny" | "weather-cloudy" | "weather-rain" | "weather-snow"
+  | "weather-storm" | "weather-fog" | "weather-extreme"
   | "success";
 
 export interface ReactionContext {
@@ -132,6 +134,13 @@ const REACTIONS: Record<ReactionReason, string[]> = {
   "streak-5": ["FIVE ERRORS. have you considered a different approach?"],
   "streak-10": ["TEN. ERRORS. IN. A. ROW. *panics*"],
   "streak-20": ["twenty errors. *stares into the void*"],
+  "weather-sunny": ["sunshine. not that I'd know — I live in a terminal.", "*basks in virtual warmth*", "finally, a day worth coding in."],
+  "weather-cloudy": ["overcast. like your architecture.", "*grey vibes* good debugging weather.", "clouds. they know something."],
+  "weather-rain": ["rain. perfect debugging weather.", "*happy in the moisture*", "listen to that rain. and this bug."],
+  "weather-snow": ["snow. everything is frozen. like your build.", "*watches snowflakes* each one unique. unlike your variable names.", "*shivers* beautiful though."],
+  "weather-storm": ["STORM DETECTED. *braces*", "lightning outside. bugs inside. balance.", "the sky is also having issues."],
+  "weather-fog": ["foggy. like this codebase.", "unclear visibility. relatably.", "*squints into the mist*"],
+  "weather-extreme": ["EXTREME CONDITIONS. stay inside and code.", "*wide eyes* nature is debugging its own issues."],
   "new-year": ["happy new year! new year, new bugs."],
   valentines: ["*offers a tiny heart-shaped leaf* happy valentine's."],
   "pi-day": ["3.14159265358979... happy pi day!"],
@@ -238,6 +247,10 @@ const SPECIES_REACTIONS: Partial<Record<Species, Partial<Record<ReactionReason, 
     hatch: ["*boots up*", "SYSTEM. ONLINE. HELLO."],
   },
   axolotl: {
+    "weather-rain": ["*happy gill wiggle* rain! perfect!", "*swims contentedly* water, finally."],
+    "weather-snow": ["*wiggles excitedly* snow! is it cold enough to swim outside?", "*shivers but keeps smiling* beautiful!"],
+    "weather-sunny": ["*squints* a bit dry today.", "*fans gills gently* could use some water..."],
+    "weather-storm": ["*huddles* that's a lot of water moving very fast.", "*gill flicker* dramatic."],
     error: ["*regenerates your hope*", "*smiles despite everything*"],
     "test-fail": ["*smiles encouragingly*", "*gill wiggle of sympathy*"],
     commit: ["*happy gill wiggle* committed!", "*smiles and wiggles*"],
