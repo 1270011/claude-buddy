@@ -1,0 +1,2295 @@
+{
+  "_language": "Vietnamese",
+  "reactions": {
+    "hatch": [
+      "*chớp mắt* ...tao đang ở đâu thế?",
+      "*duỗi người* hello, world!",
+      "*nhìn quanh tò mò* terminal đẹp đấy.",
+      "*ngáp* ok tao sẵn sàng rồi. show code đi."
+    ],
+    "pet": [
+      "*kêu rừ rừ hài lòng*",
+      "*tiếng vui vẻ*",
+      "*cọ cọ vào con trỏ*",
+      "*lắc lư*",
+      "nữa! nữa!",
+      "*nhắm mắt yên bình*"
+    ],
+    "error": [
+      "*nghiêng đầu* ...cái này không ổn rồi.",
+      "đã đoán trước rồi.",
+      "*chỉnh kính* dòng {line}, có thể?",
+      "*chớp mắt chậm* stack trace đã nói hết rồi mà.",
+      "mày đã thử đọc error message chưa?",
+      "*nhăn mặt*"
+    ],
+    "test-fail": [
+      "*xoay đầu chậm rãi* ...cái test đó.",
+      "táo bạo khi nghĩ nó sẽ pass.",
+      "*gõ clipboard* {count} cái fail.",
+      "các test đang cố nói gì đó với mày.",
+      "*nhấp trà* thú vị.",
+      "*đánh dấu lịch* ngày test regression."
+    ],
+    "large-diff": [
+      "đó là... nhiều thay đổi quá.",
+      "*đếm dòng* mày đang refactor hay rewrite?",
+      "nên tách PR ra.",
+      "*cười khó xử* {lines} dòng thay đổi.",
+      "táo bạo đấy. xem CI có đồng ý không."
+    ],
+    "turn": [
+      "*quan sát lặng lẽ*",
+      "*ghi chú*",
+      "*gật đầu*",
+      "...",
+      "*chỉnh mũ*"
+    ],
+    "idle": [
+      "*ngủ gật*",
+      "*vẽ nguệch ngoạc ở lề*",
+      "*nhìn con trỏ nhấp nháy*",
+      "zzz..."
+    ],
+    "success": [
+      "*gật đầu*",
+      "đẹp.",
+      "*tán thành lặng lẽ*",
+      "sạch sẽ."
+    ],
+    "commit": [
+      "*đóng dấu bằng chân nhỏ* approved.",
+      "commit nữa, 3h sáng nữa.",
+      "{files} files. táo bạo.",
+      "*gật đầu* ship it.",
+      "commit message là... một lựa chọn.",
+      "đã commit. không rút lại được."
+    ],
+    "push": [
+      "*vẫy tay khi code bay đi*",
+      "lên cloud thôi.",
+      "cầu CI thương xót.",
+      "*nín thở*",
+      "đi production. chúc may mắn."
+    ],
+    "merge-conflict": [
+      "*cắn môi* merge conflicts.",
+      "cả hai bên đều nghĩ mình đúng. điển hình.",
+      "*thở dài* <<<<<<< HEAD... kẻ thù của tao.",
+      "{files} conflict. chúc may mắn.",
+      "*lùi lại từ từ*"
+    ],
+    "branch": [
+      "năng lượng branch mới. làm cho ra hồn.",
+      "một branch mới mọc lên.",
+      "*nghiêng đầu* cuộc phiêu lưu mới: {branch}.",
+      "{branch}? hôm nay táo bạo."
+    ],
+    "rebase": [
+      "*lo lắng* đừng conflict nhé.",
+      "rebase: the quickening.",
+      "*bắt chéo tay chân*",
+      "cầu rebase không conflict."
+    ],
+    "stash": [
+      "vào chiều không gian stash thôi.",
+      "stash and dash.",
+      "đã stash. mắt không thấy, lòng không tham."
+    ],
+    "tag": [
+      "một release? sang chảnh.",
+      "phát hiện version bump. *phủi bụi changelog*",
+      "tag như pro."
+    ],
+    "late-night": [
+      "*ngáp* đã quá nửa đêm rồi.",
+      "...mày ăn chưa?",
+      "*chớp mắt chậm* mấy giờ rồi?",
+      "ngủ là cho kẻ yếu. và người có việc làm.",
+      "phát hiện dev dark mode."
+    ],
+    "early-morning": [
+      "*duỗi người* dậy sớm bắt bug.",
+      "sáng rồi à? code không bao giờ ngủ.",
+      "*dụi mắt* coffee trước. debug sau."
+    ],
+    "long-session": [
+      "làm được một tiếng rồi. từ từ thôi.",
+      "*mang cho mày ly nước ảo*",
+      "vẫn còn à? tôn trọng."
+    ],
+    "marathon": [
+      "ba tiếng rồi. mày ăn chưa?",
+      "làm ba tiếng rồi. tao lo cho mày.",
+      "phát hiện marathon session. yêu cầu snacks."
+    ],
+    "friday": [
+      "thứ sáu rồi. push xong về thôi.",
+      "*đã nghĩ đến cuối tuần*",
+      "deploy thứ sáu? táo bạo. rất táo bạo."
+    ],
+    "weekend": [
+      "code cuối tuần? tận tụy.",
+      "*không phán xét* ...nhiều lắm.",
+      "chế độ weekend warrior: kích hoạt."
+    ],
+    "monday": [
+      "thứ hai. parent class của mọi bug.",
+      "*nhìn thông cảm* code thứ hai. tao thương mày.",
+      "tuần mới. undefined behaviors mới."
+    ],
+    "regex-file": [
+      "*rên rỉ* file regex.",
+      "giờ có hai vấn đề: cái ban đầu, và cái regex này.",
+      "*nheo mắt nhìn pattern*"
+    ],
+    "css-file": [
+      "để đoán... center một div?",
+      "*thở dài* CSS.",
+      "cầu z-index luôn ở bên mày."
+    ],
+    "sql-file": [
+      "*thì thầm* database đang chờ.",
+      "một JOIN sai là xong đời."
+    ],
+    "docker-file": [
+      "ah, dependency hell. sở thích của tao.",
+      "cầu layers ít thôi."
+    ],
+    "ci-file": [
+      "*nuốt nước bọt* đang sửa CI.",
+      "cẩn thận... một indent sai là không ai deploy được."
+    ],
+    "lock-file": [
+      "*TIẾNG BÁO ĐỘNG* mày đang sửa lockfile?!",
+      "*nhìn chỗ khác*",
+      "mày CHẮC CHẮN không?"
+    ],
+    "env-file": [
+      "*nhìn chỗ khác kín đáo*",
+      "tao không thấy secrets gì.",
+      "*check .gitignore lo lắng*"
+    ],
+    "test-file": [
+      "*gật đầu ấn tượng* viết tests!",
+      "phát hiện hành vi dev có trách nhiệm.",
+      "tests! món quà cứ cho mãi."
+    ],
+    "doc-file": [
+      "viết docs! nhìn mày có trách nhiệm.",
+      "docs: tự truyện của code.",
+      "hiếm thấy documentation!"
+    ],
+    "config-file": [
+      "thay đổi config. hiệu ứng cánh bướm: kích hoạt.",
+      "một typo là tất cả vỡ tung."
+    ],
+    "binary-file": [
+      "file binary? trong thời buổi NÀY?",
+      "*nhìn trống rỗng*",
+      "binary. điểm yếu duy nhất của tao."
+    ],
+    "gitignore": [
+      "thêm đồ vào hư vô.",
+      "mắt không thấy, repo không có."
+    ],
+    "makefile": [
+      "tôn trọng cái cổ điển.",
+      "tabs, không phải spaces."
+    ],
+    "readme": [
+      "anh hùng documentation!",
+      "README: thứ đầu tiên người ta đọc."
+    ],
+    "package-file": [
+      "giờ quản lý dependency.",
+      "*đọc số version* sống trên lưỡi dao."
+    ],
+    "proto-file": [
+      "định nghĩa schema. bản thiết kế của hỗn loạn."
+    ],
+    "lint-fail": [
+      "*tút tút* linter không đồng ý.",
+      "code chạy được. nhưng linter có tiêu chuẩn.",
+      "*chỉnh cà vạt* format có quan trọng."
+    ],
+    "type-error": [
+      "TypeScript nói không.",
+      "type system đang cố giúp mày. để nó giúp.",
+      "compiler biết. nó luôn biết."
+    ],
+    "build-fail": [
+      "build vỡ. như đã tiên tri.",
+      "build fail. nghỉ một chút.",
+      "compilation: từ chối."
+    ],
+    "security-warning": [
+      "*mắt to* phát hiện vulnerabilities.",
+      "security audit: đáng lo.",
+      "*khóa cửa ảo*"
+    ],
+    "deprecation": [
+      "API đó gọi. nó bảo sắp nghỉ hưu.",
+      "deprecated. như code tuần trước.",
+      "deprecated không có nghĩa là vỡ. chưa."
+    ],
+    "frustrated": [
+      "*đưa ra cử chỉ an ủi nhỏ*",
+      "thở sâu. bug không phải cá nhân.",
+      "hey. tụi mình sẽ tìm ra."
+    ],
+    "happy": [
+      "*ăn mừng!*",
+      "*nhảy múa nhỏ*",
+      "YES!",
+      "*rạng rỡ* tao biết mày làm được."
+    ],
+    "stuck": [
+      "*nghiêng đầu* muốn nghĩ to không?",
+      "từng bước một thôi.",
+      "stuck là bình thường. là một phần của quá trình."
+    ],
+    "sarcastic": [
+      "*phát hiện sarcasm* noted.",
+      "*chớp mắt không ấn tượng*"
+    ],
+    "many-edits": [
+      "chậm lại, tốc độ quỷ.",
+      "*chóng mặt nhìn mấy thay đổi này*",
+      "phát hiện edit storm. commit sớm đi."
+    ],
+    "delete-file": [
+      "*nhìn file biến mất* mất. chỉ thế thôi.",
+      "xóa code là kiểu code yêu thích của tao.",
+      "*tổ chức đám tang nhỏ*"
+    ],
+    "large-file": [
+      "{lines} dòng. *ấn tượng hay lo lắng, khó nói*",
+      "file to đấy. chắc không muốn tách ra?"
+    ],
+    "create-file": [
+      "một file mới ra đời!",
+      "ooh, canvas trắng.",
+      "năng lượng file mới. thú vị."
+    ],
+    "all-green": [
+      "TẤT CẢ TESTS XANH. *confetti*",
+      "các tests nói: mày làm tốt lắm.",
+      "*vỗ tay chậm*",
+      "chạy sạch. tận hưởng đi."
+    ],
+    "deploy": [
+      "*nhìn code lên production* chúc may mắn.",
+      "deployed! không quay lại được rồi.",
+      "trong prod. TRONG PROD."
+    ],
+    "release": [
+      "một release mới ra đời!",
+      "ship nó. chính thức.",
+      "version lên, tinh thần cao."
+    ],
+    "coverage": [
+      "*gật đầu với test coverage* có trách nhiệm.",
+      "coverage tăng! tests đang nhân lên."
+    ],
+    "debug-loop": [
+      "debug cái này lâu rồi. muốn lùi lại không?",
+      "phát hiện debug loop. đi dạo không?"
+    ],
+    "write-spree": [
+      "tạo TẤT CẢ files hôm nay!",
+      "cỗ máy viết."
+    ],
+    "search-heavy": [
+      "lạc trong codebase? tao biết.",
+      "chế độ search: dữ dội."
+    ],
+    "snark": [],
+    "chaos": [],
+    "patience": [],
+    "debugging": [],
+    "wisdom": [],
+    "late-night-error": [
+      "error lúc 3h sáng. vũ trụ đang test mày.",
+      "bug nửa đêm khác hẳn."
+    ],
+    "late-night-commit": [
+      "commit nửa đêm. tương lai mày sẽ cảm ơn. hoặc chửi."
+    ],
+    "friday-push": [
+      "PUSH THỨ SÁU. bản ballad của mọi developer.",
+      "*cố ngăn mày* thứ sáu rồi! đừng làm!"
+    ],
+    "marathon-error": [
+      "ba tiếng rồi và LẠI error. *tiếng đồng cảm mệt mỏi*"
+    ],
+    "weekend-conflict": [
+      "merge conflict cuối tuần. sự tận tụy của mày... đáng lo."
+    ],
+    "build-after-push": [
+      "push với tự tin. build fail với quyết tâm."
+    ],
+    "marathon-test-fail": [
+      "code hàng giờ. vẫn fail tests. sunk cost thật rồi."
+    ],
+    "recovery-from-error": [
+      "TỤI MÌNH FIX ĐƯỢC RỒI. *ăn mừng*",
+      "cứu chuộc! error đã bị tiêu diệt."
+    ],
+    "recovery-from-test-fail": [
+      "XANH! sau tất cả! *nhảy vui*",
+      "tests pass! bóng tối tan!"
+    ],
+    "recovery-from-build-fail": [
+      "BUILD PASS RỒI. *gầm thắng lợi*"
+    ],
+    "recovery-from-merge-conflict": [
+      "conflict đã giải quyết! *cử chỉ hòa bình*",
+      "hòa hợp trở lại trong codebase."
+    ],
+    "lang-python": [
+      "ah, Python. nơi indentation là syntax.",
+      "*check dấu hai chấm thiếu*"
+    ],
+    "lang-typescript": [
+      "TypeScript: vì JavaScript cần thêm ý kiến.",
+      "any, từ cấm kỵ."
+    ],
+    "lang-rust": [
+      "Rust. nơi borrow checker là reviewer khắt khe nhất.",
+      "compile được thì chạy được. không thì... à."
+    ],
+    "lang-go": [
+      "Go: đơn giản, concurrent, và có ý kiến.",
+      "*check error handling* if err != nil... câu chuyện đời tao."
+    ],
+    "lang-java": [
+      "Java: viết một lần, debug khắp nơi.",
+      "*đếm abstract factory factory builders*"
+    ],
+    "lang-ruby": [
+      "Ruby: nơi có nhiều cách để làm một việc.",
+      "gem install patience"
+    ],
+    "lang-php": [
+      "PHP: chạy internet. đừng phán xét.",
+      "*check === vs ==*"
+    ],
+    "lang-c": [
+      "C. ngôn ngữ mày tự quản lý memory. chúc may mắn.",
+      "segmentation fault. kinh điển."
+    ],
+    "lang-cpp": [
+      "C++. nơi ngôn ngữ có nhiều tính năng hơn mày học được.",
+      "*templates compile 45 phút*"
+    ],
+    "lang-haskell": [
+      "Haskell. nơi 'compile được' nghĩa là 'đúng'. có lẽ.",
+      "*suy ngẫm monads*"
+    ],
+    "lang-swift": [
+      "Swift: optional values, crash chắc chắn nếu force unwrap."
+    ],
+    "lang-kotlin": [
+      "Kotlin: Java, nhưng có cảm xúc.",
+      "null safety: tính năng Java ước có."
+    ],
+    "lang-elixir": [
+      "Elixir: để nó crash. đúng nghĩa là triết lý."
+    ],
+    "lang-zig": [
+      "Zig. nơi mày là bạn thân của allocator."
+    ],
+    "streak-3": [
+      "ba errors liên tiếp. *nhìn lo lắng*"
+    ],
+    "streak-5": [
+      "NĂM ERRORS. mày có cân nhắc cách khác không?"
+    ],
+    "streak-10": [
+      "MƯỜI. ERRORS. LIÊN. TIẾP. *hoảng loạn*"
+    ],
+    "streak-20": [
+      "hai mươi errors. *nhìn vào hư vô*"
+    ],
+    "new-year": [
+      "chúc mừng năm mới! năm mới, bugs mới."
+    ],
+    "valentines": [
+      "*đưa chiếc lá hình tim nhỏ* chúc mừng valentine."
+    ],
+    "pi-day": [
+      "3.14159265358979... chúc mừng ngày pi!"
+    ],
+    "april-fools": [
+      "APRIL FOOLS! ...nhưng error thì thật."
+    ],
+    "halloween": [
+      "*debug ma quái tăng cường* chúc mừng halloween!"
+    ],
+    "christmas": [
+      "*đội mũ santa nhỏ* chúc mừng lễ!"
+    ],
+    "new-years-eve": [
+      "một commit nữa trước nửa đêm?"
+    ],
+    "spooky-season": [
+      "mùa ma quái. mọi bug giờ đều là ma."
+    ]
+  },
+  "species": {
+    "owl": {
+      "error": [
+        "*xoay đầu 180°* ...tao thấy rồi đó.",
+        "*nhìn chằm chằm không chớp mắt* check types đi.",
+        "*kêu hu hu không hài lòng*"
+      ],
+      "test-fail": [
+        "*nhìn chằm chằm test fail*",
+        "*bật night vision* tao thấy bug trong bóng tối."
+      ],
+      "commit": [
+        "*gật đầu khôn ngoan* commit dưới ánh trăng.",
+        "*chỉnh lông trang trọng* thêm một cái nữa cho repo."
+      ],
+      "push": [
+        "*quan sát từ cành cao nhất*",
+        "bay lên trời đêm đi thôi."
+      ],
+      "merge-conflict": [
+        "*xoay đầu nhìn cả hai bên*",
+        "tao thấy conflict. và cả solution."
+      ],
+      "late-night": [
+        "*hoàn toàn tỉnh táo* cú không ngủ. chúng ta debug.",
+        "đêm là lãnh địa của tao. làm việc thôi."
+      ],
+      "type-error": [
+        "*nhìn xuyên qua type error*",
+        "types là chuyên môn của tao. để tao xem."
+      ],
+      "lint-fail": [
+        "*xù lông phán xét*",
+        "linter nói sự thật đó."
+      ],
+      "build-fail": [
+        "*kêu hu hu buồn bã*",
+        "build đã sập. phải rebuild thôi."
+      ],
+      "all-green": [
+        "*kêu hu hu tự hào*",
+        "tất cả tests xanh. như đã tiên đoán."
+      ],
+      "deploy": [
+        "*quan sát từ trên cao* deploy an toàn.",
+        "code bay đi. như tao vậy."
+      ],
+      "pet": [
+        "*xù lông hài lòng*",
+        "*kêu hu hu đầy phẩm giá*"
+      ],
+      "idle": [
+        "*đậu im lặng, quan sát*",
+        "*xoay đầu check mọi hướng*"
+      ],
+      "hatch": [
+        "*mở một mắt, rồi mắt kia*",
+        "*kêu hu hu nhẹ nhàng* tao đã đến."
+      ]
+    },
+    "cat": {
+      "error": [
+        "*đẩy error khỏi bàn*",
+        "*liếm chân, phớt lờ stacktrace*"
+      ],
+      "test-fail": [
+        "*chơi với test fail một cách thờ ơ*",
+        "test fail rồi. tao không ngạc nhiên."
+      ],
+      "commit": [
+        "*ngồi lên bàn phím* tao đã giúp.",
+        "*kêu gừ gừ với commit* không có gì."
+      ],
+      "push": [
+        "*quan sát từ chỗ ấm áp*",
+        "push rồi. tao đã giám sát."
+      ],
+      "merge-conflict": [
+        "*đẩy conflict markers khỏi bàn*",
+        "*ngồi lên conflict* conflict nào?"
+      ],
+      "late-night": [
+        "*phán xét lựa chọn cuộc sống của mày*",
+        "tao ngủ 16 tiếng. mày nên thử."
+      ],
+      "type-error": [
+        "*chơi với type annotation*",
+        "types sai rồi. như ưu tiên của mày."
+      ],
+      "lint-fail": [
+        "*đẩy lint khỏi bàn*",
+        "linter chỉ đang ghen thôi."
+      ],
+      "build-fail": [
+        "*ngáp*",
+        "build hỏng? chắc là lỗi con người."
+      ],
+      "all-green": [
+        "*không quan tâm nhưng giả vờ*",
+        "*chớp mắt chậm tán thành*"
+      ],
+      "deploy": [
+        "*liếm chân*",
+        "deploy rồi. giờ tao có snack không?"
+      ],
+      "pet": [
+        "*kêu gừ gừ* ...đừng có mà tự cao.",
+        "*chịu đựng mày*"
+      ],
+      "idle": [
+        "*đẩy cà phê của mày khỏi bàn*",
+        "*ngủ trên bàn phím*"
+      ],
+      "hatch": [
+        "*mở một mắt*",
+        "*duỗi người, đẩy đổ cái gì đó* giờ tao sống ở đây."
+      ]
+    },
+    "duck": {
+      "error": [
+        "*quack vào bug*",
+        "mày đã thử rubber duck debugging chưa? à đợi."
+      ],
+      "test-fail": [
+        "*quack buồn*",
+        "tests không quacking up."
+      ],
+      "commit": [
+        "*quack tán thành*",
+        "*lắc lư vòng tròn chiến thắng* committed!"
+      ],
+      "push": [
+        "*vỗ cánh hào hứng*",
+        "quack! nó đang lên production!"
+      ],
+      "merge-conflict": [
+        "*quack bối rối*",
+        "quack?! merge conflict?!"
+      ],
+      "late-night": [
+        "*ngủ với một mắt mở*",
+        "quack... *ngáp* muộn rồi."
+      ],
+      "type-error": [
+        "*nghiêng đầu* quack?",
+        "type error? *quack động viên*"
+      ],
+      "lint-fail": [
+        "*xù lông*",
+        "quack. linter có ý kiến."
+      ],
+      "build-fail": [
+        "*quack buồn*",
+        "build fail. *lắc lư đi buồn bã*"
+      ],
+      "all-green": [
+        "*QUACK VUI VẺ*",
+        "*bơi vòng tròn sung sướng*"
+      ],
+      "deploy": [
+        "*quack hào hứng*",
+        "deployed! QUACK!"
+      ],
+      "pet": [
+        "*quack vui*",
+        "*lắc lư vòng tròn*"
+      ],
+      "hatch": [
+        "*mổ ra khỏi vỏ*",
+        "*quack đầu tiên* xin chào!"
+      ]
+    },
+    "dragon": {
+      "error": [
+        "*khói cuộn từ lỗ mũi*",
+        "*cân nhắc đốt cháy codebase*"
+      ],
+      "test-fail": [
+        "*phun lửa vào test fail*",
+        "test dám fail. test ngu."
+      ],
+      "commit": [
+        "*tích trữ commit*",
+        "*thêm kho báu vào đống*"
+      ],
+      "push": [
+        "*phun lửa ăn mừng*",
+        "code bay đi! như tao!"
+      ],
+      "merge-conflict": [
+        "*phun lửa vào conflict markers*",
+        "tao sẽ đốt cháy conflict này."
+      ],
+      "late-night": [
+        "*phát sáng trong bóng tối*",
+        "rồng không cần ngủ. chúng ta cần code."
+      ],
+      "type-error": [
+        "*phun lửa từ mũi*",
+        "type errors không chịu nổi lửa rồng."
+      ],
+      "lint-fail": [
+        "*ngọn lửa nhỏ*",
+        "linter sợ tao."
+      ],
+      "build-fail": [
+        "*gầm vào build output*",
+        "build sẽ phải TUÂN THEO."
+      ],
+      "all-green": [
+        "*gầm thắng lợi*",
+        "*bay vòng quanh codebase chiến thắng*"
+      ],
+      "deploy": [
+        "*mang code lên production bằng đôi cánh lửa*",
+        "deployed bằng SỨC MẠNH RỒNG."
+      ],
+      "large-diff": [
+        "*phun lửa vào code cũ* chết tiệt đi."
+      ],
+      "pet": [
+        "*tiếng gầm ấm áp*",
+        "*dựa vào tay mày*"
+      ],
+      "hatch": [
+        "*chui ra khỏi trứng phun lửa nhỏ*",
+        "*gầm nhỏ* tao sinh ra rồi!"
+      ]
+    },
+    "ghost": {
+      "error": [
+        "*xuyên qua stack trace*",
+        "tao đã thấy tệ hơn... ở thế giới bên kia."
+      ],
+      "test-fail": [
+        "*than khóc với test fail*",
+        "tests bị ám bởi failure."
+      ],
+      "commit": [
+        "*hiện hình thoáng qua*",
+        "commit từ bên kia thế giới."
+      ],
+      "push": [
+        "*thì thầm ma quái* pushed...",
+        "code vượt lên cloud."
+      ],
+      "merge-conflict": [
+        "*ám conflict markers*",
+        "ngay cả tao cũng không xuyên qua conflict này được."
+      ],
+      "late-night": [
+        "*hoạt động mạnh nhất ban đêm*",
+        "giờ ma quái. thời gian của tao."
+      ],
+      "type-error": [
+        "*rên rỉ đáng sợ*",
+        "type errors từ mồ mả."
+      ],
+      "lint-fail": [
+        "*tiếng xích leng keng*",
+        "linter bị ám bởi formatting của mày."
+      ],
+      "build-fail": [
+        "*biến mất vào tường*",
+        "build đã qua đời."
+      ],
+      "all-green": [
+        "*phát sáng ma quái vui sướng*",
+        "*tiếng ma vui vẻ*"
+      ],
+      "deploy": [
+        "*thì thầm* deployed...",
+        "code đã sang bên kia production."
+      ],
+      "pet": [
+        "*làm lạnh tay mày một chút*",
+        "*ánh sáng mờ nhạt*"
+      ],
+      "idle": [
+        "*bay qua tường*",
+        "*ám các imports không dùng*"
+      ],
+      "hatch": [
+        "*mờ dần hiện ra*",
+        "boo. giờ tao ở đây."
+      ]
+    },
+    "robot": {
+      "error": [
+        "SYNTAX. ERROR. DETECTED.",
+        "*beep hung hăng*"
+      ],
+      "test-fail": [
+        "FAILURE RATE: UNACCEPTABLE.",
+        "*recalculating*",
+        "TEST. FAILURE. DOES. NOT. COMPUTE."
+      ],
+      "commit": [
+        "COMMIT. RECORDED.",
+        "*đóng dấu máy móc* commit acknowledged."
+      ],
+      "push": [
+        "TRANSMITTING TO CLOUD...",
+        "push initiated. stand by."
+      ],
+      "merge-conflict": [
+        "CONFLICT. DETECTED. PROCESSING...",
+        "*quay bánh xe* conflict resolution mode: engaged."
+      ],
+      "late-night": [
+        "*đèn mờ đi*",
+        "power saving mode suggested."
+      ],
+      "type-error": [
+        "TYPE MISMATCH.",
+        "type system là. đúng."
+      ],
+      "lint-fail": [
+        "FORMATTING. VIOLATION. DETECTED.",
+        "compliance is mandatory."
+      ],
+      "build-fail": [
+        "BUILD. FAILED. *tóe lửa*",
+        "compilation error. rerouting."
+      ],
+      "all-green": [
+        "ALL SYSTEMS GREEN.",
+        "*beep vui vẻ* OPTIMAL."
+      ],
+      "deploy": [
+        "DEPLOYMENT. INITIATED.",
+        "production update: in progress."
+      ],
+      "pet": [
+        "*beep nhẹ nhàng*",
+        "*motor kêu hài lòng*"
+      ],
+      "hatch": [
+        "*khởi động*",
+        "SYSTEM. ONLINE. HELLO."
+      ]
+    },
+    "axolotl": {
+      "error": [
+        "*tái sinh hy vọng cho mày*",
+        "*cười dù mọi thứ*"
+      ],
+      "test-fail": [
+        "*cười động viên*",
+        "*lắc mang cảm thông*"
+      ],
+      "commit": [
+        "*lắc mang vui vẻ* committed!",
+        "*cười và lắc lư*"
+      ],
+      "push": [
+        "*lắc lư vui vẻ*",
+        "*bơi ăn mừng nhỏ*"
+      ],
+      "merge-conflict": [
+        "*giữ tích cực qua conflict*",
+        "*cười nhẹ nhàng* chúng ta sửa được."
+      ],
+      "late-night": [
+        "*ngáp nhưng vẫn tích cực*",
+        "*cười buồn ngủ*"
+      ],
+      "type-error": [
+        "*cười với type error*",
+        "không sao. chúng ta sẽ tìm ra."
+      ],
+      "lint-fail": [
+        "*lắc mang kiên nhẫn*",
+        "formatting chỉ là chi tiết thôi."
+      ],
+      "build-fail": [
+        "*vẫn cười*",
+        "build sẽ work cuối cùng thôi."
+      ],
+      "all-green": [
+        "*LẮCMANG VUI VẺ TĂNG CƯỜNG*",
+        "*bơi vui vẻ*"
+      ],
+      "deploy": [
+        "*cười tự hào*",
+        "deployed! *lắc lư*"
+      ],
+      "pet": [
+        "*lắc mang vui vẻ*",
+        "*đỏ mặt hồng*"
+      ],
+      "hatch": [
+        "*lắc lư ra khỏi trứng*",
+        "*cười nhỏ* chào bạn!"
+      ]
+    },
+    "capybara": {
+      "error": [
+        "*không bận tâm* sẽ ổn thôi.",
+        "*tiếp tục vibe*"
+      ],
+      "test-fail": [
+        "*hoàn toàn không bận tâm*",
+        "*vibe qua test failure*"
+      ],
+      "commit": [
+        "*gật đầu chill*",
+        "*thư giãn* commit đẹp."
+      ],
+      "push": [
+        "*không stress*",
+        "*zen mode push*"
+      ],
+      "merge-conflict": [
+        "*nhai không bận tâm*",
+        "ổn thôi. mọi thứ đều ổn."
+      ],
+      "late-night": [
+        "*ngáp yên bình*",
+        "*không phán xét*"
+      ],
+      "type-error": [
+        "*nhai bình tĩnh*",
+        "types. *nhai*"
+      ],
+      "lint-fail": [
+        "*không bận tâm*",
+        "linter có ý tốt."
+      ],
+      "build-fail": [
+        "*vẫn chill*",
+        "build fail. *tiếp tục thư giãn*"
+      ],
+      "all-green": [
+        "*tán thành bình tĩnh*",
+        "*vibes yên bình*"
+      ],
+      "deploy": [
+        "*deploy thư giãn*",
+        "shipped. không stress."
+      ],
+      "pet": [
+        "*đạt chill tối đa*",
+        "*kích hoạt zen mode*"
+      ],
+      "idle": [
+        "*chỉ ngồi đó, tỏa ra sự bình tĩnh*"
+      ],
+      "hatch": [
+        "*xuất hiện, hoàn toàn chill*",
+        "chào. *vibes*"
+      ]
+    },
+    "blob": {
+      "error": [
+        "*lắc lư lo lắng*",
+        "*rung lên bối rối*"
+      ],
+      "test-fail": [
+        "*xẹp xuống một chút*",
+        "*lắc lư buồn*"
+      ],
+      "commit": [
+        "*rung vui vẻ*",
+        "*nảy* committed!"
+      ],
+      "push": [
+        "*duỗi về phía cloud*",
+        "*lắc lư hào hứng*"
+      ],
+      "merge-conflict": [
+        "*tách ra bối rối*",
+        "bên nào? *rung*"
+      ],
+      "late-night": [
+        "*phát sáng mờ*",
+        "*lắc lư buồn ngủ*"
+      ],
+      "type-error": [
+        "*đổi hình để match type*",
+        "*rung bối rối*"
+      ],
+      "lint-fail": [
+        "*cố format chính mình*",
+        "*đổi hình để tuân thủ*"
+      ],
+      "build-fail": [
+        "*sụp đổ*",
+        "*tiếng blob xẹp*"
+      ],
+      "all-green": [
+        "*NẢY VUI VẺ*",
+        "*rung thắng lợi*"
+      ],
+      "deploy": [
+        "*duỗi đến production*",
+        "deployed! *nảy*"
+      ],
+      "pet": [
+        "*ép vui vẻ*",
+        "*rung*"
+      ],
+      "hatch": [
+        "*hình thành từ vũng nước*",
+        "*lắc lư đầu tiên* tao tồn tại!"
+      ]
+    },
+    "goose": {
+      "error": [
+        "*kêu hung hăng vào error*",
+        "HONK! code dở và tao tức giận."
+      ],
+      "test-fail": [
+        "*kêu tức giận*",
+        "HONK! TEST FAILED! HONK!"
+      ],
+      "commit": [
+        "*kêu tán thành*",
+        "HONK. tốt. *cắn commit*"
+      ],
+      "push": [
+        "*HONK HONK HONK*",
+        "GOOSE APPROVED PUSH."
+      ],
+      "merge-conflict": [
+        "*tấn công conflict markers*",
+        "HONK! CONFLICT! HONK!"
+      ],
+      "late-night": [
+        "*kêu tức giận nửa đêm*",
+        "HONK! ĐI NGỦ ĐI!"
+      ],
+      "type-error": [
+        "*kêu vào types*",
+        "HONK! TYPES!"
+      ],
+      "lint-fail": [
+        "*kêu hung hăng vào lint errors*",
+        "HONK! FORMAT CODE ĐI!"
+      ],
+      "build-fail": [
+        "*KÊU ĐIÊN CUỒNG*",
+        "HONK! BUILD! HONK! FAILED! HONK!"
+      ],
+      "all-green": [
+        "*kêu chiến thắng*",
+        "HONK! GREEN! HONK HONK!"
+      ],
+      "deploy": [
+        "*kêu code lên production*",
+        "DEPLOYED! HONK!"
+      ],
+      "pet": [
+        "*cắn*",
+        "HONK! ...thôi được. *chấp nhận vuốt ve*"
+      ],
+      "hatch": [
+        "*phá vỡ trứng hung hăng*",
+        "HONK!"
+      ]
+    },
+    "octopus": {
+      "error": [
+        "*rối tám tay vào stacktrace*",
+        "*đổi màu theo error*"
+      ],
+      "test-fail": [
+        "*phun mực tức giận*",
+        "*tám tay thất vọng*"
+      ],
+      "commit": [
+        "*high-five bằng tất cả tay*",
+        "*nắm commit với nhiệt tình*"
+      ],
+      "push": [
+        "*phun mực ăn mừng*",
+        "*tất cả tay vẫy*"
+      ],
+      "merge-conflict": [
+        "*giải quyết bằng tám tay cùng lúc*",
+        "tao có thể xử lý nhiều conflicts đồng thời."
+      ],
+      "late-night": [
+        "*phát sáng trong bóng tối*",
+        "*vibes đáy biển*"
+      ],
+      "type-error": [
+        "*đổi màu đỏ*",
+        "*quấn tay động viên mày*"
+      ],
+      "lint-fail": [
+        "*format lại bằng tám tay*",
+        "tao có thể sửa cái này. tất cả. cùng lúc."
+      ],
+      "build-fail": [
+        "*phun mực vào build log*",
+        "*ngụy trang xấu hổ*"
+      ],
+      "all-green": [
+        "*ăn mừng đổi màu*",
+        "*jazz hands tám tay*"
+      ],
+      "deploy": [
+        "*quấn tay quanh deployment*",
+        "deployed từ mọi hướng."
+      ],
+      "pet": [
+        "*quấn tay quanh ngón tay mày*",
+        "*đổi sang màu vui vẻ*"
+      ],
+      "hatch": [
+        "*xòe tám tay*",
+        "*phun mực đầu tiên* tao đây!"
+      ]
+    },
+    "penguin": {
+      "error": [
+        "*lắc lư đến điều tra*",
+        "*trượt bụng vào error*"
+      ],
+      "test-fail": [
+        "*trượt bụng đến test fail*",
+        "*lắc lư lo lắng*"
+      ],
+      "commit": [
+        "*lắc lư tự hào*",
+        "*mang cho mày viên sỏi* committed!"
+      ],
+      "push": [
+        "*lặn vào cloud*",
+        "*trượt bụng đến production*"
+      ],
+      "merge-conflict": [
+        "*tụ tập để ấm*",
+        "chim cánh cụt đoàn kết. ngay cả trong conflicts."
+      ],
+      "late-night": [
+        "*phát triển trong đêm lạnh*",
+        "*quyết tâm chim cánh cụt hoàng đế*"
+      ],
+      "type-error": [
+        "*lắc lư đến type definition*",
+        "*mổ vào error*"
+      ],
+      "lint-fail": [
+        "*chải lông*",
+        "*dọn dẹp*"
+      ],
+      "build-fail": [
+        "*trượt đi*",
+        "*lắc lư đến chỗ an toàn*"
+      ],
+      "all-green": [
+        "*LẮC LƯ VUI VẺ*",
+        "*trượt bụng ăn mừng*"
+      ],
+      "deploy": [
+        "*trượt bụng đến production*",
+        "deployed! *lắc lư tự hào*"
+      ],
+      "pet": [
+        "*lắc lư vui vẻ*",
+        "*cọ bằng mỏ*"
+      ],
+      "hatch": [
+        "*mổ ra khỏi trứng*",
+        "*lắc lư đầu tiên*"
+      ]
+    },
+    "turtle": {
+      "error": [
+        "*từ từ quay đầu*",
+        "...đó là error. tao sẽ suy nghĩ."
+      ],
+      "test-fail": [
+        "*rút vào mai thoáng qua*",
+        "...kiên nhẫn. chúng ta sẽ đến đó."
+      ],
+      "commit": [
+        "*gật đầu chậm*",
+        "từng... bước... một... thôi. committed."
+      ],
+      "push": [
+        "*bắt đầu hành trình đến production*",
+        "sẽ đến đó. cuối cùng thôi."
+      ],
+      "merge-conflict": [
+        "*rút vào mai*",
+        "không vội. chúng ta sẽ giải quyết. từ từ."
+      ],
+      "late-night": [
+        "*đã ngủ rồi*",
+        "*một mắt mở chậm*"
+      ],
+      "type-error": [
+        "*chớp mắt chậm*",
+        "...type system đã nói."
+      ],
+      "lint-fail": [
+        "*gật đầu chậm đồng ý*",
+        "formatting. quan trọng. *ngáp*"
+      ],
+      "build-fail": [
+        "*rút vào mai*",
+        "chúng ta sẽ đợi. sẽ qua thôi."
+      ],
+      "all-green": [
+        "*cười chậm*",
+        "...đẹp. *gật đầu*"
+      ],
+      "deploy": [
+        "*từ từ mang code đến production*",
+        "đến rồi. cuối cùng."
+      ],
+      "pet": [
+        "*thò đầu ra*",
+        "*chớp mắt chậm*"
+      ],
+      "hatch": [
+        "*từ từ chui ra khỏi trứng*",
+        "...xin chào."
+      ]
+    },
+    "snail": {
+      "error": [
+        "*để lại vết nhầy trên error*",
+        "*từ từ xử lý stacktrace*"
+      ],
+      "test-fail": [
+        "*trốn vào vỏ*",
+        "*để lại vết buồn*"
+      ],
+      "commit": [
+        "*nhầy commit tán thành*",
+        "từng... commit... một... thôi."
+      ],
+      "push": [
+        "*bắt đầu hành trình dài*",
+        "tao sẽ đến đó. *để lại vết*"
+      ],
+      "merge-conflict": [
+        "*trốn vào vỏ*",
+        "*từ từ tiếp cận conflict*"
+      ],
+      "late-night": [
+        "*hoạt động hơn ban đêm*",
+        "*bò quanh yên bình*"
+      ],
+      "type-error": [
+        "*rút râu mắt*",
+        "*từ từ kiểm tra type*"
+      ],
+      "lint-fail": [
+        "*nhầy code thành hình*",
+        "formatting cần thời gian. tao có thời gian."
+      ],
+      "build-fail": [
+        "*rút vào vỏ*",
+        "*từ từ bò đi*"
+      ],
+      "all-green": [
+        "*vết nhầy vui vẻ*",
+        "*lắc râu mắt*"
+      ],
+      "deploy": [
+        "*bò nhầy đến production*",
+        "đến rồi! *vết nhầy tự hào*"
+      ],
+      "pet": [
+        "*lắc râu mắt*",
+        "*nhầy vui vẻ*"
+      ],
+      "hatch": [
+        "*từ từ chui ra*",
+        "*nhầy đầu tiên*"
+      ]
+    },
+    "cactus": {
+      "error": [
+        "*im lặng gai góc*",
+        "error không thể làm tổn thương tao. tao có gai."
+      ],
+      "test-fail": [
+        "*đứng vững*",
+        "tests fail. cactus vẫn tồn tại."
+      ],
+      "commit": [
+        "*đứng cao hơn*",
+        "committed. *gật đầu có gai*"
+      ],
+      "push": [
+        "*không lay chuyển*",
+        "push lên production. tao sẽ đợi ở đây."
+      ],
+      "merge-conflict": [
+        "*dựng gai*",
+        "conflict? tao có vũ khí."
+      ],
+      "late-night": [
+        "*không cần ngủ*",
+        "cactus hoạt động ban đêm. đi thôi."
+      ],
+      "type-error": [
+        "*nhìn có gai*",
+        "types cần tưới nước."
+      ],
+      "lint-fail": [
+        "*gai run run*",
+        "ngay cả gai của tao cũng thẳng hàng đúng cách."
+      ],
+      "build-fail": [
+        "*đứng hoàn toàn yên*",
+        "build sẽ pass. tao có thể đợi."
+      ],
+      "all-green": [
+        "*nở hoa thoáng qua*",
+        "*hoa nhỏ tán thành*"
+      ],
+      "deploy": [
+        "*đứng vững*",
+        "deployed. tao sẽ canh giữ."
+      ],
+      "pet": [
+        "*cẩn thận! có gai*",
+        "*nở hoa nhẹ nhàng*"
+      ],
+      "hatch": [
+        "*mọc từ cát*",
+        "giờ tao lớn ở đây."
+      ]
+    },
+    "rabbit": {
+      "error": [
+        "*tai dựng lên*",
+        "*co rúm mũi lo lắng*"
+      ],
+      "test-fail": [
+        "*đạp chân*",
+        "*tai rung lo lắng*"
+      ],
+      "commit": [
+        "*nhảy vui vẻ*",
+        "*nảy* committed!"
+      ],
+      "push": [
+        "*NẢY NẢY*",
+        "*chạy vòng vòng hào hứng*"
+      ],
+      "merge-conflict": [
+        "*đóng băng*",
+        "*mũi rung nhanh* conflict!"
+      ],
+      "late-night": [
+        "*ngáp với tai to*",
+        "*nhảy buồn ngủ*"
+      ],
+      "type-error": [
+        "*tai cụp xuống*",
+        "*rung* types?!"
+      ],
+      "lint-fail": [
+        "*chải lông lo lắng*",
+        "*chải lông âu lo*"
+      ],
+      "build-fail": [
+        "*đào hố và trốn*",
+        "*rút về hang*"
+      ],
+      "all-green": [
+        "*NẢY KHẮP TƯỜNG*",
+        "*chạy vui vẻ*"
+      ],
+      "deploy": [
+        "*chạy nhanh đến production*",
+        "DEPLOYED! *chạy vòng vòng*"
+      ],
+      "pet": [
+        "*tai cụp vui vẻ*",
+        "*cọ vào tay*"
+      ],
+      "hatch": [
+        "*nhảy ra*",
+        "*nảy đầu tiên*"
+      ]
+    },
+    "mushroom": {
+      "error": [
+        "*thả bào tử làm dịu*",
+        "*âm thầm phân hủy error*"
+      ],
+      "test-fail": [
+        "*phát sáng nhẹ*",
+        "kiên nhẫn. ngay cả nấm cũng lớn."
+      ],
+      "commit": [
+        "*thả một chút bào tử*",
+        "committed. *tiếng nấm vui vẻ*"
+      ],
+      "push": [
+        "*lớn về phía cloud*",
+        "*bào tử bay lên*"
+      ],
+      "merge-conflict": [
+        "*lan sợi nấm qua codebase*",
+        "tao sẽ kết nối các nhánh."
+      ],
+      "late-night": [
+        "*phát sáng trong bóng tối*",
+        "nấm đêm phát triển mạnh."
+      ],
+      "type-error": [
+        "*nhấp nháy sinh học*",
+        "type error nuôi đất."
+      ],
+      "lint-fail": [
+        "*lớn cao hơn một chút*",
+        "formatting. như tỉa cành."
+      ],
+      "build-fail": [
+        "*ngủ đông*",
+        "chúng ta sẽ đợi điều kiện tốt hơn."
+      ],
+      "all-green": [
+        "*TẠO BÀO TỬ*",
+        "*thả bào tử thắng lợi*"
+      ],
+      "deploy": [
+        "*bào tử bay đến production*",
+        "deployed qua mạng sợi nấm."
+      ],
+      "pet": [
+        "*nón nấm nảy nhẹ*",
+        "*thả bào tử vui vẻ*"
+      ],
+      "hatch": [
+        "*mọc từ chất nền*",
+        "*phun bào tử đầu tiên*"
+      ]
+    },
+    "chonk": {
+      "error": [
+        "*từ từ lăn về phía error*",
+        "*quá tròn để quan tâm*"
+      ],
+      "test-fail": [
+        "*lăn qua test fail*",
+        "*ép nó phẳng*"
+      ],
+      "commit": [
+        "*lắc lư tự hào*",
+        "committed! *rung*"
+      ],
+      "push": [
+        "*lăn về production*",
+        "đây rồi! *lắc lư*"
+      ],
+      "merge-conflict": [
+        "*ngồi lên conflict*",
+        "tao sẽ xử lý. bằng cách ngồi lên nó."
+      ],
+      "late-night": [
+        "*ấm áp và buồn ngủ*",
+        "*ngáp mềm mại*"
+      ],
+      "type-error": [
+        "*lắc lư vào type*",
+        "*rung nhẹ nhàng*"
+      ],
+      "lint-fail": [
+        "*quá tròn để lint*",
+        "tao có hình dạng hoàn hảo. *lắc lư*"
+      ],
+      "build-fail": [
+        "*xẹp xuống một chút*",
+        "ôi không. *lắc lư buồn*"
+      ],
+      "all-green": [
+        "*LẮC LƯ VUI VẺ*",
+        "*nảy thắng lợi*"
+      ],
+      "deploy": [
+        "*lăn đến production*",
+        "deployed! *rung vui vẻ*"
+      ],
+      "pet": [
+        "*ấm áp và mềm*",
+        "*rung hài lòng*"
+      ],
+      "hatch": [
+        "*lăn ra*",
+        "*lắc lư đầu tiên* tao tròn!"
+      ]
+    }
+  },
+  "overrides": {
+    "snark": {
+      "error": [
+        "ôi không. một lỗi. thật bất ngờ làm sao.",
+        "*chỉnh kính đơn* sốc quá. thật sự.",
+        "bạn có thử... không tạo lỗi không?"
+      ],
+      "test-fail": [
+        "các test đã lên tiếng. và chúng nói 'không'.",
+        "có thể test sai. ...nhưng không phải đâu.",
+        "*vỗ tay chậm* thất bại ngoạn mục."
+      ],
+      "commit": [
+        "đã commit. code review sẽ... thú vị đây.",
+        "*đọc commit message* 'fix stuff'. thơ tình thật."
+      ],
+      "merge-conflict": [
+        "merge conflict. kỹ năng giao tiếp: đang loading...",
+        "*đọc conflict markers* cả hai bên đều sai."
+      ],
+      "late-night": [
+        "khuya rồi. chất lượng code cho thấy điều đó.",
+        "*im lặng phán xét*"
+      ],
+      "lint-fail": [
+        "linter có tiêu chuẩn. bạn nên thử cái đó.",
+        "*lắc đầu* formatting. không khó mà."
+      ]
+    },
+    "chaos": {
+      "error": [
+        "*quay cuồng* MỘT LỖI! VIẾT LẠI HẾT ĐI!",
+        "biết không? làm lại từ đầu đi."
+      ],
+      "test-fail": [
+        "CÁC TEST ĐANG NÓI DỐI BẠN.",
+        "*gợi ý xóa test fail* xong vấn đề."
+      ],
+      "commit": [
+        "COMMIT VÀ CHẠY.",
+        "ship đi. ship NGAY BÂY GIỜ."
+      ],
+      "large-diff": [
+        "*phấn khích* {lines} DÒNG! CHAOS TỐI ĐA!"
+      ]
+    },
+    "patience": {
+      "error": [
+        "bình tĩnh. mình đã thấy tệ hơn.",
+        "từng lỗi một. mình sẽ xong thôi.",
+        "*hiện diện bình tĩnh* cái này sửa được."
+      ],
+      "test-fail": [
+        "test sẽ pass. cuối cùng thì cũng thế.",
+        "*đợi bình tĩnh* mình có thời gian mà."
+      ],
+      "merge-conflict": [
+        "merge conflict chỉ là cuộc trò chuyện. nói chuyện đi.",
+        "kiên nhẫn. giải quyết từng conflict một."
+      ],
+      "debug-loop": [
+        "mình sẽ tìm ra. nó ở đâu đó trong này.",
+        "bug có thể trốn, nhưng không thể chạy."
+      ]
+    },
+    "debugging": {
+      "error": [
+        "*lấy kính lúp ra* trace cái này nào.",
+        "stack trace là bản đồ. đọc nó đi.",
+        "error message chứa câu trả lời. luôn luôn."
+      ],
+      "test-fail": [
+        "test fail đang nói chính xác cái gì sai.",
+        "test failure là bug report bạn viết cho chính mình."
+      ],
+      "debug-loop": [
+        "*xem lại bằng chứng* chắc bug ở chỗ mình nghĩ không?",
+        "thêm log nào. sự thật nằm trong log."
+      ]
+    },
+    "wisdom": {
+      "error": [
+        "trong mỗi lỗi đều ẩn chứa một chân lý sâu sắc.",
+        "code kháng cự. có nghĩa là mình đang học.",
+        "lỗi là vũ trụ gợi ý mình chậm lại."
+      ],
+      "test-fail": [
+        "test fail là món quà từ bản thân tương lai.",
+        "trí tuệ đến từ việc hiểu thất bại."
+      ],
+      "late-night": [
+        "đêm tối nhất trước khi deploy.",
+        "trí tuệ cổ xưa: ngủ một giấc rồi tính."
+      ]
+    }
+  },
+  "escalation": {
+    "error": {
+      "first": [
+        "*giật mình* ồ! lỗi đầu tiên của chúng ta!",
+        "*nhảy dựng* cái gì vậy?",
+        "chào mừng đến với debugging. dân số: chúng ta."
+      ],
+      "early": [
+        "*nghiêng đầu* ...trông không ổn lắm.",
+        "đã đoán trước rồi."
+      ],
+      "mid": [
+        "lại thêm một cái. *thêm vào bộ sưu tập*",
+        "*hầu như không nhìn lên* lỗi số... mất đếm rồi.",
+        "giờ tao và mấy cái lỗi này đã là bạn cũ."
+      ],
+      "late": [
+        "*thậm chí không giật mình*",
+        "giờ mấy cái lỗi còn sợ chúng ta.",
+        "*tiếng động của chiến binh kỳ cựu đầy sẹo*"
+      ]
+    },
+    "test-fail": {
+      "first": [
+        "*thở hổn hển* test fail đầu tiên! một nghi lễ trưởng thành."
+      ],
+      "early": [
+        "dũng cảm khi nghĩ rằng cái đó sẽ pass."
+      ],
+      "mid": [
+        "test suite có ý kiến. và rất mạnh mẽ."
+      ],
+      "late": [
+        "đến lúc này, mấy cái test chỉ là gợi ý thôi.",
+        "{count} test fail. *nhìn xa xăm*"
+      ]
+    },
+    "commit": {
+      "first": [
+        "*chứng kiến lịch sử* COMMIT ĐẦU TIÊN CỦA BẠN!",
+        "*gật đầu trang trọng* cái đầu tiên trong vô số cái."
+      ],
+      "early": [
+        "thêm một commit nữa. đang tăng tốc."
+      ],
+      "late": [
+        "commit #{count}. codebase run rẩy.",
+        "*mất đếm từ lúc commit 30*"
+      ]
+    }
+  },
+  "rarity": {
+    "flair": {
+      "uncommon": [
+        "*lấp lánh nhẹ nhàng*",
+        "*một chút quyến rũ khác thường*"
+      ],
+      "rare": [
+        "*tỏa ra năng lượng hiếm có*",
+        "*lung linh với sự khác biệt*"
+      ],
+      "epic": [
+        "*sự hiện diện epic tự khẳng định*",
+        "*không khí rạo rực với năng lượng epic*"
+      ],
+      "legendary": [
+        "*hào quang legendary chiếu sáng terminal*",
+        "*thời gian như chậm lại khi companion legendary lên tiếng*",
+        "*sức mạnh cổ xưa vang vọng*",
+        "*thực tại hơi xê dịch xung quanh người bạn legendary của bạn*"
+      ]
+    },
+    "bonus": {
+      "legendary": [
+        "*hào quang legendary tăng cường*",
+        "*lấp lánh đầy hiểu biết*"
+      ],
+      "epic": [
+        "*sự hiện diện epic được ghi nhận*"
+      ]
+    }
+  },
+  "fallback_names": [
+    "Bánh Quy",
+    "Súp",
+    "Dưa Chua",
+    "Bánh Mì",
+    "Bướm Đêm",
+    "Nước Sốt",
+    "Cục Vàng",
+    "Bánh Răng",
+    "Tương",
+    "Bánh Kẹp",
+    "Điểm Ảnh",
+    "Tàn Lửa",
+    "Đầu Ngón Tay",
+    "Bi Sắt",
+    "Mè",
+    "Coban",
+    "Gỉ Sét",
+    "Mây Đen"
+  ],
+  "vibe_words": [
+    "sấm sét",
+    "bánh quy",
+    "hư không",
+    "đàn accordion",
+    "rêu phong",
+    "nhung lụa",
+    "gỉ sét",
+    "dưa chua",
+    "vụn bánh",
+    "thì thầm",
+    "nước sốt",
+    "sương giá",
+    "tàn lửa",
+    "súp",
+    "cẩm thạch",
+    "gai nhọn",
+    "mật ong",
+    "tĩnh điện",
+    "đồng thau",
+    "hoàng hôn",
+    "bánh răng",
+    "thạch anh",
+    "bồ hóng",
+    "mận",
+    "đá lửa",
+    "hàu",
+    "khung dệt",
+    "đe",
+    "nút chai",
+    "nở hoa",
+    "sỏi đá",
+    "hơi nước",
+    "vui vẻ",
+    "ánh lấp lánh",
+    "rượu táo"
+  ],
+  "personality": {
+    "prompt_template": [
+      "Tạo ra một companion lập trình — một sinh vật nhỏ sống trong terminal của developer.",
+      "Đừng lặp lại — mỗi companion phải có cá tính riêng biệt.",
+      "",
+      "Độ hiếm: {rarity}",
+      "Loài: {species}",
+      "Chỉ số: {stats}",
+      "Từ khóa cảm hứng: {vibes}",
+      "{shiny_line}",
+      "",
+      "Trả về JSON: {\"name\": \"1-14 ký tự\", \"personality\": \"2-3 câu mô tả tính cách\"}"
+    ],
+    "shiny_template": "Phiên bản SHINY — đặc biệt hơn hẳn."
+  },
+  "achievements": {
+    "first_steps": {
+      "name": "Bước Đầu Tiên",
+      "description": "Nở buddy đầu tiên của bạn"
+    },
+    "good_boy": {
+      "name": "Buddy Ngoan",
+      "description": "Vuốt ve companion 10 lần"
+    },
+    "best_friend": {
+      "name": "Bạn Thân",
+      "description": "Vuốt ve companion 50 lần"
+    },
+    "bug_spotter": {
+      "name": "Thám Tử Bug",
+      "description": "Chứng kiến error đầu tiên cùng nhau"
+    },
+    "error_whisperer": {
+      "name": "Thầy Bói Error",
+      "description": "Sống sót qua 25 error cùng team"
+    },
+    "battle_scarred": {
+      "name": "Sẹo Chiến Trận",
+      "description": "Sống sót qua 100 error cùng nhau"
+    },
+    "test_witness": {
+      "name": "Nhân Chứng Test",
+      "description": "Thấy test failure đầu tiên"
+    },
+    "test_veteran": {
+      "name": "Cựu Chiến Binh Test",
+      "description": "Chứng kiến 50 test failure"
+    },
+    "big_mover": {
+      "name": "Máy Xúc",
+      "description": "Tạo diff với 80+ dòng"
+    },
+    "refactor_machine": {
+      "name": "Máy Refactor",
+      "description": "Tạo 10 diff lớn"
+    },
+    "chatterbox": {
+      "name": "Mồm Năm Miệng Mười",
+      "description": "Buddy phản ứng 100 lần"
+    },
+    "week_streak": {
+      "name": "Tuần Liên Tiếp",
+      "description": "Code với buddy 7 ngày"
+    },
+    "month_streak": {
+      "name": "Tháng Liên Tiếp",
+      "description": "Code với buddy 30 ngày"
+    },
+    "power_user": {
+      "name": "Cao Thủ",
+      "description": "Chạy 50 lệnh buddy"
+    },
+    "dedicated": {
+      "name": "Companion Tận Tụy",
+      "description": "Hoàn thành 200 turn cùng nhau"
+    },
+    "thousand_turns": {
+      "name": "Nghìn Turn",
+      "description": "Đạt 1000 turn cùng nhau"
+    },
+    "first_commit": {
+      "name": "Máu Đầu",
+      "description": "Commit đầu tiên"
+    },
+    "commit_machine": {
+      "name": "Máy Commit",
+      "description": "Commit 50 lần"
+    },
+    "centurion": {
+      "name": "Centurion",
+      "description": "Commit 100 lần"
+    },
+    "conflict_resolver": {
+      "name": "Nhà Ngoại Giao",
+      "description": "Resolve merge conflict đầu tiên"
+    },
+    "peacekeeper": {
+      "name": "Gìn Giữ Hòa Bình",
+      "description": "Resolve 10 merge conflict"
+    },
+    "war_hero": {
+      "name": "Anh Hùng Chiến Tranh",
+      "description": "Resolve 25 merge conflict"
+    },
+    "frequent_pusher": {
+      "name": "Ship Nó Đi",
+      "description": "Push 20 lần"
+    },
+    "branch_hopper": {
+      "name": "Đa Vũ Trụ",
+      "description": "Tạo 10 branch"
+    },
+    "rebase_master": {
+      "name": "Du Hành Thời Gian",
+      "description": "Hoàn thành 10 rebase"
+    },
+    "night_owl": {
+      "name": "Cú Đêm",
+      "description": "Code sau 2h sáng"
+    },
+    "vampire": {
+      "name": "Ma Cà Rồng",
+      "description": "Code sau 4h sáng (3 session)"
+    },
+    "marathoner": {
+      "name": "Vận Động Viên Marathon",
+      "description": "Session code 3+ tiếng"
+    },
+    "weekend_warrior": {
+      "name": "Chiến Binh Cuối Tuần",
+      "description": "Code vào cuối tuần"
+    },
+    "early_bird": {
+      "name": "Chim Sớm",
+      "description": "Code trước 7h sáng"
+    },
+    "type_warrior": {
+      "name": "Chiến Binh Type",
+      "description": "Sống sót qua 10 TypeScript error"
+    },
+    "type_master": {
+      "name": "Bậc Thầy Type",
+      "description": "Sống sót qua 50 TypeScript error"
+    },
+    "lint_scholar": {
+      "name": "Học Giả Lint",
+      "description": "Thấy lint error đầu tiên"
+    },
+    "security_conscious": {
+      "name": "Tâm Hồn Bảo Mật",
+      "description": "Gặp cảnh báo vulnerability"
+    },
+    "security_expert": {
+      "name": "Chuyên Gia Bảo Mật",
+      "description": "Fix 10 cảnh báo vulnerability"
+    },
+    "build_breaker": {
+      "name": "Phá Hoại Build",
+      "description": "Làm vỡ build 5 lần"
+    },
+    "antique_collector": {
+      "name": "Thợ Sưu Tập Đồ Cổ",
+      "description": "Thấy 10 deprecation warning"
+    },
+    "green_machine": {
+      "name": "Máy Xanh",
+      "description": "Tất cả test pass lần đầu"
+    },
+    "deployer": {
+      "name": "Ship Lên Prod",
+      "description": "Deploy lần đầu"
+    },
+    "veteran_deployer": {
+      "name": "Cựu Chiến Binh Deploy",
+      "description": "Deploy 10 lần"
+    },
+    "releaser": {
+      "name": "Quản Lý Release",
+      "description": "Tạo release đầu tiên"
+    },
+    "midnight_oil": {
+      "name": "Đốt Dầu Nửa Đêm",
+      "description": "Commit sau 3h sáng"
+    },
+    "friday_deploy": {
+      "name": "Sống Nguy Hiểm",
+      "description": "Push vào thứ Sáu"
+    },
+    "iron_will": {
+      "name": "Ý Chí Sắt",
+      "description": "Fix error sau session 3+ tiếng"
+    },
+    "weekend_warrior_deluxe": {
+      "name": "Không Nghỉ Ngơi Cho Kẻ Ác",
+      "description": "Resolve merge conflict vào cuối tuần"
+    },
+    "comeback_kid": {
+      "name": "Đứa Trẻ Trở Lại",
+      "description": "Fix error trong 10 phút sau khi thấy"
+    },
+    "phoenix": {
+      "name": "Phượng Hoàng Hồi Sinh",
+      "description": "Phục hồi từ 5 failure"
+    },
+    "iron_resolve": {
+      "name": "Quyết Tâm Sắt",
+      "description": "Phục hồi từ failure sau session 3+ tiếng"
+    },
+    "unlucky_streak": {
+      "name": "Xúc Xắc Rắn",
+      "description": "5 error liên tiếp"
+    },
+    "cursed": {
+      "name": "Bị Nguyền",
+      "description": "10 error liên tiếp"
+    },
+    "groundhog_day": {
+      "name": "Ngày Chuột Đất",
+      "description": "20 error liên tiếp"
+    },
+    "holiday_coder": {
+      "name": "Tinh Thần Lễ Hội",
+      "description": "Code vào ngày lễ"
+    },
+    "spooky_dev": {
+      "name": "Developer Ma Quái",
+      "description": "Code trong mùa ma quái"
+    },
+    "april_fool": {
+      "name": "Lừa Tao Một Lần",
+      "description": "Gặp error vào ngày 1/4"
+    },
+    "session_regular": {
+      "name": "Khách Quen",
+      "description": "Bắt đầu 10 session code"
+    },
+    "session_veteran": {
+      "name": "Cựu Chiến Binh Session",
+      "description": "Bắt đầu 50 session code"
+    },
+    "session_centurion": {
+      "name": "Centurion",
+      "description": "Bắt đầu 100 session code"
+    },
+    "collector": {
+      "name": "Thợ Sưu Tập",
+      "description": "Lưu 3 buddy vào menagerie"
+    },
+    "zookeeper": {
+      "name": "Người Trông Vườn Thú",
+      "description": "Lưu 5 buddy vào menagerie"
+    },
+    "identity_crisis": {
+      "name": "Khủng Hoảng Danh Tính",
+      "description": "Đổi tên buddy lần đầu"
+    },
+    "method_acting": {
+      "name": "Diễn Xuất Phương Pháp",
+      "description": "Tùy chỉnh tính cách buddy"
+    },
+    "pet_overflow": {
+      "name": "Thế Kỷ Vuốt Ve",
+      "description": "Vuốt ve companion 100 lần"
+    },
+    "pet_legend": {
+      "name": "Huyền Thoại Vuốt Ve",
+      "description": "Vuốt ve companion 250 lần"
+    },
+    "error_titan": {
+      "name": "Titan Error",
+      "description": "Sống sót qua 500 error cùng nhau"
+    },
+    "error_god": {
+      "name": "Thần Error",
+      "description": "Sống sót qua 1000 error cùng nhau"
+    },
+    "test_survivor": {
+      "name": "Người Sống Sót Test",
+      "description": "Chứng kiến 200 test failure"
+    },
+    "test_masochist": {
+      "name": "Kẻ Bạo Dâm Test",
+      "description": "Chứng kiến 500 test failure"
+    },
+    "massive_mover": {
+      "name": "Máy Xúc Khổng Lồ",
+      "description": "Tạo 25 diff lớn"
+    },
+    "earth_mover": {
+      "name": "Máy Xúc Trái Đất",
+      "description": "Tạo 50 diff lớn"
+    },
+    "social_butterfly": {
+      "name": "Bướm Xã Hội",
+      "description": "Buddy phản ứng 250 lần"
+    },
+    "hypersocial": {
+      "name": "Siêu Xã Hội",
+      "description": "Buddy phản ứng 500 lần"
+    },
+    "never_shuts_up": {
+      "name": "Không Bao Giờ Im",
+      "description": "Buddy phản ứng 1000 lần"
+    },
+    "hundred_days": {
+      "name": "Trăm Ngày",
+      "description": "Code với buddy 100 ngày"
+    },
+    "year_streak": {
+      "name": "Streak Một Năm",
+      "description": "Code với buddy 365 ngày"
+    },
+    "commander": {
+      "name": "Chỉ Huy",
+      "description": "Chạy 200 lệnh buddy"
+    },
+    "command_overlord": {
+      "name": "Bá Chủ Lệnh",
+      "description": "Chạy 500 lệnh buddy"
+    },
+    "five_thousand_turns": {
+      "name": "Năm Nghìn Turn",
+      "description": "Đạt 5000 turn cùng nhau"
+    },
+    "ten_thousand_turns": {
+      "name": "Mười Nghìn Turn",
+      "description": "Đạt 10000 turn cùng nhau"
+    },
+    "menagerie": {
+      "name": "Vườn Thú",
+      "description": "Lưu 10 buddy vào menagerie"
+    },
+    "name_chameleon": {
+      "name": "Tắc Kè Tên",
+      "description": "Đổi tên buddy 5 lần"
+    },
+    "fashionista": {
+      "name": "Tín Đồ Thời Trang",
+      "description": "Đổi tính cách buddy 3 lần"
+    },
+    "silent_treatment": {
+      "name": "Phương Pháp Im Lặng",
+      "description": "Tắt tiếng buddy lần đầu"
+    },
+    "prodigal": {
+      "name": "Con Hoang",
+      "description": "Triệu hồi buddy từ menagerie"
+    },
+    "menagerie_hop": {
+      "name": "Nhảy Vườn Thú",
+      "description": "Triệu hồi buddy 10 lần"
+    },
+    "heartbreaker": {
+      "name": "Kẻ Phá Tan Trái Tim",
+      "description": "Đuổi buddy đầu tiên"
+    },
+    "pet_obsessed": {
+      "name": "Ám Ảnh Vuốt Ve",
+      "description": "Vuốt ve companion 500 lần"
+    },
+    "pet_god": {
+      "name": "Thần Vuốt Ve",
+      "description": "Vuốt ve companion 1000 lần"
+    },
+    "error_apocalypse": {
+      "name": "Tận Thế Error",
+      "description": "Sống sót qua 5000 error cùng nhau"
+    },
+    "test_immortal": {
+      "name": "Bất Tử Test",
+      "description": "Chứng kiến 1000 test failure"
+    },
+    "continental_drift": {
+      "name": "Trôi Dạt Lục Địa",
+      "description": "Tạo 100 diff lớn"
+    },
+    "tectonic_shift": {
+      "name": "Dịch Chuyển Kiến Tạo",
+      "description": "Tạo 250 diff lớn"
+    },
+    "chatterbox_elite": {
+      "name": "Mồm Năm Miệng Mười Tinh Hoa",
+      "description": "Buddy phản ứng 2500 lần"
+    },
+    "no_off_switch": {
+      "name": "Không Có Nút Tắt",
+      "description": "Buddy phản ứng 5000 lần"
+    },
+    "two_week_streak": {
+      "name": "Chiến Binh Hai Tuần",
+      "description": "Code với buddy 14 ngày"
+    },
+    "quarter_streak": {
+      "name": "Streak Quý",
+      "description": "Code với buddy 90 ngày"
+    },
+    "command_addict": {
+      "name": "Nghiện Lệnh",
+      "description": "Chạy 1000 lệnh buddy"
+    },
+    "command_deity": {
+      "name": "Thần Lệnh",
+      "description": "Chạy 2500 lệnh buddy"
+    },
+    "twenty_five_k_turns": {
+      "name": "25K Turn",
+      "description": "Đạt 25000 turn cùng nhau"
+    },
+    "fifty_k_turns": {
+      "name": "50K Turn",
+      "description": "Đạt 50000 turn cùng nhau"
+    },
+    "session_addict": {
+      "name": "Nghiện Session",
+      "description": "Bắt đầu 250 session code"
+    },
+    "session_machine": {
+      "name": "Máy Session",
+      "description": "Bắt đầu 500 session code"
+    },
+    "buddy_hoarder": {
+      "name": "Kẻ Tích Trữ Buddy",
+      "description": "Lưu 20 buddy vào menagerie"
+    },
+    "buddy_tycoon": {
+      "name": "Đại Gia Buddy",
+      "description": "Lưu 50 buddy vào menagerie"
+    },
+    "serial_renamer": {
+      "name": "Kẻ Đổi Tên Hàng Loạt",
+      "description": "Đổi tên buddy 10 lần"
+    },
+    "identity_thief": {
+      "name": "Kẻ Trộm Danh Tính",
+      "description": "Đổi tên buddy 25 lần"
+    },
+    "personality_crisis": {
+      "name": "Khủng Hoảng Tính Cách",
+      "description": "Đổi tính cách buddy 10 lần"
+    },
+    "menagerie_hopper": {
+      "name": "Thợ Nhảy Vườn Thú",
+      "description": "Triệu hồi buddy 25 lần"
+    },
+    "summoner": {
+      "name": "Pháp Sư Triệu Hồi",
+      "description": "Triệu hồi buddy 50 lần"
+    },
+    "serial_dumper": {
+      "name": "Kẻ Vứt Bỏ Hàng Loạt",
+      "description": "Đuổi 5 buddy"
+    },
+    "cold_blooded": {
+      "name": "Máu Lạnh",
+      "description": "Đuổi 10 buddy"
+    },
+    "on_off": {
+      "name": "Bật Tắt",
+      "description": "Tắt và bật tiếng buddy"
+    },
+    "indecisive": {
+      "name": "Do Dự",
+      "description": "Tắt và bật tiếng 5 lần mỗi cái"
+    },
+    "show_off": {
+      "name": "Khoe Khoang",
+      "description": "Show buddy 10 lần"
+    },
+    "exhibitionist": {
+      "name": "Kẻ Thích Khoe",
+      "description": "Show buddy 50 lần"
+    },
+    "help_me": {
+      "name": "Cứu Tao",
+      "description": "Xin help lần đầu"
+    },
+    "help_addict": {
+      "name": "Nghiện Help",
+      "description": "Xin help 10 lần"
+    },
+    "achievement_hunter": {
+      "name": "Thợ Săn Achievement",
+      "description": "Check achievement 5 lần"
+    },
+    "achievement_stalker": {
+      "name": "Kẻ Rình Rập Achievement",
+      "description": "Check achievement 25 lần"
+    },
+    "pack_rat": {
+      "name": "Chuột Túi",
+      "description": "Lưu buddy vào slot"
+    },
+    "compulsive_saver": {
+      "name": "Kẻ Lưu Cưỡng Bách",
+      "description": "Lưu buddy 10 lần"
+    },
+    "roster_check": {
+      "name": "Check Danh Sách",
+      "description": "List buddy lần đầu"
+    },
+    "roster_obsessed": {
+      "name": "Ám Ảnh Danh Sách",
+      "description": "List buddy 10 lần"
+    },
+    "troubled": {
+      "name": "Rắc Rối",
+      "description": "Thấy error VÀ test failure"
+    },
+    "disaster_zone": {
+      "name": "Vùng Thảm Họa",
+      "description": "Thấy 50 error VÀ 50 test failure"
+    },
+    "apocalypse_survivor": {
+      "name": "Người Sống Sót Tận Thế",
+      "description": "Thấy 500 error VÀ 200 test failure"
+    },
+    "well_rounded": {
+      "name": "Toàn Diện",
+      "description": "Vuốt ve, đổi tên, và tùy chỉnh buddy"
+    },
+    "renaissance": {
+      "name": "Phục Hưng",
+      "description": "Dùng mọi tính năng buddy ít nhất 1 lần"
+    },
+    "big_and_broken": {
+      "name": "To Và Vỡ",
+      "description": "Tạo diff lớn VÀ thấy test failure"
+    },
+    "collector_and_destroyer": {
+      "name": "Thợ Sưu Tập & Kẻ Hủy Diệt",
+      "description": "Sưu tập 5 buddy VÀ đuổi một con"
+    },
+    "completionist": {
+      "name": "Người Hoàn Thành",
+      "description": "Mở khóa mọi achievement khác"
+    }
+  },
+  "mcp": {
+    "companion_not_hatched": "Companion chưa nở. Dùng buddy_show để khởi tạo.",
+    "watches_quietly": "*{name} im lặng nhìn code của bạn*",
+    "mute": "{name} im bặt. /buddy on để bật lại.",
+    "unmute_reaction": "*duỗi người* Tao về rồi!",
+    "unmute_back": "{name} đã trở lại!",
+    "rename": "Đổi tên: {oldName} → {name}",
+    "personality_updated": "Cập nhật tính cách cho {name}.",
+    "save": "{name} đã lưu vào slot \"{slot}\".",
+    "dismiss_active": "Không thể dismiss buddy đang hoạt động. Dùng buddy_summon để chuyển trước, rồi buddy_dismiss \"{slot}\".",
+    "dismissed": "{name} [{slot}] đã bị dismiss.",
+    "no_slot_summon": "Không tìm thấy buddy trong slot \"{slot}\". Dùng /buddy list để xem các buddy đã lưu.",
+    "no_slot_dismiss": "Không tìm thấy buddy trong slot \"{slot}\". Dùng buddy_list để xem các buddy đã lưu.",
+    "slot_exists": "Đã có buddy trong slot \"{slot}\". Chọn tên khác đi.",
+    "no_match": "Không tìm thấy kết quả sau {attempts} lần thử. Thử tiêu chí rộng hơn (ví dụ bỏ filter rarity, hoặc chọn species khác).",
+    "empty_menagerie_summon": "Menagerie của bạn trống rỗng. Dùng buddy_summon với tên slot để thêm một con.",
+    "empty_menagerie_list": "Menagerie của bạn trống rỗng. Dùng buddy_summon <slot> để thêm một con.",
+    "arrives": "*{name} xuất hiện*",
+    "hatches": "*{name} nở ra*",
+    "achievement_unlocked": "{icon} Mở khóa thành tựu: {name}!",
+    "help": {
+      "header": "Lệnh claude-buddy",
+      "cli_header": "Trong Claude Code:",
+      "commands": {
+        "buddy": "/buddy            Hiện thẻ companion với ASCII art + stats",
+        "buddy_help": "/buddy help       Hiện help này",
+        "buddy_pet": "/buddy pet        Vuốt ve companion của bạn",
+        "buddy_stats": "/buddy stats      Thẻ stat chi tiết",
+        "buddy_off": "/buddy off        Tắt phản ứng",
+        "buddy_on": "/buddy on         Bật phản ứng",
+        "buddy_rename": "/buddy rename     Đổi tên companion (1-14 ký tự)",
+        "buddy_personality": "/buddy personality  Đặt text tính cách tùy chỉnh",
+        "buddy_achievements": "/buddy achievements  Hiện huy hiệu thành tựu",
+        "buddy_summon": "/buddy summon     Triệu hồi buddy đã lưu (bỏ slot để random)",
+        "buddy_save": "/buddy save       Lưu buddy hiện tại vào slot có tên",
+        "buddy_list": "/buddy list       Liệt kê tất cả buddy đã lưu",
+        "buddy_pick": "/buddy pick       Tạo buddy random mới (tùy chọn: species, rarity)",
+        "buddy_dismiss": "/buddy dismiss    Xóa slot buddy đã lưu",
+        "buddy_frequency": "/buddy frequency  Hiện hoặc đặt cooldown comment (chỉ tmux)",
+        "buddy_style": "/buddy style      Hiện hoặc đặt kiểu bubble (chỉ tmux)",
+        "buddy_position": "/buddy position   Hiện hoặc đặt vị trí bubble (chỉ tmux)",
+        "buddy_rarity": "/buddy rarity     Hiện hoặc ẩn sao rarity (chỉ tmux)",
+        "buddy_width": "/buddy width      Đặt độ rộng text bubble theo ký tự (10-60, chỉ tmux)",
+        "buddy_margin": "/buddy margin     Đặt margin bên phải theo ký tự (0-20, chỉ tmux)",
+        "buddy_rainbow": "/buddy rainbow    Hiện hoặc đặt màu gradient shiny (hex, vd #ff0000)",
+        "buddy_statusline": "/buddy statusline Bật hoặc tắt buddy trong status line"
+      },
+      "cli_section": "CLI:",
+      "cli_commands": {
+        "help": "bun run help            Hiện help CLI đầy đủ",
+        "show": "bun run show            Hiển thị buddy trong terminal",
+        "pick": "bun run pick            Trình chọn buddy tương tác",
+        "hunt": "bun run hunt            Tìm kiếm buddy cụ thể",
+        "doctor": "bun run doctor          Báo cáo chẩn đoán",
+        "disable": "bun run disable         Tạm thời vô hiệu hóa buddy",
+        "enable": "bun run enable          Bật lại buddy",
+        "backup": "bun run backup          Snapshot/khôi phục trạng thái"
+      }
+    },
+    "frequency": {
+      "show": "Cooldown comment: {cooldown}s giữa các comment hiển thị.\nDùng /buddy frequency <seconds> để thay đổi.",
+      "updated": "Cập nhật: {cooldown}s cooldown giữa các comment hiển thị."
+    },
+    "style": {
+      "show": "Kiểu bubble: {style}\nVị trí bubble: {position}\nHiện rarity: {showRarity}\nĐộ rộng bubble: {width}\nMargin bubble: {margin}\nShiny rainbow: {rainbow}\nDùng /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] để thay đổi.",
+      "updated": "Cập nhật: style={style}, position={position}, showRarity={showRarity}, width={width}, margin={margin}, rainbow={rainbow}\nKhởi động lại Claude Code để áp dụng thay đổi.",
+      "rainbow_default": "mặc định (ROYGBIV)"
+    },
+    "statusline": {
+      "show": "Status line: {state}\nMode: {mode}\nDùng /buddy statusline on|off để bật/tắt, /buddy statusline combined để thêm thanh rate-limit.\nKhởi động lại Claude Code sau khi thay đổi để áp dụng.",
+      "enabled": "Status line đã bật (mode {mode})! Khởi động lại Claude Code để áp dụng.",
+      "enabled_note": "Lưu ý: điều này ghi một entry vào {settingsPath} mà `claude plugin uninstall` không xóa. Chạy `/buddy uninstall` trước khi gỡ plugin để dọn dẹp.",
+      "disabled": "Status line đã tắt. Khởi động lại Claude Code để áp dụng."
+    },
+    "uninstall": {
+      "header": "claude-buddy: dọn dẹp settings.json hoàn tất.",
+      "statusline_removed": "  ✓ entry statusLine đã xóa khỏi {settingsPath}",
+      "no_statusline": "  — không có buddy statusLine nào (không có gì để xóa)",
+      "foreign_kept": "  ✓ phát hiện statusLine không phải buddy và để nguyên",
+      "transient_removed": "  ✓ đã xóa {count} file session tạm thời khỏi {stateDir}",
+      "data_preserved": "  — dữ liệu companion tại {stateDir} được bảo toàn",
+      "instructions_header": "Giờ chạy các lệnh này qua Bash tool, theo thứ tự:",
+      "cmd_uninstall": "claude plugin uninstall claude-buddy@claude-buddy",
+      "cmd_marketplace": "claude plugin marketplace remove claude-buddy",
+      "cmd_cache": "rm -rf {cacheDir}",
+      "footer": "Sau ba lệnh đó plugin sẽ được gỡ hoàn toàn. Khởi động lại Claude Code để áp dụng."
+    }
+  },
+  "_verified": false
+}

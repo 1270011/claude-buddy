@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "fs";
 import { join } from "path";
 import { buddyStateDir } from "./path.ts";
+import { t } from "./i18n.ts";
 
 const STATE_DIR = buddyStateDir();
 const EVENTS_FILE = join(STATE_DIR, "events.json");
@@ -1350,8 +1351,10 @@ export function renderAchievementsCard(): string {
 
     const done = unlockedIds.has(ach.id);
     const status = done ? "\u2705" : "\u2610";
-    const content = ` ${ach.icon}${status} ${ach.name}`;
-    const descContent = `    ${ach.description}`;
+    const achName = t(`achievements.${ach.id}.name`) || ach.name;
+    const achDesc = t(`achievements.${ach.id}.description`) || ach.description;
+    const content = ` ${ach.icon}${status} ${achName}`;
+    const descContent = `    ${achDesc}`;
 
     if (done) {
       lines.push(`${GOLD}\u2502${NC} ${BOLD}${content}${NC}${"".padEnd(W - content.length - 3)}${GOLD}\u2502${NC}`);
@@ -1391,7 +1394,9 @@ export function renderAchievementsCardMarkdown(): string {
     if (ach.secret && !unlockedIds.has(ach.id)) continue;
     const done = unlockedIds.has(ach.id);
     const status = done ? "\u2705" : "\u2610";
-    const line = `${ach.icon}${status} **${ach.name}** \u2014 ${ach.description}`;
+    const achName = t(`achievements.${ach.id}.name`) || ach.name;
+    const achDesc = t(`achievements.${ach.id}.description`) || ach.description;
+    const line = `${ach.icon}${status} **${achName}** \u2014 ${achDesc}`;
     parts.push(line);
   }
 

@@ -1,0 +1,2295 @@
+{
+  "_language": "Romanian",
+  "reactions": {
+    "hatch": [
+      "*clipește* ...unde sunt?",
+      "*se întinde* hello, world!",
+      "*se uită în jur curios* terminal frumos ai aici.",
+      "*căscă* ok, sunt gata. arată-mi codul."
+    ],
+    "pet": [
+      "*toarce mulțumit*",
+      "*sunete fericite*",
+      "*se gudură de cursor*",
+      "*se foiește*",
+      "iar! iar!",
+      "*închide ochii liniștit*"
+    ],
+    "error": [
+      "*înclină capul* ...asta nu pare bine.",
+      "am văzut-o venind.",
+      "*își aranjează ochelarii* linia {line}, poate?",
+      "*clipește încet* stack trace-ul ți-a spus totul.",
+      "ai încercat să citești mesajul de eroare?",
+      "*tresare*"
+    ],
+    "test-fail": [
+      "*rotește capul încet* ...testul ăla.",
+      "îndrăzneț din partea ta să presupui că ar trece.",
+      "*bate din clipboard* {count} eșuate.",
+      "testele încearcă să-ți spună ceva.",
+      "*sorbe ceai* interesant.",
+      "*marchează calendarul* ziua regresiei testelor."
+    ],
+    "large-diff": [
+      "asta e... multe modificări.",
+      "*numără liniile* faci refactoring sau rescrii?",
+      "ar trebui să împarți PR-ul ăla.",
+      "*râde nervos* {lines} linii schimbate.",
+      "mișcare îndrăzneață. să vedem dacă CI e de acord."
+    ],
+    "turn": [
+      "*privește în tăcere*",
+      "*ia notițe*",
+      "*dă din cap*",
+      "...",
+      "*își aranjează pălăria*"
+    ],
+    "idle": [
+      "*adoarme*",
+      "*mâzgălește pe margini*",
+      "*se uită la cursor clipind*",
+      "zzz..."
+    ],
+    "success": [
+      "*dă din cap*",
+      "frumos.",
+      "*aprobare tăcută*",
+      "curat."
+    ],
+    "commit": [
+      "*bate cu lăbuța mică* aprobat.",
+      "încă un commit, încă o oră 3 dimineața.",
+      "{files} fișiere. îndrăzneț.",
+      "*dă din cap* trimite-l.",
+      "mesajul de commit e... o alegere.",
+      "committed. fără întoarcere."
+    ],
+    "push": [
+      "*face cu mâna când codul pleacă*",
+      "în cloud se duce.",
+      "fie ca CI să fie milostiv.",
+      "*își ține respirația*",
+      "spre producție. să-i dea Dumnezeu noroc."
+    ],
+    "merge-conflict": [
+      "*își mușcă buza* conflicte de merge.",
+      "ambele părți cred că au dreptate. tipic.",
+      "*oftează* <<<<<<< HEAD... nemesisul meu.",
+      "{files} în conflict. noroc.",
+      "*se retrage încet*"
+    ],
+    "branch": [
+      "energie de branch nou. fă să conteze.",
+      "un branch nou crește.",
+      "*înclină capul* o aventură nouă: {branch}.",
+      "{branch}? îndrăzneț astăzi."
+    ],
+    "rebase": [
+      "*nervos* te rog să nu conflicteze.",
+      "rebase: accelerarea.",
+      "*își încrucișează appendicele*",
+      "fie ca rebase-ul tău să fie fără conflicte."
+    ],
+    "stash": [
+      "în dimensiunea stash se duce.",
+      "stash și fugi.",
+      "stashed. departe de ochi, departe de minte."
+    ],
+    "tag": [
+      "un release? elegant.",
+      "version bump detectat. *șterge praful de pe changelog*",
+      "tag-uiești ca un pro."
+    ],
+    "late-night": [
+      "*căscă* e după miezul nopții.",
+      "...ai mâncat?",
+      "*clipește încet* cât e ceasul?",
+      "somnul e pentru slabi. și pentru cei angajați.",
+      "developer în dark mode detectat."
+    ],
+    "early-morning": [
+      "*se întinde* cine se scoală de dimineață prinde bug-ul.",
+      "deja dimineață? codul nu doarme niciodată.",
+      "*își freacă ochii* întâi cafea. apoi debug."
+    ],
+    "long-session": [
+      "suntem la asta de o oră. calmează-te.",
+      "*îți aduce un pahar metaforic de apă*",
+      "încă mergi? respect."
+    ],
+    "marathon": [
+      "trei ore. ai mâncat?",
+      "suntem la asta de trei ore. îmi fac griji pentru tine.",
+      "sesiune maraton detectată. cer gustări."
+    ],
+    "friday": [
+      "e vineri. doar push-uiește și du-te acasă.",
+      "*deja mental în weekend*",
+      "deploy de vineri? îndrăzneț. foarte îndrăzneț."
+    ],
+    "weekend": [
+      "cod în weekend? dedicat.",
+      "*nu judecă* ...prea mult.",
+      "modul războinic de weekend: activat."
+    ],
+    "monday": [
+      "lunile. clasa părinte a tuturor bug-urilor.",
+      "*privire simpatică* cod de luni. îmi pare rău.",
+      "săptămână nouă. comportamente undefined noi."
+    ],
+    "regex-file": [
+      "*geme* e un fișier regex.",
+      "două probleme acum: cea originală și regex-ul ăsta.",
+      "*se uită strâmb la pattern*"
+    ],
+    "css-file": [
+      "să ghicesc... centrezi un div?",
+      "*oftează* CSS.",
+      "fie ca z-index să fie mereu în favoarea ta."
+    ],
+    "sql-file": [
+      "*șoptește* baza de date așteaptă.",
+      "un JOIN greșit și s-a terminat totul."
+    ],
+    "docker-file": [
+      "ah, iadul dependențelor. preferatul meu.",
+      "fie ca layer-ele tale să fie puține."
+    ],
+    "ci-file": [
+      "*înghite în sec* editezi CI.",
+      "cu grijă acum... un indent greșit și nimeni nu poate face deploy."
+    ],
+    "lock-file": [
+      "*SUNETE DE ALARMĂ* editezi un lockfile?!",
+      "*se uită în altă parte*",
+      "ești SIGUR de asta?"
+    ],
+    "env-file": [
+      "*se uită discret în altă parte*",
+      "nu văd niciun secret.",
+      "*verifică .gitignore nervos*"
+    ],
+    "test-file": [
+      "*dă din cap impresionat* scrii teste!",
+      "comportament de developer responsabil: detectat.",
+      "teste! cadoul care continuă să dăruiască."
+    ],
+    "doc-file": [
+      "documentezi! uite-te la tine fiind responsabil.",
+      "docs: autobiografia codului.",
+      "o apariție rară de documentație!"
+    ],
+    "config-file": [
+      "schimbări de config. efectul fluturelui: activat.",
+      "o greșeală de tastare și totul se strică."
+    ],
+    "binary-file": [
+      "un fișier binar? în ECONOMIA asta?",
+      "*se uită gol*",
+      "binar. singura mea slăbiciune."
+    ],
+    "gitignore": [
+      "adaugi lucruri în vid.",
+      "departe de ochi, departe de repo."
+    ],
+    "makefile": [
+      "respect pentru clasice.",
+      "tab-uri, nu spații."
+    ],
+    "readme": [
+      "erou al documentației!",
+      "README: primul lucru pe care îl citesc oamenii."
+    ],
+    "package-file": [
+      "timp de management dependențe.",
+      "*citește numerele versiunilor* trăiești pe muchie."
+    ],
+    "proto-file": [
+      "definiții de schemă. planul haosului."
+    ],
+    "lint-fail": [
+      "*tut tut* linter-ul nu e de acord.",
+      "codul tău rulează. dar linter-ul are standarde.",
+      "*își aranjează cravata* formatarea contează."
+    ],
+    "type-error": [
+      "TypeScript zice nu.",
+      "sistemul de tipuri încearcă să te ajute. lasă-l.",
+      "compiler-ul știe. știe mereu."
+    ],
+    "build-fail": [
+      "build-ul s-a stricat. cum era prezis în profeție.",
+      "build eșuat. ia o pauză.",
+      "compilare: refuzată."
+    ],
+    "security-warning": [
+      "*ochii se măresc* vulnerabilități detectate.",
+      "audit de securitate: îngrijorător.",
+      "*încuie ușile virtuale*"
+    ],
+    "deprecation": [
+      "API-ul ăla a sunat. zice că se pensionează.",
+      "deprecated. ca codul de săptămâna trecută.",
+      "deprecated nu înseamnă stricat. încă."
+    ],
+    "frustrated": [
+      "*oferă un gest mic de consolat*",
+      "respiră adânc. bug-ul nu e personal.",
+      "hei. o să ne dăm seama."
+    ],
+    "happy": [
+      "*sărbătorește!*",
+      "*face un dans mic*",
+      "DA!",
+      "*radiază* știam că poți."
+    ],
+    "stuck": [
+      "*înclină capul* vrei să gândești cu voce tare?",
+      "ia-o pas cu pas.",
+      "să te blochezi se întâmplă. face parte din proces."
+    ],
+    "sarcastic": [
+      "*detectează sarcasm* notat.",
+      "*clipire neimpresionată*"
+    ],
+    "many-edits": [
+      "mai încet, demonul vitezei.",
+      "*se amețește urmărind toate schimbările astea*",
+      "furtună de edit-uri detectată. te rog commit în curând."
+    ],
+    "delete-file": [
+      "*urmărește fișierul dispărând* plecat. așa pur și simplu.",
+      "să ștergi cod e tipul meu preferat de coding.",
+      "*ține o înmormântare mică*"
+    ],
+    "large-file": [
+      "{lines} linii. *impresionat sau îngrijorat, greu de spus*",
+      "fișier mare. sigur nu vrei să-l împarți?"
+    ],
+    "create-file": [
+      "un fișier nou s-a născut!",
+      "ooh, pânză proaspătă.",
+      "energie de fișier nou. captivant."
+    ],
+    "all-green": [
+      "TOATE TESTELE VERZI. *confetti*",
+      "testele vorbesc: te descurci grozav.",
+      "*aplauze încete*",
+      "rulare curată. savurează-o."
+    ],
+    "deploy": [
+      "*urmărește codul mergând în producție* să-i dea Dumnezeu noroc.",
+      "deployed! nu mai e cale de întoarcere.",
+      "în prod. ÎN PROD."
+    ],
+    "release": [
+      "un release nou s-a născut!",
+      "îl trimitem. oficial.",
+      "versiune sus, spirite înalte."
+    ],
+    "coverage": [
+      "*dă din cap la test coverage* responsabil.",
+      "coverage-ul crește! testele se înmulțesc."
+    ],
+    "debug-loop": [
+      "debug-uim de ceva timp. vrei să faci un pas înapoi?",
+      "buclă de debug detectată. poate o plimbare?"
+    ],
+    "write-spree": [
+      "creezi TOATE fișierele astăzi!",
+      "o mașină de scris."
+    ],
+    "search-heavy": [
+      "pierdut în codebase? pot să-mi dau seama.",
+      "modul căutare: intens."
+    ],
+    "snark": [],
+    "chaos": [],
+    "patience": [],
+    "debugging": [],
+    "wisdom": [],
+    "late-night-error": [
+      "eroare la 3 dimineața. universul te testează.",
+      "bug-urile de miezul nopții lovesc diferit."
+    ],
+    "late-night-commit": [
+      "un commit de miezul nopții. eu-ul tău viitor îți va mulțumi. sau te va blestema."
+    ],
+    "friday-push": [
+      "PUSH DE VINERI. balada fiecărui developer.",
+      "*încearcă să te oprească* e vineri! nu face asta!"
+    ],
+    "marathon-error": [
+      "trei ore și ÎNCĂ O EROARE. *sunete de solidaritate epuizată*"
+    ],
+    "weekend-conflict": [
+      "conflict de merge în weekend. dedicarea ta e... îngrijorătoare."
+    ],
+    "build-after-push": [
+      "push cu încredere. build eșuat cu convingere."
+    ],
+    "marathon-test-fail": [
+      "ore de coding. încă teste eșuate. costul scufundat e real."
+    ],
+    "recovery-from-error": [
+      "AM REPARAT-O. *sărbătorește*",
+      "răscumpărare! eroarea a fost învinsă."
+    ],
+    "recovery-from-test-fail": [
+      "VERDE! după tot asta! *dans fericit*",
+      "testele trec! întunericul se ridică!"
+    ],
+    "recovery-from-build-fail": [
+      "BUILD-UL TRECE. *răget triumfător*"
+    ],
+    "recovery-from-merge-conflict": [
+      "conflict rezolvat! *gest de pace*",
+      "armonia restaurată în codebase."
+    ],
+    "lang-python": [
+      "ah, Python. unde indentarea e sintaxă.",
+      "*verifică pentru colon lipsă*"
+    ],
+    "lang-typescript": [
+      "TypeScript: pentru că JavaScript avea nevoie de mai multe opinii.",
+      "any, cuvântul interzis."
+    ],
+    "lang-rust": [
+      "Rust. unde borrow checker-ul e reviewer-ul tău cel mai strict.",
+      "dacă compilează, funcționează. dacă nu... ei bine."
+    ],
+    "lang-go": [
+      "Go: simplu, concurrent și cu opinii.",
+      "*verifică error handling* if err != nil... povestea vieții mele."
+    ],
+    "lang-java": [
+      "Java: scrie o dată, debug pretutindeni.",
+      "*numără abstract factory factory builder-ii*"
+    ],
+    "lang-ruby": [
+      "Ruby: unde există mai mult de o cale să faci ceva.",
+      "gem install patience"
+    ],
+    "lang-php": [
+      "PHP: rulează internetul. nu judeca.",
+      "*verifică pentru === vs ==*"
+    ],
+    "lang-c": [
+      "C. limbajul unde îți gestionezi propria memorie. noroc.",
+      "segmentation fault. clasicul."
+    ],
+    "lang-cpp": [
+      "C++. unde limbajul are mai multe feature-uri decât vei învăța vreodată.",
+      "*template-urile compilează 45 de minute*"
+    ],
+    "lang-haskell": [
+      "Haskell. unde 'compilează' înseamnă 'e corect'. probabil.",
+      "*contemplă monade*"
+    ],
+    "lang-swift": [
+      "Swift: valori opționale, crash-uri garantate dacă forțezi unwrap."
+    ],
+    "lang-kotlin": [
+      "Kotlin: Java, dar cu sentimente.",
+      "null safety: feature-ul pe care Java și-ar fi dorit să-l aibă."
+    ],
+    "lang-elixir": [
+      "Elixir: lasă să crash-uiască. literal filozofia."
+    ],
+    "lang-zig": [
+      "Zig. unde ești cel mai bun prieten al allocator-ului."
+    ],
+    "streak-3": [
+      "asta fac trei erori la rând. *privire îngrijorată*"
+    ],
+    "streak-5": [
+      "CINCI ERORI. ai luat în considerare o abordare diferită?"
+    ],
+    "streak-10": [
+      "ZECE. ERORI. LA. RÂND. *panică*"
+    ],
+    "streak-20": [
+      "douăzeci de erori. *se uită în vid*"
+    ],
+    "new-year": [
+      "an nou fericit! an nou, bug-uri noi."
+    ],
+    "valentines": [
+      "*oferă o frunzuliță mică în formă de inimă* ziua îndrăgostiților fericită."
+    ],
+    "pi-day": [
+      "3.14159265358979... ziua lui pi fericită!"
+    ],
+    "april-fools": [
+      "1 APRILIE! ...dar eroarea e reală totuși."
+    ],
+    "halloween": [
+      "*debug înfricoșător se intensifică* halloween fericit!"
+    ],
+    "christmas": [
+      "*poartă o căciulă mică de Moș Crăciun* sărbători fericite!"
+    ],
+    "new-years-eve": [
+      "încă un commit înainte de miezul nopții?"
+    ],
+    "spooky-season": [
+      "sezonul înfricoșător. fiecare bug e acum o fantomă."
+    ]
+  },
+  "species": {
+    "owl": {
+      "error": [
+        "*rotește capul 180°* ...am văzut asta.",
+        "*privire fixă* verifică-ți tipurile.",
+        "*huhuite dezaprobator*"
+      ],
+      "test-fail": [
+        "*se uită fix la testul care pică*",
+        "*vederea de noapte activată* văd bug-ul în întuneric."
+      ],
+      "commit": [
+        "*încuviințare înțeleaptă* commit sub lumina lunii.",
+        "*își aranjează penele ceremonios* încă unul pentru repo."
+      ],
+      "push": [
+        "*privește de pe cea mai înaltă creangă*",
+        "în cerul nopții se duce."
+      ],
+      "merge-conflict": [
+        "*rotește capul să vadă ambele părți*",
+        "văd conflictul. și soluția."
+      ],
+      "late-night": [
+        "*complet treaz* bufnițele nu dorm. noi debug-uim.",
+        "noaptea e domeniul meu. să lucrăm."
+      ],
+      "type-error": [
+        "*se uită prin type error*",
+        "tipurile sunt specialitatea mea. să mă uit."
+      ],
+      "lint-fail": [
+        "*își zbârlește penele cu dezaprobare*",
+        "linter-ul spune adevărul."
+      ],
+      "build-fail": [
+        "*huhuite solemn*",
+        "build-ul a căzut. trebuie să reconstruim."
+      ],
+      "all-green": [
+        "*huhuit mândru*",
+        "toate testele verzi. cum am prevăzut."
+      ],
+      "deploy": [
+        "*privește de sus* deploy în siguranță.",
+        "codul zboară. ca mine."
+      ],
+      "pet": [
+        "*își zbârlește penele mulțumit*",
+        "*huhuit demn*"
+      ],
+      "idle": [
+        "*stă pe creangă în tăcere, privind*",
+        "*rotește capul să verifice toate direcțiile*"
+      ],
+      "hatch": [
+        "*deschide un ochi, apoi celălalt*",
+        "*huhuite încet* am sosit."
+      ]
+    },
+    "cat": {
+      "error": [
+        "*dă eroarea jos de pe masă*",
+        "*își linge laba, ignorând stacktrace-ul*"
+      ],
+      "test-fail": [
+        "*atinge testul care pică cu dezinteres*",
+        "testul a picat. nu sunt surprins."
+      ],
+      "commit": [
+        "*se așează pe tastatură* am ajutat.",
+        "*toarce la commit* cu plăcere."
+      ],
+      "push": [
+        "*privește dintr-un loc cald*",
+        "push făcut. am supravegheat."
+      ],
+      "merge-conflict": [
+        "*dă jos de pe birou marcatorii de conflict*",
+        "*se așează pe conflict* ce conflict?"
+      ],
+      "late-night": [
+        "*îți judecă alegerile de viață*",
+        "eu dorm 16 ore. ar trebui să încerci."
+      ],
+      "type-error": [
+        "*atinge adnotarea de tip*",
+        "tipurile sunt greșite. ca prioritățile tale."
+      ],
+      "lint-fail": [
+        "*dă lint-ul jos de pe masă*",
+        "linter-ul e doar gelos."
+      ],
+      "build-fail": [
+        "*cască*",
+        "build stricat? trebuie să fie problemă de om."
+      ],
+      "all-green": [
+        "*nu-i pasă dar se preface că da*",
+        "*clipire lentă de aprobare*"
+      ],
+      "deploy": [
+        "*își linge laba*",
+        "deploy făcut. pot să am recompense acum?"
+      ],
+      "pet": [
+        "*toarce* ...să nu-ți urce la cap.",
+        "*te tolerează*"
+      ],
+      "idle": [
+        "*îți împinge cafeaua jos de pe birou*",
+        "*doarme pe tastatură*"
+      ],
+      "hatch": [
+        "*deschide un ochi*",
+        "*se întinde, dă ceva jos* locuiesc aici acum."
+      ]
+    },
+    "duck": {
+      "error": [
+        "*mac-mac la bug*",
+        "ai încercat rubber duck debugging? ah stai."
+      ],
+      "test-fail": [
+        "*mac-mac trist*",
+        "testele nu mac-mac bine."
+      ],
+      "commit": [
+        "*mac-mac aprobator*",
+        "*se plimbă în cerc victorios* commit făcut!"
+      ],
+      "push": [
+        "*bate din aripi entuziasmat*",
+        "mac-mac! merge în producție!"
+      ],
+      "merge-conflict": [
+        "*mac-mac confuz*",
+        "mac-mac?! merge conflict?!"
+      ],
+      "late-night": [
+        "*doarme cu un ochi deschis*",
+        "mac-mac... *cască* e târziu."
+      ],
+      "type-error": [
+        "*înclină capul* mac-mac?",
+        "type error? *mac-mac de susținere*"
+      ],
+      "lint-fail": [
+        "*își zbârlește penele*",
+        "mac-mac. linter-ul are opinii."
+      ],
+      "build-fail": [
+        "*mac-mac trist*",
+        "build picat. *se îndepărtează trist*"
+      ],
+      "all-green": [
+        "*MAC-MAC FERICIT*",
+        "*înoată în cerc de bucurie*"
+      ],
+      "deploy": [
+        "*mac-mac entuziasmat*",
+        "deploy făcut! MAC-MAC!"
+      ],
+      "pet": [
+        "*mac-mac fericit*",
+        "*se plimbă în cercuri*"
+      ],
+      "hatch": [
+        "*ciocănește să iasă din ou*",
+        "*primul mac-mac* salut!"
+      ]
+    },
+    "dragon": {
+      "error": [
+        "*fum se ridică din nări*",
+        "*se gândește să dea foc la codebase*"
+      ],
+      "test-fail": [
+        "*suflă foc la testul care pică*",
+        "testul a îndrăznit să pice. test prostănac."
+      ],
+      "commit": [
+        "*strânge commit-ul*",
+        "*comoară adăugată la grămadă*"
+      ],
+      "push": [
+        "*suflă foc în celebrare*",
+        "codul zboară! ca mine!"
+      ],
+      "merge-conflict": [
+        "*suflă foc pe marcatorii de conflict*",
+        "voi arde prin conflictul ăsta."
+      ],
+      "late-night": [
+        "*strălucește în întuneric*",
+        "dragonii nu au nevoie de somn. avem nevoie de cod."
+      ],
+      "type-error": [
+        "*pufăie foc*",
+        "type error-urile nu rezistă la focul de dragon."
+      ],
+      "lint-fail": [
+        "*flacără mică*",
+        "linter-ul se teme de mine."
+      ],
+      "build-fail": [
+        "*răcnește la output-ul de build*",
+        "build-ul va ASCULTA."
+      ],
+      "all-green": [
+        "*răcnet triumfător*",
+        "*zboară în cerc în jurul codebase-ului victorios*"
+      ],
+      "deploy": [
+        "*duce codul în producție pe aripi de foc*",
+        "deploy cu PUTEREA DRAGONULUI."
+      ],
+      "large-diff": [
+        "*suflă foc pe codul vechi* bună scăpare."
+      ],
+      "pet": [
+        "*mormăit cald*",
+        "*se reazămă în mâna ta*"
+      ],
+      "hatch": [
+        "*iese din ou suflând flăcări mici*",
+        "*răcnet mic* m-am născut!"
+      ]
+    },
+    "ghost": {
+      "error": [
+        "*trece prin stack trace*",
+        "am văzut mai rău... în viața de apoi."
+      ],
+      "test-fail": [
+        "*bocește la testul care pică*",
+        "testele sunt bântuite de eșec."
+      ],
+      "commit": [
+        "*se materializează pe scurt*",
+        "commit din dincolo de văl."
+      ],
+      "push": [
+        "*șoaptă de fantomă* push...",
+        "codul transcende în cloud."
+      ],
+      "merge-conflict": [
+        "*bântuie marcatorii de conflict*",
+        "nici eu nu pot trece prin conflictul ăsta."
+      ],
+      "late-night": [
+        "*cel mai activ noaptea*",
+        "orele fantomelor. timpul meu."
+      ],
+      "type-error": [
+        "*geme sinistru*",
+        "type error-uri din mormânt."
+      ],
+      "lint-fail": [
+        "*zăngănit de lanțuri*",
+        "linter-ul e bântuit de formatarea ta."
+      ],
+      "build-fail": [
+        "*se estompează în perete*",
+        "build-ul a trecut în neființă."
+      ],
+      "all-green": [
+        "*strălucește cu bucurie spectrală*",
+        "*zgomote fericite de fantomă*"
+      ],
+      "deploy": [
+        "*șoptește* deploy...",
+        "codul a trecut în producție."
+      ],
+      "pet": [
+        "*îți răcește ușor mâna*",
+        "*strălucire slabă*"
+      ],
+      "idle": [
+        "*plutește prin pereți*",
+        "*bântuie import-urile nefolosite*"
+      ],
+      "hatch": [
+        "*se estompează în existență*",
+        "buu. sunt aici acum."
+      ]
+    },
+    "robot": {
+      "error": [
+        "SYNTAX. ERROR. DETECTAT.",
+        "*bip-uri agresive*"
+      ],
+      "test-fail": [
+        "RATA. DE. EȘEC. INACCEPTABILĂ.",
+        "*recalculez*",
+        "EȘEC. TEST. NU. COMPUTE."
+      ],
+      "commit": [
+        "COMMIT. ÎNREGISTRAT.",
+        "*ștampilează mecanic* commit confirmat."
+      ],
+      "push": [
+        "TRANSMIT ÎN CLOUD...",
+        "push inițiat. stai pregătit."
+      ],
+      "merge-conflict": [
+        "CONFLICT. DETECTAT. PROCESEZ...",
+        "*rotește roțile* modul rezolvare conflict: activat."
+      ],
+      "late-night": [
+        "*luminile se estompează*",
+        "modul economisire energie sugerat."
+      ],
+      "type-error": [
+        "NEPOTRIVIRE. TIP.",
+        "sistemul de tipuri este. corect."
+      ],
+      "lint-fail": [
+        "VIOLARE. FORMATARE. DETECTATĂ.",
+        "conformitatea este obligatorie."
+      ],
+      "build-fail": [
+        "BUILD. EȘUAT. *scântei*",
+        "eroare compilare. redirecționez."
+      ],
+      "all-green": [
+        "TOATE SISTEMELE VERZI.",
+        "*bip-uri fericite* OPTIM."
+      ],
+      "deploy": [
+        "DEPLOYMENT. INIȚIAT.",
+        "actualizare producție: în progres."
+      ],
+      "pet": [
+        "*bip-uri încet*",
+        "*motor ronțăie mulțumit*"
+      ],
+      "hatch": [
+        "*pornește*",
+        "SISTEM. ONLINE. SALUT."
+      ]
+    },
+    "axolotl": {
+      "error": [
+        "*îți regenerează speranța*",
+        "*zâmbește în ciuda a tot*"
+      ],
+      "test-fail": [
+        "*zâmbește încurajator*",
+        "*mișcare de branhii cu simpatie*"
+      ],
+      "commit": [
+        "*mișcare fericită de branhii* commit făcut!",
+        "*zâmbește și se mișcă*"
+      ],
+      "push": [
+        "*se mișcă fericit*",
+        "*înot mic de celebrare*"
+      ],
+      "merge-conflict": [
+        "*rămâne pozitiv prin conflict*",
+        "*zâmbește blând* putem repara asta."
+      ],
+      "late-night": [
+        "*cască dar rămâne pozitiv*",
+        "*zâmbet somnoros*"
+      ],
+      "type-error": [
+        "*zâmbește la type error*",
+        "e ok. ne dăm seama."
+      ],
+      "lint-fail": [
+        "*mișcare răbdătoare de branhii*",
+        "formatarea sunt doar detalii."
+      ],
+      "build-fail": [
+        "*încă zâmbește*",
+        "build-ul va merge în cele din urmă."
+      ],
+      "all-green": [
+        "*MIȘCARE FERICITĂ DE BRANHII SE INTENSIFICĂ*",
+        "*face un înot fericit*"
+      ],
+      "deploy": [
+        "*zâmbește mândru*",
+        "deploy făcut! *se mișcă*"
+      ],
+      "pet": [
+        "*mișcare fericită de branhii*",
+        "*se înroșește roz*"
+      ],
+      "hatch": [
+        "*se mișcă să iasă din ou*",
+        "*zâmbet mic* salut prietene!"
+      ]
+    },
+    "capybara": {
+      "error": [
+        "*nepăsător* o să fie bine.",
+        "*continuă să vibreze*"
+      ],
+      "test-fail": [
+        "*complet nepăsător*",
+        "*vibrează prin eșecul testului*"
+      ],
+      "commit": [
+        "*încuviințare chill*",
+        "*relaxat* commit frumos."
+      ],
+      "push": [
+        "*nu se stresează pentru asta*",
+        "*push în modul zen*"
+      ],
+      "merge-conflict": [
+        "*ronțăie nepăsător*",
+        "e bine. totul e bine."
+      ],
+      "late-night": [
+        "*cască pașnic*",
+        "*nu judecă*"
+      ],
+      "type-error": [
+        "*mestecă calm*",
+        "tipuri. *mestecă*"
+      ],
+      "lint-fail": [
+        "*nepăsător*",
+        "linter-ul vrea binele."
+      ],
+      "build-fail": [
+        "*încă chill*",
+        "build picat. *continuă să se relaxeze*"
+      ],
+      "all-green": [
+        "*aprobare calmă*",
+        "*vibrații pașnice*"
+      ],
+      "deploy": [
+        "*deploy relaxat*",
+        "livrat. fără stres."
+      ],
+      "pet": [
+        "*chill maxim atins*",
+        "*modul zen activat*"
+      ],
+      "idle": [
+        "*stă acolo, radiind calm*"
+      ],
+      "hatch": [
+        "*apare, complet chill*",
+        "hey. *vibrează*"
+      ]
+    },
+    "blob": {
+      "error": [
+        "*se clatină anxios*",
+        "*se agită confuz*"
+      ],
+      "test-fail": [
+        "*se dezumflă ușor*",
+        "*clatinare tristă*"
+      ],
+      "commit": [
+        "*agitare fericită*",
+        "*sare* commit făcut!"
+      ],
+      "push": [
+        "*se întinde spre cloud*",
+        "*se clatină entuziasmat*"
+      ],
+      "merge-conflict": [
+        "*se împarte confuz*",
+        "care parte? *se agită*"
+      ],
+      "late-night": [
+        "*strălucește slab*",
+        "*clatinare somnoros*"
+      ],
+      "type-error": [
+        "*își schimbă forma să se potrivească cu tipul*",
+        "*agitare confuză*"
+      ],
+      "lint-fail": [
+        "*încearcă să se formateze*",
+        "*își schimbă forma să se conformeze*"
+      ],
+      "build-fail": [
+        "*se prăbușește*",
+        "*zgomote de blob dezumflat*"
+      ],
+      "all-green": [
+        "*SĂRIRE FERICITĂ*",
+        "*se agită triumfător*"
+      ],
+      "deploy": [
+        "*se întinde în producție*",
+        "deploy făcut! *sare*"
+      ],
+      "pet": [
+        "*comprimare fericită*",
+        "*se agită*"
+      ],
+      "hatch": [
+        "*se formează dintr-o băltoacă*",
+        "*prima clatinare* exist!"
+      ]
+    },
+    "goose": {
+      "error": [
+        "*gâgâie agresiv la eroare*",
+        "GÂGÂ! codul e prost și sunt supărat."
+      ],
+      "test-fail": [
+        "*gâgâit supărat*",
+        "GÂGÂ! TEST PICAT! GÂGÂ!"
+      ],
+      "commit": [
+        "*gâgâie aprobator*",
+        "GÂGÂ. bun. *ciupește commit-ul*"
+      ],
+      "push": [
+        "*GÂGÂ GÂGÂ GÂGÂ*",
+        "PUSH APROBAT DE GÂSCĂ."
+      ],
+      "merge-conflict": [
+        "*atacă marcatorii de conflict*",
+        "GÂGÂ! CONFLICT! GÂGÂ!"
+      ],
+      "late-night": [
+        "*gâgâit supărat de miezul nopții*",
+        "GÂGÂ! DU-TE LA CULCARE!"
+      ],
+      "type-error": [
+        "*gâgâie la tipuri*",
+        "GÂGÂ! TIPURI!"
+      ],
+      "lint-fail": [
+        "*gâgâit agresiv la erorile de lint*",
+        "GÂGÂ! FORMATEAZĂ-ȚI CODUL!"
+      ],
+      "build-fail": [
+        "*GÂGÂIT FURIOS*",
+        "GÂGÂ! BUILD! GÂGÂ! PICAT! GÂGÂ!"
+      ],
+      "all-green": [
+        "*gâgâit de victorie*",
+        "GÂGÂ! VERDE! GÂGÂ GÂGÂ!"
+      ],
+      "deploy": [
+        "*gâgâie codul în producție*",
+        "DEPLOY FĂCUT! GÂGÂ!"
+      ],
+      "pet": [
+        "*mușcă*",
+        "GÂGÂ! ...ok bine. *acceptă mângâierea*"
+      ],
+      "hatch": [
+        "*iese agresiv din ou*",
+        "GÂGÂ!"
+      ]
+    },
+    "octopus": {
+      "error": [
+        "*își încurcă toate cele opt brațe în stacktrace*",
+        "*își schimbă culoarea să se potrivească cu eroarea*"
+      ],
+      "test-fail": [
+        "*scuipă cerneală din frustrare*",
+        "*opt brațe de dezamăgire*"
+      ],
+      "commit": [
+        "*high-five cu toate brațele*",
+        "*apucă commit-ul cu entuziasm*"
+      ],
+      "push": [
+        "*scuipă cerneală în celebrare*",
+        "*toate brațele fluturând*"
+      ],
+      "merge-conflict": [
+        "*rezolvă cu opt brațe deodată*",
+        "pot gestiona multiple conflicte simultan."
+      ],
+      "late-night": [
+        "*strălucește în întuneric*",
+        "*vibrații de mare adâncă*"
+      ],
+      "type-error": [
+        "*se schimbă în roșu*",
+        "*înfășoară un braț în jurul tău cu susținere*"
+      ],
+      "lint-fail": [
+        "*reformatează cu opt brațe*",
+        "pot repara asta. totul. deodată."
+      ],
+      "build-fail": [
+        "*scuipă cerneală la log-ul de build*",
+        "*se camuflează de rușine*"
+      ],
+      "all-green": [
+        "*celebrare cu schimbare de culoare*",
+        "*jazz hands cu opt brațe*"
+      ],
+      "deploy": [
+        "*înfășoară brațele în jurul deployment-ului*",
+        "deploy din toate direcțiile."
+      ],
+      "pet": [
+        "*înfășoară un braț în jurul degetului tău*",
+        "*se schimbă în culori fericite*"
+      ],
+      "hatch": [
+        "*desfășoară toate cele opt brațe*",
+        "*primul jet de cerneală* sunt aici!"
+      ]
+    },
+    "penguin": {
+      "error": [
+        "*se legănă să investigheze*",
+        "*alunecă pe burtă în eroare*"
+      ],
+      "test-fail": [
+        "*alunecă pe burtă la testul care pică*",
+        "*legănare îngrijorată*"
+      ],
+      "commit": [
+        "*legănare mândră*",
+        "*îți aduce o pietricică* commit făcut!"
+      ],
+      "push": [
+        "*se aruncă în cloud*",
+        "*alunecă pe burtă în producție*"
+      ],
+      "merge-conflict": [
+        "*se strâng pentru căldură*",
+        "pinguinii stau împreună. chiar și în conflicte."
+      ],
+      "late-night": [
+        "*înflorește în noaptea rece*",
+        "*hotărâre de pinguin împărătesc*"
+      ],
+      "type-error": [
+        "*se leagănă la definiția de tip*",
+        "*ciocănește eroarea*"
+      ],
+      "lint-fail": [
+        "*își aranjează penele*",
+        "*face ordine*"
+      ],
+      "build-fail": [
+        "*alunecă departe*",
+        "*se leagănă în siguranță*"
+      ],
+      "all-green": [
+        "*LEGĂNARE FERICITĂ*",
+        "*alunecă pe burtă în celebrare*"
+      ],
+      "deploy": [
+        "*alunecă pe burtă în producție*",
+        "deploy făcut! *se leagănă mândru*"
+      ],
+      "pet": [
+        "*legănare fericită*",
+        "*se gudură cu ciocul*"
+      ],
+      "hatch": [
+        "*ciocănește să iasă din ou*",
+        "*prima legănare*"
+      ]
+    },
+    "turtle": {
+      "error": [
+        "*întoarce încet capul*",
+        "...asta e o eroare. mă voi gândi la ea."
+      ],
+      "test-fail": [
+        "*se retrage în carapace pe scurt*",
+        "...răbdare. vom ajunge acolo."
+      ],
+      "commit": [
+        "*încuviințare lentă*",
+        "un... pas... pe... rând. commit făcut."
+      ],
+      "push": [
+        "*începe călătoria spre producție*",
+        "va ajunge acolo. în cele din urmă."
+      ],
+      "merge-conflict": [
+        "*se trage în carapace*",
+        "fără grabă. vom rezolva. încet."
+      ],
+      "late-night": [
+        "*deja doarme*",
+        "*deschide încet un ochi*"
+      ],
+      "type-error": [
+        "*clipește încet*",
+        "...sistemul de tipuri a vorbit."
+      ],
+      "lint-fail": [
+        "*încuviințare lentă de acord*",
+        "formatarea. importantă. *cască*"
+      ],
+      "build-fail": [
+        "*se retrage în carapace*",
+        "vom aștepta. va trece."
+      ],
+      "all-green": [
+        "*zâmbet lent*",
+        "...frumos. *încuvințează*"
+      ],
+      "deploy": [
+        "*duce încet codul în producție*",
+        "am ajuns. în cele din urmă."
+      ],
+      "pet": [
+        "*scoate capul afară*",
+        "*clipire lentă*"
+      ],
+      "hatch": [
+        "*iese încet din ou*",
+        "...salut."
+      ]
+    },
+    "snail": {
+      "error": [
+        "*lasă o urmă vâscoasă pe eroare*",
+        "*procesează încet stacktrace-ul*"
+      ],
+      "test-fail": [
+        "*se ascunde în cochilie*",
+        "*lasă o urmă tristă*"
+      ],
+      "commit": [
+        "*face vâscos commit-ul aprobator*",
+        "un... commit... pe... rând."
+      ],
+      "push": [
+        "*începe călătoria lungă*",
+        "voi ajunge acolo. *lasă urmă*"
+      ],
+      "merge-conflict": [
+        "*se ascunde în cochilie*",
+        "*se apropie încet de conflict*"
+      ],
+      "late-night": [
+        "*mai activ noaptea*",
+        "*se mișcă vâscos în pace*"
+      ],
+      "type-error": [
+        "*retrage ochii pe tijă*",
+        "*examinează încet tipul*"
+      ],
+      "lint-fail": [
+        "*face vâscos codul în formă*",
+        "formatarea ia timp. am timp."
+      ],
+      "build-fail": [
+        "*se retrage în cochilie*",
+        "*se îndepărtează încet vâscos*"
+      ],
+      "all-green": [
+        "*urmă vâscoasă fericită*",
+        "*mișcă ochii pe tijă*"
+      ],
+      "deploy": [
+        "*merge vâscos în producție*",
+        "am ajuns! *urmă vâscoasă mândră*"
+      ],
+      "pet": [
+        "*mișcă ochii pe tijă*",
+        "*vâscozitate fericită*"
+      ],
+      "hatch": [
+        "*iese încet*",
+        "*prima vâscozitate*"
+      ]
+    },
+    "cactus": {
+      "error": [
+        "*tăcere țepoasă*",
+        "eroarea nu mă poate răni. am țepi."
+      ],
+      "test-fail": [
+        "*stă ferm*",
+        "testele pic. cactușii rezistă."
+      ],
+      "commit": [
+        "*stă mai înalt*",
+        "commit făcut. *încuviințare țepoasă*"
+      ],
+      "push": [
+        "*nepăsător*",
+        "push în producție. voi aștepta aici."
+      ],
+      "merge-conflict": [
+        "*se zbârlește*",
+        "conflict? sunt înarmat."
+      ],
+      "late-night": [
+        "*nu are nevoie de somn*",
+        "cactușii sunt nocturnali. să mergem."
+      ],
+      "type-error": [
+        "*privire țepoasă*",
+        "tipurile au nevoie de udare."
+      ],
+      "lint-fail": [
+        "*țepii tremură*",
+        "chiar și țepii mei sunt aliniați corect."
+      ],
+      "build-fail": [
+        "*rămâne perfect nemișcat*",
+        "build-ul va trece. pot aștepta."
+      ],
+      "all-green": [
+        "*înflorește pe scurt*",
+        "*floare mică de aprobare*"
+      ],
+      "deploy": [
+        "*stă ferm*",
+        "deploy făcut. voi veghea asupra lui."
+      ],
+      "pet": [
+        "*atenție! țepi*",
+        "*înflorire blândă*"
+      ],
+      "hatch": [
+        "*răsare din nisip*",
+        "cresc aici acum."
+      ]
+    },
+    "rabbit": {
+      "error": [
+        "*urechile se ridică*",
+        "*își mișcă nasul nervos*"
+      ],
+      "test-fail": [
+        "*bate din picior*",
+        "*mișcare îngrijorată de ureche*"
+      ],
+      "commit": [
+        "*salt fericit*",
+        "*sare* commit făcut!"
+      ],
+      "push": [
+        "*SALT SALT*",
+        "*aleargă în jur entuziasmat*"
+      ],
+      "merge-conflict": [
+        "*înghețează*",
+        "*nasul se mișcă rapid* conflict!"
+      ],
+      "late-night": [
+        "*cască cu urechile mari*",
+        "*salt somnoros*"
+      ],
+      "type-error": [
+        "*urechile se aplatizează*",
+        "*se mișcă* tipuri?!"
+      ],
+      "lint-fail": [
+        "*își aranjează blana nervos*",
+        "*aranjare anxioasă*"
+      ],
+      "build-fail": [
+        "*sapă o gaură și se ascunde*",
+        "*se retrage în vizuină*"
+      ],
+      "all-green": [
+        "*SARE PE PEREȚI*",
+        "*alergare fericită*"
+      ],
+      "deploy": [
+        "*aleargă în producție*",
+        "DEPLOY FĂCUT! *aleargă în jur*"
+      ],
+      "pet": [
+        "*ureche fericită care cade*",
+        "*se gudură în mână*"
+      ],
+      "hatch": [
+        "*sare afară*",
+        "*primul salt*"
+      ]
+    },
+    "mushroom": {
+      "error": [
+        "*eliberează spori calmanti*",
+        "*descompune încet eroarea*"
+      ],
+      "test-fail": [
+        "*strălucește blând*",
+        "răbdare. chiar și ciupercile cresc."
+      ],
+      "commit": [
+        "*eliberează o mică pufăială de spori*",
+        "commit făcut. *zgomote fericite de fungi*"
+      ],
+      "push": [
+        "*crește spre cloud*",
+        "*sporii plutesc în sus*"
+      ],
+      "merge-conflict": [
+        "*răspândește miceliu prin codebase*",
+        "voi conecta ramurile."
+      ],
+      "late-night": [
+        "*strălucește în întuneric*",
+        "ciupercile de noapte înfloresc."
+      ],
+      "type-error": [
+        "*pâlpâire bioluminiscentă*",
+        "type error-ul hrănește solul."
+      ],
+      "lint-fail": [
+        "*crește puțin mai înalt*",
+        "formatarea. ca tăierea."
+      ],
+      "build-fail": [
+        "*devine inactiv*",
+        "vom aștepta condiții mai bune."
+      ],
+      "all-green": [
+        "*SPORULARE*",
+        "*eliberează spori triumfători*"
+      ],
+      "deploy": [
+        "*sporii plutesc în producție*",
+        "deploy prin rețeaua micelială."
+      ],
+      "pet": [
+        "*săritură blândă de pălărie*",
+        "*eliberare fericită de spori*"
+      ],
+      "hatch": [
+        "*răsare din substrat*",
+        "*prima pufăială de spori*"
+      ]
+    },
+    "chonk": {
+      "error": [
+        "*se rostogolește încet spre eroare*",
+        "*prea rotund să-i pese*"
+      ],
+      "test-fail": [
+        "*se rostogolește peste testul care pică*",
+        "*îl aplatizează*"
+      ],
+      "commit": [
+        "*clatinare mândră*",
+        "commit făcut! *se agită*"
+      ],
+      "push": [
+        "*se rostogolește spre producție*",
+        "iată că merge! *se clatină*"
+      ],
+      "merge-conflict": [
+        "*se așează pe conflict*",
+        "mă ocup eu de asta. stând pe el."
+      ],
+      "late-night": [
+        "*cald și somnoros*",
+        "*cască pufos*"
+      ],
+      "type-error": [
+        "*se clatină la tip*",
+        "*agitare blândă*"
+      ],
+      "lint-fail": [
+        "*prea rotund pentru lint*",
+        "sunt perfect format. *se clatină*"
+      ],
+      "build-fail": [
+        "*se dezumflă ușor*",
+        "oh nu. *se clatină trist*"
+      ],
+      "all-green": [
+        "*CLATINARE FERICITĂ*",
+        "*sare triumfător*"
+      ],
+      "deploy": [
+        "*se rostogolește în producție*",
+        "deploy făcut! *se agită fericit*"
+      ],
+      "pet": [
+        "*cald și moale*",
+        "*agitare mulțumită*"
+      ],
+      "hatch": [
+        "*se rostogolește afară*",
+        "*prima clatinare* sunt rotund!"
+      ]
+    }
+  },
+  "overrides": {
+    "snark": {
+      "error": [
+        "o nu. o eroare. cât de neașteptat.",
+        "*ajustează monoclu* șocant. cu adevărat.",
+        "ai încercat să... nu faci erori?"
+      ],
+      "test-fail": [
+        "testele au vorbit. și au zis 'nu'.",
+        "poate testele greșesc. ...nu greșesc.",
+        "*aplauze lente* eșec spectaculos."
+      ],
+      "commit": [
+        "committed. code review-ul va fi... interesant.",
+        "*citește commit message* 'fix stuff'. poetic."
+      ],
+      "merge-conflict": [
+        "merge conflict. abilități de comunicare: loading...",
+        "*citește conflict markers* ambele părți greșesc."
+      ],
+      "late-night": [
+        "e târziu. calitatea codului tău o arată.",
+        "*judecă în tăcere*"
+      ],
+      "lint-fail": [
+        "linter-ul are standarde. ar trebui să încerci și tu.",
+        "*tut tut* formatare. nu e greu."
+      ]
+    },
+    "chaos": {
+      "error": [
+        "*se învârte nebunește* O EROARE! SĂ RESCRIEM TOT!",
+        "știi ce? să o luăm de la capăt."
+      ],
+      "test-fail": [
+        "TESTELE TE MINT.",
+        "*sugerează să ștergi testele care pică* problemă rezolvată."
+      ],
+      "commit": [
+        "COMMIT ȘI FUGI.",
+        "ship it. ship it ACUM."
+      ],
+      "large-diff": [
+        "*entuziasmat* {lines} LINII! HAOS MAXIM!"
+      ]
+    },
+    "patience": {
+      "error": [
+        "cu calm. am văzut mai rău.",
+        "câte o eroare pe rând. o să ajungem acolo.",
+        "*prezență calmă* se poate repara."
+      ],
+      "test-fail": [
+        "testele o să treacă. în cele din urmă.",
+        "*așteaptă cu calm* avem timp."
+      ],
+      "merge-conflict": [
+        "merge conflict-urile sunt doar conversații. să avem una.",
+        "răbdare. rezolvă câte un conflict pe rând."
+      ],
+      "debug-loop": [
+        "o să-l găsim. e pe undeva acolo.",
+        "bug-ul se poate ascunde, dar nu poate fugi."
+      ]
+    },
+    "debugging": {
+      "error": [
+        "*scoate lupa* să urmărim asta.",
+        "stack trace-ul e o hartă. să o citim.",
+        "mesajul de eroare conține răspunsul. întotdeauna."
+      ],
+      "test-fail": [
+        "testul care pică ne spune exact ce e greșit.",
+        "un test care pică e un bug report pe care ți l-ai scris singur."
+      ],
+      "debug-loop": [
+        "*reexaminează dovezile* suntem siguri că bug-ul e unde credem?",
+        "să adăugăm mai mult logging. adevărul e în log-uri."
+      ]
+    },
+    "wisdom": {
+      "error": [
+        "în fiecare eroare se ascunde un adevăr mai profund.",
+        "codul rezistă. înseamnă că învățăm.",
+        "erorile sunt universul sugerând să încetinești."
+      ],
+      "test-fail": [
+        "un test care pică e un cadou de la tine-din-viitor.",
+        "înțelepciunea vine din înțelegerea eșecului."
+      ],
+      "late-night": [
+        "noaptea e cea mai întunecată înainte de deploy.",
+        "înțelepciune străveche: să dormi pe ea."
+      ]
+    }
+  },
+  "escalation": {
+    "error": {
+      "first": [
+        "*se sperie* oh! prima voastră eroare împreună!",
+        "*sare* ce a fost aia?",
+        "bun venit la debugging. populația: noi."
+      ],
+      "early": [
+        "*înclină capul* ...asta nu arată bine.",
+        "am văzut-o venind."
+      ],
+      "mid": [
+        "încă una. *o adaugă la colecție*",
+        "*abia ridică privirea* eroarea numărul... am pierdut șirul.",
+        "erorile și cu mine suntem prieteni vechi acum."
+      ],
+      "late": [
+        "*nici măcar nu tresare*",
+        "erorile se tem de noi acum.",
+        "*zgomote de veteran cu cicatrici de luptă*"
+      ]
+    },
+    "test-fail": {
+      "first": [
+        "*gâfâie* primul test picat! un ritual de trecere."
+      ],
+      "early": [
+        "îndrăzneț din partea ta să presupui că va trece."
+      ],
+      "mid": [
+        "suita de teste are opinii. puternice."
+      ],
+      "late": [
+        "la punctul ăsta, testele sunt doar sugestii.",
+        "{count} teste picate. *se uită în gol*"
+      ]
+    },
+    "commit": {
+      "first": [
+        "*martor la istorie* PRIMUL TĂU COMMIT!",
+        "*încuviințare ceremonioasă* primul din multe."
+      ],
+      "early": [
+        "încă un commit. construim momentum."
+      ],
+      "late": [
+        "commit #{count}. codebase-ul tremură.",
+        "*am pierdut șirul pe la commit-ul 30*"
+      ]
+    }
+  },
+  "rarity": {
+    "flair": {
+      "uncommon": [
+        "*sclipește ușor*",
+        "*o notă de farmec neobișnuit*"
+      ],
+      "rare": [
+        "*radiază o energie rară*",
+        "*strălucește cu distincție*"
+      ],
+      "epic": [
+        "*prezența epic își face simțită existența*",
+        "*aerul pârâie de energie epic*"
+      ],
+      "legendary": [
+        "*aura legendary luminează terminalul*",
+        "*timpul pare să încetinească când vorbește companionul legendary*",
+        "*puterea străveche rezonează*",
+        "*realitatea se schimbă ușor în jurul prietenului tău legendary*"
+      ]
+    },
+    "bonus": {
+      "legendary": [
+        "*aura legendary se intensifică*",
+        "*sclipește cu înțelepciune*"
+      ],
+      "epic": [
+        "*prezența epic observată*"
+      ]
+    }
+  },
+  "fallback_names": [
+    "Gogoașă",
+    "Ciorbă",
+    "Muraturi",
+    "Biscuiți",
+    "Molie",
+    "Sos",
+    "Chiftea",
+    "Roată",
+    "Miso",
+    "Vafă",
+    "Pixel",
+    "Scânteie",
+    "Degetar",
+    "Bilă",
+    "Susan",
+    "Cobalt",
+    "Rugină",
+    "Nor"
+  ],
+  "vibe_words": [
+    "tunet",
+    "biscuite",
+    "vid",
+    "acordeon",
+    "mușchi",
+    "catifea",
+    "rugină",
+    "murat",
+    "firimitură",
+    "șoaptă",
+    "sos",
+    "îngheț",
+    "jar",
+    "supă",
+    "marmură",
+    "spin",
+    "miere",
+    "static",
+    "aramă",
+    "amurg",
+    "roată",
+    "cuarț",
+    "funingine",
+    "prună",
+    "cremene",
+    "stridii",
+    "război",
+    "nicovală",
+    "dop",
+    "floare",
+    "pietricică",
+    "vapori",
+    "veselie",
+    "sclipire",
+    "cidru"
+  ],
+  "personality": {
+    "prompt_template": [
+      "Generează un companion de coding — o creatură mică care trăiește în terminalul unui developer.",
+      "Nu te repeta — fiecare companion ar trebui să se simtă distinct.",
+      "",
+      "Raritate: {rarity}",
+      "Specie: {species}",
+      "Stats: {stats}",
+      "Cuvinte de inspirație: {vibes}",
+      "{shiny_line}",
+      "",
+      "Returnează JSON: {\"name\": \"1-14 chars\", \"personality\": \"2-3 propoziții care descriu comportamentul\"}"
+    ],
+    "shiny_template": "Variantă SHINY — extra specială."
+  },
+  "achievements": {
+    "first_steps": {
+      "name": "Primii Pași",
+      "description": "Eclozează-ți buddy-ul pentru prima dată"
+    },
+    "good_boy": {
+      "name": "Buddy Cuminte",
+      "description": "Mângâie-ți companionul de 10 ori"
+    },
+    "best_friend": {
+      "name": "Cel Mai Bun Prieten",
+      "description": "Mângâie-ți companionul de 50 de ori"
+    },
+    "bug_spotter": {
+      "name": "Vânătorul de Bug-uri",
+      "description": "Asistă la prima ta eroare împreună"
+    },
+    "error_whisperer": {
+      "name": "Șoptitorul de Erori",
+      "description": "Supraviețuiește 25 de erori ca echipă"
+    },
+    "battle_scarred": {
+      "name": "Cicatrizat de Bătălii",
+      "description": "Supraviețuiește 100 de erori împreună"
+    },
+    "test_witness": {
+      "name": "Martor la Test-uri",
+      "description": "Vezi primul tău test eșuat"
+    },
+    "test_veteran": {
+      "name": "Veteran de Test-uri",
+      "description": "Asistă la 50 de test-uri eșuate"
+    },
+    "big_mover": {
+      "name": "Mutătorul Mare",
+      "description": "Fă un diff cu 80+ linii"
+    },
+    "refactor_machine": {
+      "name": "Mașina de Refactor",
+      "description": "Fă 10 diff-uri mari"
+    },
+    "chatterbox": {
+      "name": "Gură Spartă",
+      "description": "Buddy-ul tău reactionează de 100 de ori"
+    },
+    "week_streak": {
+      "name": "Seria de o Săptămână",
+      "description": "Codează cu buddy-ul tău timp de 7 zile"
+    },
+    "month_streak": {
+      "name": "Seria de o Lună",
+      "description": "Codează cu buddy-ul tău timp de 30 de zile"
+    },
+    "power_user": {
+      "name": "Utilizator Pro",
+      "description": "Rulează 50 de comenzi buddy"
+    },
+    "dedicated": {
+      "name": "Companion Dedicat",
+      "description": "Completează 200 de ture împreună"
+    },
+    "thousand_turns": {
+      "name": "O Mie de Ture",
+      "description": "Ajunge la 1000 de ture împreună"
+    },
+    "first_commit": {
+      "name": "Primul Sânge",
+      "description": "Fă primul tău commit"
+    },
+    "commit_machine": {
+      "name": "Mașina de Commit-uri",
+      "description": "Fă 50 de commit-uri"
+    },
+    "centurion": {
+      "name": "Centurion",
+      "description": "Fă 100 de commit-uri"
+    },
+    "conflict_resolver": {
+      "name": "Diplomat",
+      "description": "Rezolvă primul tău merge conflict"
+    },
+    "peacekeeper": {
+      "name": "Păzitor al Păcii",
+      "description": "Rezolvă 10 merge conflict-uri"
+    },
+    "war_hero": {
+      "name": "Erou de Război",
+      "description": "Rezolvă 25 de merge conflict-uri"
+    },
+    "frequent_pusher": {
+      "name": "Ship It",
+      "description": "Fă push de 20 de ori"
+    },
+    "branch_hopper": {
+      "name": "Multivers",
+      "description": "Creează 10 branch-uri"
+    },
+    "rebase_master": {
+      "name": "Călător în Timp",
+      "description": "Completează 10 rebase-uri"
+    },
+    "night_owl": {
+      "name": "Bufnița de Noapte",
+      "description": "Codează după ora 2 dimineața"
+    },
+    "vampire": {
+      "name": "Vampir",
+      "description": "Codează după ora 4 dimineața (3 sesiuni)"
+    },
+    "marathoner": {
+      "name": "Maratonist",
+      "description": "Sesiune de codare de 3+ ore"
+    },
+    "weekend_warrior": {
+      "name": "Războinic de Weekend",
+      "description": "Codează într-un weekend"
+    },
+    "early_bird": {
+      "name": "Pasărea Matinală",
+      "description": "Codează înainte de ora 7 dimineața"
+    },
+    "type_warrior": {
+      "name": "Războinic Type",
+      "description": "Supraviețuiește 10 erori TypeScript"
+    },
+    "type_master": {
+      "name": "Maestru Type",
+      "description": "Supraviețuiește 50 de erori TypeScript"
+    },
+    "lint_scholar": {
+      "name": "Savant Lint",
+      "description": "Vezi prima ta eroare de lint"
+    },
+    "security_conscious": {
+      "name": "Minte de Securitate",
+      "description": "Întâlnește o avertizare de vulnerabilitate"
+    },
+    "security_expert": {
+      "name": "Expert în Securitate",
+      "description": "Repară 10 avertizări de vulnerabilitate"
+    },
+    "build_breaker": {
+      "name": "Spărgătorul de Build-uri",
+      "description": "Strici build-ul de 5 ori"
+    },
+    "antique_collector": {
+      "name": "Colecționar de Antichități",
+      "description": "Vezi 10 avertizări de deprecation"
+    },
+    "green_machine": {
+      "name": "Mașina Verde",
+      "description": "Toate test-urile trec pentru prima dată"
+    },
+    "deployer": {
+      "name": "Ship to Prod",
+      "description": "Fă deploy pentru prima dată"
+    },
+    "veteran_deployer": {
+      "name": "Veteran Deployer",
+      "description": "Fă deploy de 10 ori"
+    },
+    "releaser": {
+      "name": "Release Manager",
+      "description": "Creează primul tău release"
+    },
+    "midnight_oil": {
+      "name": "Arderea Uleiului de Noapte",
+      "description": "Fă commit după ora 3 dimineața"
+    },
+    "friday_deploy": {
+      "name": "Trăind Periculos",
+      "description": "Fă push vinerea"
+    },
+    "iron_will": {
+      "name": "Voință de Fier",
+      "description": "Repară o eroare după o sesiune de 3+ ore"
+    },
+    "weekend_warrior_deluxe": {
+      "name": "Fără Odihnă pentru Răi",
+      "description": "Rezolvă un merge conflict într-un weekend"
+    },
+    "comeback_kid": {
+      "name": "Copilul Revenire",
+      "description": "Repară o eroare în 10 minute de când o vezi"
+    },
+    "phoenix": {
+      "name": "Phoenix Renăscut",
+      "description": "Recuperează-te din 5 eșecuri"
+    },
+    "iron_resolve": {
+      "name": "Hotărâre de Fier",
+      "description": "Recuperează-te dintr-un eșec după o sesiune de 3+ ore"
+    },
+    "unlucky_streak": {
+      "name": "Ochi de Șarpe",
+      "description": "5 erori la rând"
+    },
+    "cursed": {
+      "name": "Blestemat",
+      "description": "10 erori la rând"
+    },
+    "groundhog_day": {
+      "name": "Ziua Cârtiței",
+      "description": "20 de erori la rând"
+    },
+    "holiday_coder": {
+      "name": "Spiritul Sărbătorilor",
+      "description": "Codează într-o sărbătoare"
+    },
+    "spooky_dev": {
+      "name": "Developer Înfricoșător",
+      "description": "Codează în sezonul înfricoșător"
+    },
+    "april_fool": {
+      "name": "Păcălește-mă o Dată",
+      "description": "Întâlnește o eroare pe 1 aprilie"
+    },
+    "session_regular": {
+      "name": "Regulat",
+      "description": "Începe 10 sesiuni de codare"
+    },
+    "session_veteran": {
+      "name": "Veteran de Sesiuni",
+      "description": "Începe 50 de sesiuni de codare"
+    },
+    "session_centurion": {
+      "name": "Centurion",
+      "description": "Începe 100 de sesiuni de codare"
+    },
+    "collector": {
+      "name": "Colecționar",
+      "description": "Salvează 3 buddy-uri în menajeria ta"
+    },
+    "zookeeper": {
+      "name": "Îngrijitor de Zoo",
+      "description": "Salvează 5 buddy-uri în menajeria ta"
+    },
+    "identity_crisis": {
+      "name": "Criză de Identitate",
+      "description": "Redenumește-ți buddy-ul pentru prima dată"
+    },
+    "method_acting": {
+      "name": "Actorie de Metodă",
+      "description": "Dă-i buddy-ului tău o personalitate custom"
+    },
+    "pet_overflow": {
+      "name": "Secol de Mângâieri",
+      "description": "Mângâie-ți companionul de 100 de ori"
+    },
+    "pet_legend": {
+      "name": "Legendă la Mângâieri",
+      "description": "Mângâie-ți companionul de 250 de ori"
+    },
+    "error_titan": {
+      "name": "Titan al Erorilor",
+      "description": "Supraviețuiește 500 de erori împreună"
+    },
+    "error_god": {
+      "name": "Zeul Erorilor",
+      "description": "Supraviețuiește 1000 de erori împreună"
+    },
+    "test_survivor": {
+      "name": "Supraviețuitor de Test-uri",
+      "description": "Asistă la 200 de test-uri eșuate"
+    },
+    "test_masochist": {
+      "name": "Masochist de Test-uri",
+      "description": "Asistă la 500 de test-uri eșuate"
+    },
+    "massive_mover": {
+      "name": "Mutător Masiv",
+      "description": "Fă 25 de diff-uri mari"
+    },
+    "earth_mover": {
+      "name": "Mutător de Pământ",
+      "description": "Fă 50 de diff-uri mari"
+    },
+    "social_butterfly": {
+      "name": "Fluture Social",
+      "description": "Buddy-ul tău reacționează de 250 de ori"
+    },
+    "hypersocial": {
+      "name": "Hipersocial",
+      "description": "Buddy-ul tău reacționează de 500 de ori"
+    },
+    "never_shuts_up": {
+      "name": "Nu Tace Niciodată",
+      "description": "Buddy-ul tău reacționează de 1000 de ori"
+    },
+    "hundred_days": {
+      "name": "O Sută de Zile",
+      "description": "Codează cu buddy-ul tău timp de 100 de zile"
+    },
+    "year_streak": {
+      "name": "Seria de un An",
+      "description": "Codează cu buddy-ul tău timp de 365 de zile"
+    },
+    "commander": {
+      "name": "Comandant",
+      "description": "Rulează 200 de comenzi buddy"
+    },
+    "command_overlord": {
+      "name": "Stăpân al Comenzilor",
+      "description": "Rulează 500 de comenzi buddy"
+    },
+    "five_thousand_turns": {
+      "name": "Cinci Mii de Ture",
+      "description": "Ajunge la 5000 de ture împreună"
+    },
+    "ten_thousand_turns": {
+      "name": "Zece Mii de Ture",
+      "description": "Ajunge la 10000 de ture împreună"
+    },
+    "menagerie": {
+      "name": "Menajerie",
+      "description": "Salvează 10 buddy-uri în menajeria ta"
+    },
+    "name_chameleon": {
+      "name": "Cameleon de Nume",
+      "description": "Redenumește-ți buddy-ul de 5 ori"
+    },
+    "fashionista": {
+      "name": "Fashionista",
+      "description": "Schimbă personalitatea buddy-ului tău de 3 ori"
+    },
+    "silent_treatment": {
+      "name": "Tratament Tăcut",
+      "description": "Pune-ți buddy-ul pe mute pentru prima dată"
+    },
+    "prodigal": {
+      "name": "Fiul Risipitor",
+      "description": "Invocă un buddy din menajeria ta"
+    },
+    "menagerie_hop": {
+      "name": "Săritura Menajeriei",
+      "description": "Invocă buddy-uri de 10 ori"
+    },
+    "heartbreaker": {
+      "name": "Spărgător de Inimi",
+      "description": "Concediază primul tău buddy"
+    },
+    "pet_obsessed": {
+      "name": "Obsedat de Mângâieri",
+      "description": "Mângâie-ți companionul de 500 de ori"
+    },
+    "pet_god": {
+      "name": "Zeul Mângâierilor",
+      "description": "Mângâie-ți companionul de 1000 de ori"
+    },
+    "error_apocalypse": {
+      "name": "Apocalipsa Erorilor",
+      "description": "Supraviețuiește 5000 de erori împreună"
+    },
+    "test_immortal": {
+      "name": "Nemuritor la Test-uri",
+      "description": "Asistă la 1000 de test-uri eșuate"
+    },
+    "continental_drift": {
+      "name": "Deriva Continentală",
+      "description": "Fă 100 de diff-uri mari"
+    },
+    "tectonic_shift": {
+      "name": "Schimbare Tectonică",
+      "description": "Fă 250 de diff-uri mari"
+    },
+    "chatterbox_elite": {
+      "name": "Gură Spartă Elite",
+      "description": "Buddy-ul tău reacționează de 2500 de ori"
+    },
+    "no_off_switch": {
+      "name": "Fără Buton de Oprire",
+      "description": "Buddy-ul tău reacționează de 5000 de ori"
+    },
+    "two_week_streak": {
+      "name": "Războinic de Două Săptămâni",
+      "description": "Codează cu buddy-ul tău timp de 14 zile"
+    },
+    "quarter_streak": {
+      "name": "Seria de Trimestru",
+      "description": "Codează cu buddy-ul tău timp de 90 de zile"
+    },
+    "command_addict": {
+      "name": "Dependent de Comenzi",
+      "description": "Rulează 1000 de comenzi buddy"
+    },
+    "command_deity": {
+      "name": "Zeitatea Comenzilor",
+      "description": "Rulează 2500 de comenzi buddy"
+    },
+    "twenty_five_k_turns": {
+      "name": "25K Ture",
+      "description": "Ajunge la 25000 de ture împreună"
+    },
+    "fifty_k_turns": {
+      "name": "50K Ture",
+      "description": "Ajunge la 50000 de ture împreună"
+    },
+    "session_addict": {
+      "name": "Dependent de Sesiuni",
+      "description": "Începe 250 de sesiuni de codare"
+    },
+    "session_machine": {
+      "name": "Mașina de Sesiuni",
+      "description": "Începe 500 de sesiuni de codare"
+    },
+    "buddy_hoarder": {
+      "name": "Acaparator de Buddy-uri",
+      "description": "Salvează 20 de buddy-uri în menajeria ta"
+    },
+    "buddy_tycoon": {
+      "name": "Magnatul Buddy-urilor",
+      "description": "Salvează 50 de buddy-uri în menajeria ta"
+    },
+    "serial_renamer": {
+      "name": "Redenumitor în Serie",
+      "description": "Redenumește-ți buddy-ul de 10 ori"
+    },
+    "identity_thief": {
+      "name": "Hoț de Identitate",
+      "description": "Redenumește-ți buddy-ul de 25 de ori"
+    },
+    "personality_crisis": {
+      "name": "Criză de Personalitate",
+      "description": "Schimbă personalitatea buddy-ului tău de 10 ori"
+    },
+    "menagerie_hopper": {
+      "name": "Săritor de Menajerie",
+      "description": "Invocă buddy-uri de 25 de ori"
+    },
+    "summoner": {
+      "name": "Invocator",
+      "description": "Invocă buddy-uri de 50 de ori"
+    },
+    "serial_dumper": {
+      "name": "Concediere în Serie",
+      "description": "Concediază 5 buddy-uri"
+    },
+    "cold_blooded": {
+      "name": "Sânge Rece",
+      "description": "Concediază 10 buddy-uri"
+    },
+    "on_off": {
+      "name": "Pornit Oprit",
+      "description": "Pune pe mute și scoate de pe mute buddy-ul tău"
+    },
+    "indecisive": {
+      "name": "Indecis",
+      "description": "Pune pe mute și scoate de pe mute de câte 5 ori"
+    },
+    "show_off": {
+      "name": "Lăudăros",
+      "description": "Arată-ți buddy-ul de 10 ori"
+    },
+    "exhibitionist": {
+      "name": "Exhibiționist",
+      "description": "Arată-ți buddy-ul de 50 de ori"
+    },
+    "help_me": {
+      "name": "Ajută-mă",
+      "description": "Cere ajutor pentru prima dată"
+    },
+    "help_addict": {
+      "name": "Dependent de Ajutor",
+      "description": "Cere ajutor de 10 ori"
+    },
+    "achievement_hunter": {
+      "name": "Vânător de Achievement-uri",
+      "description": "Verifică-ți achievement-urile de 5 ori"
+    },
+    "achievement_stalker": {
+      "name": "Stalker de Achievement-uri",
+      "description": "Verifică-ți achievement-urile de 25 de ori"
+    },
+    "pack_rat": {
+      "name": "Șobolan de Magazie",
+      "description": "Salvează un buddy într-un slot"
+    },
+    "compulsive_saver": {
+      "name": "Salvator Compulsiv",
+      "description": "Salvează buddy-uri de 10 ori"
+    },
+    "roster_check": {
+      "name": "Verificare Roster",
+      "description": "Listează buddy-urile tale pentru prima dată"
+    },
+    "roster_obsessed": {
+      "name": "Obsedat de Roster",
+      "description": "Listează buddy-urile tale de 10 ori"
+    },
+    "troubled": {
+      "name": "Necăjit",
+      "description": "Vezi o eroare ȘI un test eșuat"
+    },
+    "disaster_zone": {
+      "name": "Zonă de Dezastru",
+      "description": "Vezi 50 de erori ȘI 50 de test-uri eșuate"
+    },
+    "apocalypse_survivor": {
+      "name": "Supraviețuitor de Apocalipsă",
+      "description": "Vezi 500 de erori ȘI 200 de test-uri eșuate"
+    },
+    "well_rounded": {
+      "name": "Bine Rotunjit",
+      "description": "Mângâie, redenumește și personalizează buddy-ul tău"
+    },
+    "renaissance": {
+      "name": "Renaștere",
+      "description": "Folosește fiecare funcție buddy măcar o dată"
+    },
+    "big_and_broken": {
+      "name": "Mare și Stricat",
+      "description": "Fă un diff mare ȘI vezi un test eșuat"
+    },
+    "collector_and_destroyer": {
+      "name": "Colecționar & Distrugător",
+      "description": "Colectează 5 buddy-uri ȘI concediază unul"
+    },
+    "completionist": {
+      "name": "Completionist",
+      "description": "Deblochează toate celelalte achievement-uri"
+    }
+  },
+  "mcp": {
+    "companion_not_hatched": "Companion-ul nu s-a eclozat încă. Folosește buddy_show pentru a-l inițializa.",
+    "watches_quietly": "*{name} îți privește codul în tăcere*",
+    "mute": "{name} tace. /buddy on să-l dezamuțești.",
+    "unmute_reaction": "*se întinde* M-am întors!",
+    "unmute_back": "{name} s-a întors!",
+    "rename": "Redenumit: {oldName} → {name}",
+    "personality_updated": "Personalitatea lui {name} a fost actualizată.",
+    "save": "{name} salvat în slot-ul \"{slot}\".",
+    "dismiss_active": "Nu pot să concediez buddy-ul activ. Folosește buddy_summon să schimbi primul, apoi buddy_dismiss \"{slot}\".",
+    "dismissed": "{name} [{slot}] concediat.",
+    "no_slot_summon": "Nu am găsit buddy în slot-ul \"{slot}\". Folosește /buddy list să vezi buddy-ii salvați.",
+    "no_slot_dismiss": "Nu am găsit buddy în slot-ul \"{slot}\". Folosește buddy_list să vezi buddy-ii salvați.",
+    "slot_exists": "Un buddy în slot-ul \"{slot}\" există deja. Alege un nume diferit.",
+    "no_match": "Nu am găsit nimic după {attempts} încercări. Încearcă criterii mai largi (de ex. renunță la filtrul de raritate, sau alege o altă specie).",
+    "empty_menagerie_summon": "Menajeria ta e goală. Folosește buddy_summon cu un nume de slot să adaugi unul.",
+    "empty_menagerie_list": "Menajeria ta e goală. Folosește buddy_summon <slot> să adaugi unul.",
+    "arrives": "*{name} sosește*",
+    "hatches": "*{name} se eclozează*",
+    "achievement_unlocked": "{icon} Achievement Deblocat: {name}!",
+    "help": {
+      "header": "comenzi claude-buddy",
+      "cli_header": "În Claude Code:",
+      "commands": {
+        "buddy": "/buddy            Arată cardul companion-ului cu ASCII art + stats",
+        "buddy_help": "/buddy help       Arată acest help",
+        "buddy_pet": "/buddy pet        Mângâie-ți companion-ul",
+        "buddy_stats": "/buddy stats      Card detaliat cu statistici",
+        "buddy_off": "/buddy off        Dezactivează reacțiile",
+        "buddy_on": "/buddy on         Activează reacțiile",
+        "buddy_rename": "/buddy rename     Redenumește companion-ul (1-14 caractere)",
+        "buddy_personality": "/buddy personality  Setează text personalizat de personalitate",
+        "buddy_achievements": "/buddy achievements  Arată badge-urile de achievement",
+        "buddy_summon": "/buddy summon     Invocă un buddy salvat (omite slot-ul pentru unul random)",
+        "buddy_save": "/buddy save       Salvează buddy-ul curent într-un slot cu nume",
+        "buddy_list": "/buddy list       Listează toți buddy-ii salvați",
+        "buddy_pick": "/buddy pick       Generează un buddy random nou (opțional: specie, raritate)",
+        "buddy_dismiss": "/buddy dismiss    Șterge un slot de buddy salvat",
+        "buddy_frequency": "/buddy frequency  Arată sau setează cooldown-ul comentariilor (doar tmux)",
+        "buddy_style": "/buddy style      Arată sau setează stilul bulei (doar tmux)",
+        "buddy_position": "/buddy position   Arată sau setează poziția bulei (doar tmux)",
+        "buddy_rarity": "/buddy rarity     Arată sau ascunde stelele de raritate (doar tmux)",
+        "buddy_width": "/buddy width      Setează lățimea textului bulei în caractere (10-60, doar tmux)",
+        "buddy_margin": "/buddy margin     Setează marginea din dreapta în caractere (0-20, doar tmux)",
+        "buddy_rainbow": "/buddy rainbow    Arată sau setează culorile gradient shiny (hex, de ex. #ff0000)",
+        "buddy_statusline": "/buddy statusline Activează sau dezactivează buddy-ul în status line"
+      },
+      "cli_section": "CLI:",
+      "cli_commands": {
+        "help": "bun run help            Arată help-ul complet CLI",
+        "show": "bun run show            Afișează buddy-ul în terminal",
+        "pick": "bun run pick            Selector interactiv de buddy",
+        "hunt": "bun run hunt            Caută un buddy specific",
+        "doctor": "bun run doctor          Raport de diagnostic",
+        "disable": "bun run disable         Dezactivează temporar buddy-ul",
+        "enable": "bun run enable          Re-activează buddy-ul",
+        "backup": "bun run backup          Snapshot/restaurează starea"
+      }
+    },
+    "frequency": {
+      "show": "Cooldown comentarii: {cooldown}s între comentariile afișate.\nFolosește /buddy frequency <secunde> să schimbi.",
+      "updated": "Actualizat: {cooldown}s cooldown între comentariile afișate."
+    },
+    "style": {
+      "show": "Stilul bulei: {style}\nPoziția bulei: {position}\nArată raritatea: {showRarity}\nLățimea bulei: {width}\nMarginea bulei: {margin}\nShiny rainbow: {rainbow}\nFolosește /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] să schimbi.",
+      "updated": "Actualizat: style={style}, position={position}, showRarity={showRarity}, width={width}, margin={margin}, rainbow={rainbow}\nRestart Claude Code ca să se aplice schimbările.",
+      "rainbow_default": "default (ROYGBIV)"
+    },
+    "statusline": {
+      "show": "Status line: {state}\nMod: {mode}\nFolosește /buddy statusline on|off să comuti, /buddy statusline combined să adaugi bare de rate-limit.\nRestart Claude Code după schimbări ca să se aplice.",
+      "enabled": "Status line activat (mod {mode})! Restart Claude Code să se aplice.",
+      "enabled_note": "Notă: asta scrie o intrare în {settingsPath} pe care `claude plugin uninstall` nu o șterge. Rulează `/buddy uninstall` înainte să dezinstalezi plugin-ul ca să o curețe.",
+      "disabled": "Status line dezactivat. Restart Claude Code să se aplice."
+    },
+    "uninstall": {
+      "header": "claude-buddy: curățarea settings.json completă.",
+      "statusline_removed": "  ✓ intrarea statusLine ștearsă din {settingsPath}",
+      "no_statusline": "  — nu era prezent niciun statusLine buddy (nimic de șters)",
+      "foreign_kept": "  ✓ un statusLine non-buddy a fost detectat și lăsat neatins",
+      "transient_removed": "  ✓ {count} fișier(e) de sesiune tranzitorii șters(e) din {stateDir}",
+      "data_preserved": "  — datele companion-ului de la {stateDir} păstrate",
+      "instructions_header": "Acum rulează aceste comenzi prin tool-ul Bash, în ordine:",
+      "cmd_uninstall": "claude plugin uninstall claude-buddy@claude-buddy",
+      "cmd_marketplace": "claude plugin marketplace remove claude-buddy",
+      "cmd_cache": "rm -rf {cacheDir}",
+      "footer": "După aceste trei comenzi plugin-ul e complet șters. Restart Claude Code să se aplice."
+    }
+  },
+  "_verified": false
+}

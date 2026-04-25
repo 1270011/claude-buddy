@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
+argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|language [code]|uninstall]"
 allowed-tools: mcp__claude_buddy__*, Bash
 ---
 
@@ -70,6 +70,8 @@ Based on `$ARGUMENTS`:
 | `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |
 | `statusline combined`    | Call `buddy_statusline` with combined=true (adds rate-limit usage bars, needs python3)       |
 | `statusline basic`       | Call `buddy_statusline` with combined=false (buddy only, no rate-limit bars)                 |
+| `language`               | Call `buddy_language` with no args (show current)                                            |
+| `language <code>`        | Call `buddy_language` with language=code (e.g. 'es', 'ja', 'fr')                             |
 | `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below)                           |
 
 ## CRITICAL OUTPUT RULES

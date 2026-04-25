@@ -60,6 +60,16 @@ Species art lives in `server/art.ts` and `statusline/buddy-status.sh`. Each spec
 ### New Reactions
 Reaction templates are in `server/reactions.ts`. Species-specific reactions go in `SPECIES_REACTIONS`, general ones in `REACTIONS`.
 
+### Translations
+Locale files live in `locales/<code>.json` (e.g. `locales/en.json`, `locales/es.json`). To add a new language:
+
+1. Copy `locales/en.json` to `locales/<code>.json`
+2. Set `"_language"` to the language name (e.g. `"Español"`)
+3. Translate the string values (keep `{variable}` placeholders and `*asterisk actions*` intact)
+4. Run `bun test` to validate the locale structure
+
+The i18n module (`server/i18n.ts`) auto-discovers locale files by scanning `locales/*.json`. No code changes needed — just drop in the file.
+
 ## DCO (Developer Certificate of Origin)
 
 Every commit to this repo must be **signed off** with the Developer

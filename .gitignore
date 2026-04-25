@@ -38,3 +38,6 @@ coverage/
 main.py
 pyproject.toml
 uv.lock
+
+# i18n
+i18n.lock

@@ -1,7 +1,7 @@
 {
   "name": "claude-buddy",
   "version": "0.5.2",
-  "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
+  "description": "Permanent coding companion for Claude Code \u2014 survives any update (MVP)",
   "type": "module",
   "bin": {
     "claude-buddy": "./cli/index.ts"
@@ -34,7 +34,8 @@
     "hooks/",
     "statusline/",
     ".claude-plugin/",
-    "!**/*.test.ts"
+    "!**/*.test.ts",
+    "locales/"
   ],
   "keywords": [
     "claude-code",

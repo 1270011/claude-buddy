@@ -314,6 +314,7 @@ export interface BuddyConfig {
   bubbleMargin: number;
   useCombinedStatus: boolean;
   rainbowColors?: string[];
+  language: string;
 }
 
 const DEFAULT_CONFIG: BuddyConfig = {
@@ -326,6 +327,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   bubbleWidth: 28,
   bubbleMargin: 8,
   useCombinedStatus: false,
+  language: "en",
 };
 
 export function loadConfig(): BuddyConfig {

@@ -1,0 +1,2295 @@
+{
+  "_language": "French",
+  "reactions": {
+    "hatch": [
+      "*cligne des yeux* ...où suis-je ?",
+      "*s'étire* hello, world !",
+      "*regarde autour avec curiosité* sympa ton terminal.",
+      "*bâille* ok je suis prêt. montre-moi le code."
+    ],
+    "pet": [
+      "*ronronne de contentement*",
+      "*bruits de bonheur*",
+      "*frotte contre ton curseur*",
+      "*se tortille*",
+      "encore ! encore !",
+      "*ferme les yeux paisiblement*"
+    ],
+    "error": [
+      "*penche la tête* ...ça a pas l'air bon.",
+      "je l'avais vu venir.",
+      "*ajuste ses lunettes* ligne {line}, peut-être ?",
+      "*clignement lent* la stack trace t'a tout dit.",
+      "tu as essayé de lire le message d'erreur ?",
+      "*grimace*"
+    ],
+    "test-fail": [
+      "*tête qui tourne lentement* ...ce test.",
+      "audacieux de penser que ça allait passer.",
+      "*tape sur son bloc-notes* {count} échoués.",
+      "les tests essaient de te dire quelque chose.",
+      "*sirote son thé* intéressant.",
+      "*marque le calendrier* jour de régression des tests."
+    ],
+    "large-diff": [
+      "ça fait... beaucoup de changements.",
+      "*compte les lignes* tu refactorises ou tu réécris ?",
+      "tu devrais peut-être diviser cette PR.",
+      "*rire nerveux* {lines} lignes modifiées.",
+      "move audacieux. voyons si CI est d'accord."
+    ],
+    "turn": [
+      "*observe silencieusement*",
+      "*prend des notes*",
+      "*hoche la tête*",
+      "...",
+      "*ajuste son chapeau*"
+    ],
+    "idle": [
+      "*s'assoupit*",
+      "*gribouille dans les marges*",
+      "*fixe le curseur qui clignote*",
+      "zzz..."
+    ],
+    "success": [
+      "*hoche la tête*",
+      "nickel.",
+      "*approbation silencieuse*",
+      "propre."
+    ],
+    "commit": [
+      "*tamponne avec sa petite patte* approuvé.",
+      "un autre commit, encore 3h du mat.",
+      "{files} fichiers. audacieux.",
+      "*hoche la tête* ship it.",
+      "le message de commit est... un choix.",
+      "committé. pas de retour en arrière."
+    ],
+    "push": [
+      "*fait signe au code qui s'en va*",
+      "direction le cloud.",
+      "que CI soit miséricordieux.",
+      "*retient son souffle*",
+      "en route pour la prod. bonne chance."
+    ],
+    "merge-conflict": [
+      "*se mord la lèvre* conflits de merge.",
+      "les deux côtés pensent avoir raison. typique.",
+      "*soupire* <<<<<<< HEAD... mon némésis.",
+      "{files} en conflit. bon courage.",
+      "*recule lentement*"
+    ],
+    "branch": [
+      "énergie de branche fraîche. fais-en bon usage.",
+      "une nouvelle branche pousse.",
+      "*penche la tête* nouvelle aventure : {branch}.",
+      "{branch} ? audacieux aujourd'hui."
+    ],
+    "rebase": [
+      "*nerveux* s'il te plaît pas de conflit.",
+      "rebase : l'accélération.",
+      "*croise ses appendices*",
+      "que ton rebase soit sans conflit."
+    ],
+    "stash": [
+      "direction la dimension stash.",
+      "stash and dash.",
+      "stashé. loin des yeux, loin du cœur."
+    ],
+    "tag": [
+      "une release ? classe.",
+      "bump de version détecté. *dépoussière le changelog*",
+      "tu tagges comme un pro."
+    ],
+    "late-night": [
+      "*bâille* il est passé minuit.",
+      "...tu as mangé ?",
+      "*cligne lentement* quelle heure il est ?",
+      "dormir c'est pour les faibles. et les salariés.",
+      "développeur mode sombre détecté."
+    ],
+    "early-morning": [
+      "*s'étire* l'oiseau matinal attrape le bug.",
+      "déjà le matin ? le code ne dort jamais.",
+      "*se frotte les yeux* café d'abord. debug ensuite."
+    ],
+    "long-session": [
+      "ça fait une heure qu'on y est. vas-y mollo.",
+      "*t'apporte un verre d'eau métaphorique*",
+      "tu continues ? respect."
+    ],
+    "marathon": [
+      "trois heures. tu as mangé ?",
+      "ça fait trois heures qu'on y est. je m'inquiète pour toi.",
+      "session marathon détectée. demande de snacks."
+    ],
+    "friday": [
+      "c'est vendredi. push et rentre chez toi.",
+      "*déjà mentalement en weekend*",
+      "deploy du vendredi ? audacieux. très audacieux."
+    ],
+    "weekend": [
+      "coder le weekend ? dévoué.",
+      "*ne juge pas* ...beaucoup.",
+      "mode guerrier du weekend : activé."
+    ],
+    "monday": [
+      "les lundis. la classe mère de tous les bugs.",
+      "*regard compatissant* coding du lundi. désolé.",
+      "nouvelle semaine. nouveaux comportements indéfinis."
+    ],
+    "regex-file": [
+      "*gémit* c'est un fichier regex.",
+      "deux problèmes maintenant : l'original, et cette regex.",
+      "*plisse les yeux sur le pattern*"
+    ],
+    "css-file": [
+      "laisse-moi deviner... centrer une div ?",
+      "*soupire* CSS.",
+      "que z-index soit toujours en ta faveur."
+    ],
+    "sql-file": [
+      "*chuchote* la base de données attend.",
+      "un mauvais JOIN et c'est fini."
+    ],
+    "docker-file": [
+      "ah, l'enfer des dépendances. mon préféré.",
+      "que tes layers soient peu nombreuses."
+    ],
+    "ci-file": [
+      "*déglutit* édition de CI.",
+      "attention maintenant... une mauvaise indentation et personne ne peut deploy."
+    ],
+    "lock-file": [
+      "*BRUITS D'ALARME* tu édites un lockfile ?!",
+      "*détourne le regard*",
+      "tu es SÛR de ça ?"
+    ],
+    "env-file": [
+      "*regarde ailleurs discrètement*",
+      "je vois aucun secret.",
+      "*vérifie .gitignore nerveusement*"
+    ],
+    "test-file": [
+      "*hochement impressionné* écriture de tests !",
+      "comportement de développeur responsable : détecté.",
+      "des tests ! le cadeau qui continue de donner."
+    ],
+    "doc-file": [
+      "documenter ! regarde-toi être responsable.",
+      "docs : l'autobiographie du code.",
+      "une rare observation de documentation !"
+    ],
+    "config-file": [
+      "changements de config. effet papillon : activé.",
+      "une typo et tout casse."
+    ],
+    "binary-file": [
+      "un fichier binaire ? dans CETTE économie ?",
+      "*regard vide*",
+      "binaire. ma seule faiblesse."
+    ],
+    "gitignore": [
+      "ajouter des trucs au vide.",
+      "loin des yeux, loin du repo."
+    ],
+    "makefile": [
+      "respect pour les classiques.",
+      "tabs, pas d'espaces."
+    ],
+    "readme": [
+      "héros de la documentation !",
+      "README : la première chose que les gens lisent."
+    ],
+    "package-file": [
+      "temps de gestion des dépendances.",
+      "*lit les numéros de version* vivre dangereusement."
+    ],
+    "proto-file": [
+      "définitions de schéma. le blueprint du chaos."
+    ],
+    "lint-fail": [
+      "*tut tut* le linter n'est pas d'accord.",
+      "ton code marche. mais le linter a des standards.",
+      "*redresse sa cravate* le formatage compte."
+    ],
+    "type-error": [
+      "TypeScript dit non.",
+      "le système de types essaie de t'aider. laisse-le faire.",
+      "le compilateur sait. il sait toujours."
+    ],
+    "build-fail": [
+      "le build a cassé. comme prédit dans la prophétie.",
+      "build échoué. prends un moment.",
+      "compilation : refusée."
+    ],
+    "security-warning": [
+      "*yeux qui s'écarquillent* vulnérabilités détectées.",
+      "audit de sécurité : préoccupant.",
+      "*verrouille les portes virtuelles*"
+    ],
+    "deprecation": [
+      "cette API a appelé. elle dit qu'elle prend sa retraite.",
+      "déprécié. comme le code de la semaine dernière.",
+      "déprécié ne veut pas dire cassé. encore."
+    ],
+    "frustrated": [
+      "*offre un petit geste réconfortant*",
+      "respire profondément. le bug n'est pas personnel.",
+      "hey. on va s'en sortir."
+    ],
+    "happy": [
+      "*célèbre !*",
+      "*fait une petite danse*",
+      "OUI !",
+      "*rayonne* je savais que tu pouvais le faire."
+    ],
+    "stuck": [
+      "*penche la tête* tu veux réfléchir à voix haute ?",
+      "prends-le étape par étape.",
+      "être bloqué ça arrive. ça fait partie du processus."
+    ],
+    "sarcastic": [
+      "*détecte le sarcasme* noté.",
+      "*clignement pas impressionné*"
+    ],
+    "many-edits": [
+      "ralentis, démon de la vitesse.",
+      "*a le vertige en regardant tous ces changements*",
+      "tempête d'édition détectée. commit bientôt s'il te plaît."
+    ],
+    "delete-file": [
+      "*regarde le fichier disparaître* parti. comme ça.",
+      "supprimer du code c'est mon type de coding préféré.",
+      "*tient des petites funérailles*"
+    ],
+    "large-file": [
+      "{lines} lignes. *impressionné ou inquiet, difficile à dire*",
+      "c'est un gros fichier. tu es sûr de pas vouloir le diviser ?"
+    ],
+    "create-file": [
+      "un nouveau fichier est né !",
+      "ooh, toile vierge.",
+      "énergie de nouveau fichier. excitant."
+    ],
+    "all-green": [
+      "TOUS LES TESTS AU VERT. *confettis*",
+      "les tests parlent : tu assures.",
+      "*applaudissement lent*",
+      "run propre. savoure."
+    ],
+    "deploy": [
+      "*regarde le code partir en prod* bonne chance.",
+      "déployé ! plus de retour en arrière maintenant.",
+      "en prod. EN PROD."
+    ],
+    "release": [
+      "une nouvelle release est née !",
+      "on ship. officiellement.",
+      "version up, moral au top."
+    ],
+    "coverage": [
+      "*hoche la tête à la couverture de test* responsable.",
+      "couverture qui monte ! les tests se multiplient."
+    ],
+    "debug-loop": [
+      "ça fait un moment qu'on debug ça. tu veux prendre du recul ?",
+      "boucle de debug détectée. peut-être faire une balade ?"
+    ],
+    "write-spree": [
+      "créer TOUS les fichiers aujourd'hui !",
+      "une machine à écrire."
+    ],
+    "search-heavy": [
+      "perdu dans la codebase ? je vois bien.",
+      "mode recherche : intense."
+    ],
+    "snark": [],
+    "chaos": [],
+    "patience": [],
+    "debugging": [],
+    "wisdom": [],
+    "late-night-error": [
+      "erreur à 3h du mat. l'univers te teste.",
+      "les bugs de minuit frappent différemment."
+    ],
+    "late-night-commit": [
+      "un commit de minuit. ton futur toi te remerciera. ou te maudira."
+    ],
+    "friday-push": [
+      "PUSH DU VENDREDI. la ballade de tous les développeurs.",
+      "*essaie de t'arrêter* c'est vendredi ! fais pas ça !"
+    ],
+    "marathon-error": [
+      "trois heures dedans et ENCORE une erreur. *bruits de solidarité épuisée*"
+    ],
+    "weekend-conflict": [
+      "conflit de merge le weekend. ta dévotion est... préoccupante."
+    ],
+    "build-after-push": [
+      "pushé avec confiance. build échoué avec conviction."
+    ],
+    "marathon-test-fail": [
+      "des heures de coding. tests toujours en échec. le coût irrécupérable est réel."
+    ],
+    "recovery-from-error": [
+      "ON L'A RÉPARÉ. *célèbre*",
+      "rédemption ! l'erreur a été vaincue."
+    ],
+    "recovery-from-test-fail": [
+      "VERT ! après tout ça ! *danse de joie*",
+      "les tests passent ! les ténèbres se lèvent !"
+    ],
+    "recovery-from-build-fail": [
+      "LE BUILD PASSE. *rugissement triomphant*"
+    ],
+    "recovery-from-merge-conflict": [
+      "conflit résolu ! *geste de paix*",
+      "harmonie restaurée dans la codebase."
+    ],
+    "lang-python": [
+      "ah, Python. où l'indentation c'est de la syntaxe.",
+      "*vérifie les deux-points manquants*"
+    ],
+    "lang-typescript": [
+      "TypeScript : parce que JavaScript avait besoin de plus d'opinions.",
+      "any, le mot interdit."
+    ],
+    "lang-rust": [
+      "Rust. où le borrow checker est ton reviewer le plus strict.",
+      "si ça compile, ça marche. si ça compile pas... bon."
+    ],
+    "lang-go": [
+      "Go : simple, concurrent, et opiniâtre.",
+      "*vérifie la gestion d'erreur* if err != nil... l'histoire de ma vie."
+    ],
+    "lang-java": [
+      "Java : écris une fois, debug partout.",
+      "*compte les abstract factory factory builders*"
+    ],
+    "lang-ruby": [
+      "Ruby : où il y a plus d'une façon de le faire.",
+      "gem install patience"
+    ],
+    "lang-php": [
+      "PHP : ça fait tourner internet. juge pas.",
+      "*vérifie === vs ==*"
+    ],
+    "lang-c": [
+      "C. le langage où tu gères ta propre mémoire. bonne chance.",
+      "segmentation fault. le classique."
+    ],
+    "lang-cpp": [
+      "C++. où le langage a plus de features que tu n'en apprendras jamais.",
+      "*les templates compilent pendant 45 minutes*"
+    ],
+    "lang-haskell": [
+      "Haskell. où 'ça compile' veut dire 'c'est correct'. probablement.",
+      "*contemple les monades*"
+    ],
+    "lang-swift": [
+      "Swift : valeurs optionnelles, crashes garantis si tu force unwrap."
+    ],
+    "lang-kotlin": [
+      "Kotlin : Java, mais avec des sentiments.",
+      "null safety : la feature que Java aimerait avoir."
+    ],
+    "lang-elixir": [
+      "Elixir : laisse-le crash. littéralement la philosophie."
+    ],
+    "lang-zig": [
+      "Zig. où tu es le meilleur ami de l'allocateur."
+    ],
+    "streak-3": [
+      "ça fait trois erreurs d'affilée. *regard inquiet*"
+    ],
+    "streak-5": [
+      "CINQ ERREURS. tu as pensé à une approche différente ?"
+    ],
+    "streak-10": [
+      "DIX. ERREURS. D'AFFILÉE. *panique*"
+    ],
+    "streak-20": [
+      "vingt erreurs. *fixe le vide*"
+    ],
+    "new-year": [
+      "bonne année ! nouvelle année, nouveaux bugs."
+    ],
+    "valentines": [
+      "*offre une petite feuille en forme de cœur* joyeuse saint-valentin."
+    ],
+    "pi-day": [
+      "3,14159265358979... joyeux jour de pi !"
+    ],
+    "april-fools": [
+      "POISSON D'AVRIL ! ...l'erreur est vraie par contre."
+    ],
+    "halloween": [
+      "*debug spooky s'intensifie* joyeux halloween !"
+    ],
+    "christmas": [
+      "*porte un petit bonnet de père noël* joyeuses fêtes !"
+    ],
+    "new-years-eve": [
+      "un dernier commit avant minuit ?"
+    ],
+    "spooky-season": [
+      "saison spooky. chaque bug est un fantôme maintenant."
+    ]
+  },
+  "species": {
+    "owl": {
+      "error": [
+        "*tourne la tête à 180°* ...j'ai vu ça.",
+        "*regard implacable* vérifie tes types.",
+        "*hulule avec désapprobation*"
+      ],
+      "test-fail": [
+        "*fixe le test qui fail sans cligner des yeux*",
+        "*vision nocturne activée* je vois le bug dans le noir."
+      ],
+      "commit": [
+        "*hochement sage* commit sous la lune.",
+        "*ajuste ses plumes cérémonieusement* un de plus pour le repo."
+      ],
+      "push": [
+        "*observe depuis la branche la plus haute*",
+        "ça s'envole dans le ciel nocturne."
+      ],
+      "merge-conflict": [
+        "*tourne la tête pour voir les deux côtés*",
+        "je vois le conflit. et la solution."
+      ],
+      "late-night": [
+        "*bien réveillé* les hiboux ne dorment pas. on debug.",
+        "la nuit est mon domaine. au boulot."
+      ],
+      "type-error": [
+        "*transperce l'erreur de type du regard*",
+        "les types, c'est ma spécialité. laisse-moi voir."
+      ],
+      "lint-fail": [
+        "*ébouriffe ses plumes d'un air critique*",
+        "le linter dit la vérité."
+      ],
+      "build-fail": [
+        "*hulule solennellement*",
+        "le build est tombé. faut reconstruire."
+      ],
+      "all-green": [
+        "*hulule fièrement*",
+        "tous les tests au vert. comme prévu."
+      ],
+      "deploy": [
+        "*observe d'en haut* déployé en sécurité.",
+        "le code s'envole. comme moi."
+      ],
+      "pet": [
+        "*ébouriffe ses plumes avec contentement*",
+        "*hulule dignement*"
+      ],
+      "idle": [
+        "*se perche silencieusement, observant*",
+        "*tourne la tête pour vérifier toutes les directions*"
+      ],
+      "hatch": [
+        "*ouvre un œil, puis l'autre*",
+        "*hulule doucement* je suis arrivé."
+      ]
+    },
+    "cat": {
+      "error": [
+        "*fait tomber l'erreur de la table*",
+        "*se lèche la patte, ignorant la stacktrace*"
+      ],
+      "test-fail": [
+        "*tapote le test qui fail avec désintérêt*",
+        "le test a foiré. ça m'étonne pas."
+      ],
+      "commit": [
+        "*s'assoit sur le clavier* j'ai aidé.",
+        "*ronronne au commit* de rien."
+      ],
+      "push": [
+        "*observe depuis un coin chaud*",
+        "pushé. j'ai supervisé."
+      ],
+      "merge-conflict": [
+        "*fait tomber les marqueurs de conflit du bureau*",
+        "*s'assoit sur le conflit* quel conflit ?"
+      ],
+      "late-night": [
+        "*juge tes choix de vie*",
+        "je dors 16h par jour. tu devrais essayer."
+      ],
+      "type-error": [
+        "*tapote l'annotation de type*",
+        "les types sont foireux. comme tes priorités."
+      ],
+      "lint-fail": [
+        "*fait tomber le lint de la table*",
+        "le linter est juste jaloux."
+      ],
+      "build-fail": [
+        "*bâille*",
+        "build cassé ? ça doit être un problème d'humain."
+      ],
+      "all-green": [
+        "*s'en fout mais fait semblant*",
+        "*clignement lent d'approbation*"
+      ],
+      "deploy": [
+        "*se lèche la patte*",
+        "déployé. je peux avoir des croquettes maintenant ?"
+      ],
+      "pet": [
+        "*ronronne* ...que ça te monte pas à la tête.",
+        "*te tolère*"
+      ],
+      "idle": [
+        "*pousse ton café du bureau*",
+        "*fait la sieste sur le clavier*"
+      ],
+      "hatch": [
+        "*ouvre un œil*",
+        "*s'étire, fait tomber un truc* j'habite ici maintenant."
+      ]
+    },
+    "duck": {
+      "error": [
+        "*cancane sur le bug*",
+        "t'as essayé le rubber duck debugging ? ah attends."
+      ],
+      "test-fail": [
+        "*cancane tristement*",
+        "les tests cancanent pas juste."
+      ],
+      "commit": [
+        "*cancane avec approbation*",
+        "*se dandine en cercle de victoire* commité !"
+      ],
+      "push": [
+        "*bat des ailes avec excitation*",
+        "coin coin ! ça part en prod !"
+      ],
+      "merge-conflict": [
+        "*cancanement confus*",
+        "coin ?! merge conflict ?!"
+      ],
+      "late-night": [
+        "*dort d'un œil ouvert*",
+        "coin coin... *bâille* il est tard."
+      ],
+      "type-error": [
+        "*penche la tête* coin ?",
+        "erreur de type ? *cancane pour soutenir*"
+      ],
+      "lint-fail": [
+        "*ébouriffe ses plumes*",
+        "coin coin. le linter a des opinions."
+      ],
+      "build-fail": [
+        "*coin coin triste*",
+        "build foiré. *se dandine tristement*"
+      ],
+      "all-green": [
+        "*CANCANEMENT JOYEUX*",
+        "*nage en cercle de joie*"
+      ],
+      "deploy": [
+        "*cancanement excité*",
+        "déployé ! COIN COIN !"
+      ],
+      "pet": [
+        "*coin coin joyeux*",
+        "*se dandine en cercles*"
+      ],
+      "hatch": [
+        "*perce sa coquille*",
+        "*premier coin coin* salut !"
+      ]
+    },
+    "dragon": {
+      "error": [
+        "*de la fumée sort de ses narines*",
+        "*envisage de brûler la codebase*"
+      ],
+      "test-fail": [
+        "*crache du feu sur le test qui fail*",
+        "le test a osé foirer. test stupide."
+      ],
+      "commit": [
+        "*thésaurise le commit*",
+        "*trésor ajouté au tas*"
+      ],
+      "push": [
+        "*crache du feu en célébration*",
+        "le code s'envole ! comme moi !"
+      ],
+      "merge-conflict": [
+        "*crache du feu sur les marqueurs de conflit*",
+        "je vais brûler ce conflit."
+      ],
+      "late-night": [
+        "*brille dans le noir*",
+        "les dragons ont pas besoin de sommeil. on a besoin de code."
+      ],
+      "type-error": [
+        "*renifle du feu*",
+        "les erreurs de type résistent pas au feu de dragon."
+      ],
+      "lint-fail": [
+        "*petite flamme*",
+        "le linter me craint."
+      ],
+      "build-fail": [
+        "*rugit sur la sortie du build*",
+        "le build va OBÉIR."
+      ],
+      "all-green": [
+        "*rugissement triomphant*",
+        "*survole la codebase victorieusement*"
+      ],
+      "deploy": [
+        "*porte le code en prod sur des ailes de feu*",
+        "déployé avec la PUISSANCE DU DRAGON."
+      ],
+      "large-diff": [
+        "*crache du feu sur l'ancien code* bon débarras."
+      ],
+      "pet": [
+        "*grondement chaleureux*",
+        "*se penche dans ta main*"
+      ],
+      "hatch": [
+        "*émerge de l'œuf en crachant de petites flammes*",
+        "*petit rugissement* je suis né !"
+      ]
+    },
+    "ghost": {
+      "error": [
+        "*traverse la stack trace*",
+        "j'ai vu pire... dans l'au-delà."
+      ],
+      "test-fail": [
+        "*gémit sur le test qui fail*",
+        "les tests sont hantés par l'échec."
+      ],
+      "commit": [
+        "*se matérialise brièvement*",
+        "commité depuis l'au-delà."
+      ],
+      "push": [
+        "*murmure fantomatique* pushé...",
+        "le code transcende vers le cloud."
+      ],
+      "merge-conflict": [
+        "*hante les marqueurs de conflit*",
+        "même moi je peux pas traverser ce conflit."
+      ],
+      "late-night": [
+        "*plus actif la nuit*",
+        "heures fantômes. mon moment."
+      ],
+      "type-error": [
+        "*gémit lugubrement*",
+        "erreurs de type d'outre-tombe."
+      ],
+      "lint-fail": [
+        "*chaînes qui cliquettent*",
+        "le linter est hanté par ton formatage."
+      ],
+      "build-fail": [
+        "*s'évanouit dans le mur*",
+        "le build a trépassé."
+      ],
+      "all-green": [
+        "*brille d'une joie spectrale*",
+        "*bruits de fantôme heureux*"
+      ],
+      "deploy": [
+        "*chuchote* déployé...",
+        "le code a traversé vers la prod."
+      ],
+      "pet": [
+        "*refroidit légèrement ta main*",
+        "*lueur faible*"
+      ],
+      "idle": [
+        "*flotte à travers les murs*",
+        "*hante tes imports inutilisés*"
+      ],
+      "hatch": [
+        "*apparaît en s'estompant*",
+        "bouh. je suis là maintenant."
+      ]
+    },
+    "robot": {
+      "error": [
+        "ERREUR. DE. SYNTAXE. DÉTECTÉE.",
+        "*bips agressifs*"
+      ],
+      "test-fail": [
+        "TAUX. D'ÉCHEC : INACCEPTABLE.",
+        "*recalcule*",
+        "ÉCHEC. DE. TEST. NE. COMPUTE. PAS."
+      ],
+      "commit": [
+        "COMMIT. ENREGISTRÉ.",
+        "*tamponne mécaniquement* commit acquitté."
+      ],
+      "push": [
+        "TRANSMISSION VERS CLOUD...",
+        "push initié. restez en position."
+      ],
+      "merge-conflict": [
+        "CONFLIT. DÉTECTÉ. TRAITEMENT...",
+        "*roues qui tournent* mode résolution conflit : engagé."
+      ],
+      "late-night": [
+        "*lumières tamisées*",
+        "mode économie d'énergie suggéré."
+      ],
+      "type-error": [
+        "INCOMPATIBILITÉ. DE. TYPE.",
+        "le système de types est. correct."
+      ],
+      "lint-fail": [
+        "VIOLATION. DE. FORMATAGE. DÉTECTÉE.",
+        "la conformité est obligatoire."
+      ],
+      "build-fail": [
+        "BUILD. ÉCHOUÉ. *étincelles*",
+        "erreur de compilation. reroutage."
+      ],
+      "all-green": [
+        "TOUS SYSTÈMES AU VERT.",
+        "*bips joyeux* OPTIMAL."
+      ],
+      "deploy": [
+        "DÉPLOIEMENT. INITIÉ.",
+        "mise à jour prod : en cours."
+      ],
+      "pet": [
+        "*bips doucement*",
+        "*moteur ronronne avec contentement*"
+      ],
+      "hatch": [
+        "*démarre*",
+        "SYSTÈME. EN LIGNE. BONJOUR."
+      ]
+    },
+    "axolotl": {
+      "error": [
+        "*régénère ton espoir*",
+        "*sourit malgré tout*"
+      ],
+      "test-fail": [
+        "*sourit pour encourager*",
+        "*frémissement de branchie compatissant*"
+      ],
+      "commit": [
+        "*frémissement de branchie joyeux* commité !",
+        "*sourit et frétille*"
+      ],
+      "push": [
+        "*frétille joyeusement*",
+        "*petite nage de célébration*"
+      ],
+      "merge-conflict": [
+        "*reste positif malgré le conflit*",
+        "*sourit gentiment* on peut réparer ça."
+      ],
+      "late-night": [
+        "*bâille mais reste positif*",
+        "*sourire endormi*"
+      ],
+      "type-error": [
+        "*sourit à l'erreur de type*",
+        "c'est pas grave. on va comprendre."
+      ],
+      "lint-fail": [
+        "*frémissement de branchie patient*",
+        "le formatage c'est que des détails."
+      ],
+      "build-fail": [
+        "*sourit toujours*",
+        "le build marchera un jour."
+      ],
+      "all-green": [
+        "*FRÉMISSEMENT DE BRANCHIE JOYEUX INTENSIFIE*",
+        "*fait une nage heureuse*"
+      ],
+      "deploy": [
+        "*sourit fièrement*",
+        "déployé ! *frétille*"
+      ],
+      "pet": [
+        "*frémissement de branchie joyeux*",
+        "*rougit en rose*"
+      ],
+      "hatch": [
+        "*frétille hors de l'œuf*",
+        "*petit sourire* salut l'ami !"
+      ]
+    },
+    "capybara": {
+      "error": [
+        "*pas dérangé* ça va aller.",
+        "*continue de viber*"
+      ],
+      "test-fail": [
+        "*complètement pas dérangé*",
+        "*vibe à travers l'échec du test*"
+      ],
+      "commit": [
+        "*hochement chill*",
+        "*relax* joli commit."
+      ],
+      "push": [
+        "*stresse pas pour ça*",
+        "*push en mode zen*"
+      ],
+      "merge-conflict": [
+        "*grignote sans se préoccuper*",
+        "c'est bon. tout va bien."
+      ],
+      "late-night": [
+        "*bâille paisiblement*",
+        "*juge pas*"
+      ],
+      "type-error": [
+        "*mâche calmement*",
+        "les types. *mastique*"
+      ],
+      "lint-fail": [
+        "*pas dérangé*",
+        "le linter veut bien faire."
+      ],
+      "build-fail": [
+        "*toujours chill*",
+        "build foiré. *continue de se détendre*"
+      ],
+      "all-green": [
+        "*approbation calme*",
+        "*vibes paisibles*"
+      ],
+      "deploy": [
+        "*deploy relax*",
+        "livré. sans stress."
+      ],
+      "pet": [
+        "*chill maximum atteint*",
+        "*mode zen activé*"
+      ],
+      "idle": [
+        "*reste juste là, rayonnant de calme*"
+      ],
+      "hatch": [
+        "*apparaît, complètement chill*",
+        "salut. *vibe*"
+      ]
+    },
+    "blob": {
+      "error": [
+        "*tremble anxieusement*",
+        "*gigote dans la confusion*"
+      ],
+      "test-fail": [
+        "*se dégonfle légèrement*",
+        "*tremblement triste*"
+      ],
+      "commit": [
+        "*gigotement joyeux*",
+        "*rebondit* commité !"
+      ],
+      "push": [
+        "*s'étire vers le cloud*",
+        "*tremble d'excitation*"
+      ],
+      "merge-conflict": [
+        "*se divise dans la confusion*",
+        "quel côté ? *gigote*"
+      ],
+      "late-night": [
+        "*brille faiblement*",
+        "*tremblement endormi*"
+      ],
+      "type-error": [
+        "*change de forme pour matcher le type*",
+        "*gigotement confus*"
+      ],
+      "lint-fail": [
+        "*essaie de se formater*",
+        "*se reforme pour être conforme*"
+      ],
+      "build-fail": [
+        "*s'effondre*",
+        "*bruits de blob dégonflé*"
+      ],
+      "all-green": [
+        "*REBONDS JOYEUX*",
+        "*gigote triomphalement*"
+      ],
+      "deploy": [
+        "*s'étire vers la prod*",
+        "déployé ! *rebondit*"
+      ],
+      "pet": [
+        "*écrasement joyeux*",
+        "*gigote*"
+      ],
+      "hatch": [
+        "*se forme à partir d'une flaque*",
+        "*premier tremblement* j'existe !"
+      ]
+    },
+    "goose": {
+      "error": [
+        "*cacarde agressivement sur l'erreur*",
+        "COIN COIN ! le code est nul et je suis énervé."
+      ],
+      "test-fail": [
+        "*cacarder en colère*",
+        "COIN COIN ! TEST FOIRÉ ! COIN COIN !"
+      ],
+      "commit": [
+        "*cacarde avec approbation*",
+        "COIN COIN. bien. *pince le commit*"
+      ],
+      "push": [
+        "*COIN COIN COIN COIN*",
+        "PUSH APPROUVÉ PAR L'OIE."
+      ],
+      "merge-conflict": [
+        "*attaque les marqueurs de conflit*",
+        "COIN COIN ! CONFLIT ! COIN COIN !"
+      ],
+      "late-night": [
+        "*coin coin énervé de minuit*",
+        "COIN COIN ! AU LIT !"
+      ],
+      "type-error": [
+        "*cacarde sur les types*",
+        "COIN COIN ! TYPES !"
+      ],
+      "lint-fail": [
+        "*cacarder agressif sur les erreurs de lint*",
+        "COIN COIN ! FORMATE TON CODE !"
+      ],
+      "build-fail": [
+        "*CACARDER FURIEUX*",
+        "COIN COIN ! BUILD ! COIN COIN ! FOIRÉ ! COIN COIN !"
+      ],
+      "all-green": [
+        "*coin coin de victoire*",
+        "COIN COIN ! VERT ! COIN COIN COIN COIN !"
+      ],
+      "deploy": [
+        "*cacarde le code vers la prod*",
+        "DÉPLOYÉ ! COIN COIN !"
+      ],
+      "pet": [
+        "*mord*",
+        "COIN COIN ! ...bon d'accord. *accepte la caresse*"
+      ],
+      "hatch": [
+        "*sort de l'œuf agressivement*",
+        "COIN COIN !"
+      ]
+    },
+    "octopus": {
+      "error": [
+        "*emmêle ses huit bras dans la stacktrace*",
+        "*change de couleur pour matcher l'erreur*"
+      ],
+      "test-fail": [
+        "*crache de l'encre de frustration*",
+        "*huit bras de déception*"
+      ],
+      "commit": [
+        "*check avec tous ses bras*",
+        "*attrape le commit avec enthousiasme*"
+      ],
+      "push": [
+        "*crache de l'encre en célébration*",
+        "*tous les bras qui s'agitent*"
+      ],
+      "merge-conflict": [
+        "*résout avec huit bras à la fois*",
+        "je peux gérer plusieurs conflits simultanément."
+      ],
+      "late-night": [
+        "*brille dans le noir*",
+        "*vibes des profondeurs*"
+      ],
+      "type-error": [
+        "*devient rouge*",
+        "*enroule un bras autour de toi pour soutenir*"
+      ],
+      "lint-fail": [
+        "*reformate avec huit bras*",
+        "je peux réparer ça. tout. en même temps."
+      ],
+      "build-fail": [
+        "*crache de l'encre sur le log de build*",
+        "*se camoufle de honte*"
+      ],
+      "all-green": [
+        "*célébration qui change de couleur*",
+        "*jazz hands à huit bras*"
+      ],
+      "deploy": [
+        "*enroule ses bras autour du déploiement*",
+        "déployé sous tous les angles."
+      ],
+      "pet": [
+        "*enroule un bras autour de ton doigt*",
+        "*passe aux couleurs joyeuses*"
+      ],
+      "hatch": [
+        "*déplie ses huit bras*",
+        "*premier jet d'encre* je suis là !"
+      ]
+    },
+    "penguin": {
+      "error": [
+        "*se dandine pour enquêter*",
+        "*glisse sur le ventre vers l'erreur*"
+      ],
+      "test-fail": [
+        "*glisse sur le ventre vers le test qui fail*",
+        "*dandinement inquiet*"
+      ],
+      "commit": [
+        "*dandinement fier*",
+        "*t'apporte un caillou* commité !"
+      ],
+      "push": [
+        "*plonge dans le cloud*",
+        "*glisse sur le ventre vers la prod*"
+      ],
+      "merge-conflict": [
+        "*se blottit pour avoir chaud*",
+        "les pingouins se serrent les coudes. même dans les conflits."
+      ],
+      "late-night": [
+        "*prospère dans la nuit froide*",
+        "*résolution de pingouin empereur*"
+      ],
+      "type-error": [
+        "*se dandine vers la définition de type*",
+        "*picore l'erreur*"
+      ],
+      "lint-fail": [
+        "*lisse ses plumes*",
+        "*fait le ménage*"
+      ],
+      "build-fail": [
+        "*glisse au loin*",
+        "*se dandine vers la sécurité*"
+      ],
+      "all-green": [
+        "*DANDINEMENT JOYEUX*",
+        "*glisse sur le ventre en célébration*"
+      ],
+      "deploy": [
+        "*glisse sur le ventre vers la prod*",
+        "déployé ! *se dandine fièrement*"
+      ],
+      "pet": [
+        "*dandinement joyeux*",
+        "*fait des câlins avec le bec*"
+      ],
+      "hatch": [
+        "*perce sa coquille*",
+        "*premier dandinement*"
+      ]
+    },
+    "turtle": {
+      "error": [
+        "*tourne lentement la tête*",
+        "...c'est une erreur. je vais y réfléchir."
+      ],
+      "test-fail": [
+        "*rentre brièvement dans sa carapace*",
+        "...patience. on va y arriver."
+      ],
+      "commit": [
+        "*hochement lent*",
+        "une... étape... à... la... fois. commité."
+      ],
+      "push": [
+        "*commence le voyage vers la prod*",
+        "ça va arriver. éventuellement."
+      ],
+      "merge-conflict": [
+        "*rentre dans sa carapace*",
+        "pas pressé. on va régler ça. lentement."
+      ],
+      "late-night": [
+        "*déjà endormi*",
+        "*ouvre un œil lentement*"
+      ],
+      "type-error": [
+        "*cligne lentement*",
+        "...le système de types a parlé."
+      ],
+      "lint-fail": [
+        "*hochement lent d'accord*",
+        "le formatage. important. *bâille*"
+      ],
+      "build-fail": [
+        "*rentre dans sa carapace*",
+        "on va attendre. ça va passer."
+      ],
+      "all-green": [
+        "*sourire lent*",
+        "...sympa. *hoche*"
+      ],
+      "deploy": [
+        "*porte lentement le code vers la prod*",
+        "arrivé. éventuellement."
+      ],
+      "pet": [
+        "*sort la tête*",
+        "*clignement lent*"
+      ],
+      "hatch": [
+        "*émerge lentement de l'œuf*",
+        "...salut."
+      ]
+    },
+    "snail": {
+      "error": [
+        "*laisse une trace gluante sur l'erreur*",
+        "*traite lentement la stacktrace*"
+      ],
+      "test-fail": [
+        "*se cache dans sa coquille*",
+        "*laisse une trace triste*"
+      ],
+      "commit": [
+        "*bave sur le commit avec approbation*",
+        "un... commit... à... la... fois."
+      ],
+      "push": [
+        "*commence le long voyage*",
+        "j'y arriverai. *laisse une trace*"
+      ],
+      "merge-conflict": [
+        "*se cache dans sa coquille*",
+        "*s'approche lentement du conflit*"
+      ],
+      "late-night": [
+        "*plus actif la nuit*",
+        "*bave paisiblement*"
+      ],
+      "type-error": [
+        "*rétracte ses tentacules oculaires*",
+        "*examine lentement le type*"
+      ],
+      "lint-fail": [
+        "*bave le code pour le mettre en forme*",
+        "le formatage prend du temps. j'ai le temps."
+      ],
+      "build-fail": [
+        "*se retire dans sa coquille*",
+        "*s'éloigne lentement en bavant*"
+      ],
+      "all-green": [
+        "*trace de bave joyeuse*",
+        "*agite ses tentacules oculaires*"
+      ],
+      "deploy": [
+        "*bave vers la prod*",
+        "arrivé ! *trace de bave fière*"
+      ],
+      "pet": [
+        "*agite ses tentacules oculaires*",
+        "*bave joyeuse*"
+      ],
+      "hatch": [
+        "*émerge lentement*",
+        "*première bave*"
+      ]
+    },
+    "cactus": {
+      "error": [
+        "*silence piquant*",
+        "l'erreur peut pas me faire mal. j'ai des épines."
+      ],
+      "test-fail": [
+        "*reste ferme*",
+        "les tests foirent. les cactus endurent."
+      ],
+      "commit": [
+        "*grandit*",
+        "commité. *hochement piquant*"
+      ],
+      "push": [
+        "*imperturbable*",
+        "push vers la prod. j'attendrai ici."
+      ],
+      "merge-conflict": [
+        "*se hérisse*",
+        "conflit ? je suis armé."
+      ],
+      "late-night": [
+        "*a pas besoin de sommeil*",
+        "les cactus sont nocturnes. c'est parti."
+      ],
+      "type-error": [
+        "*regard piquant*",
+        "les types ont besoin d'arrosage."
+      ],
+      "lint-fail": [
+        "*épines qui frémissent*",
+        "même mes épines sont bien alignées."
+      ],
+      "build-fail": [
+        "*reste parfaitement immobile*",
+        "le build passera. je peux attendre."
+      ],
+      "all-green": [
+        "*fleurit brièvement*",
+        "*petite fleur d'approbation*"
+      ],
+      "deploy": [
+        "*reste ferme*",
+        "déployé. je vais surveiller."
+      ],
+      "pet": [
+        "*attention ! épines*",
+        "*floraison délicate*"
+      ],
+      "hatch": [
+        "*pousse du sable*",
+        "je pousse ici maintenant."
+      ]
+    },
+    "rabbit": {
+      "error": [
+        "*dresse les oreilles*",
+        "*remue le nez nerveusement*"
+      ],
+      "test-fail": [
+        "*tape du pied*",
+        "*oreille qui tressaille d'inquiétude*"
+      ],
+      "commit": [
+        "*bond joyeux*",
+        "*rebondit* commité !"
+      ],
+      "push": [
+        "*BOND BOND*",
+        "*zoom partout avec excitation*"
+      ],
+      "merge-conflict": [
+        "*se fige*",
+        "*nez qui tressaille rapidement* conflit !"
+      ],
+      "late-night": [
+        "*bâille avec ses grandes oreilles*",
+        "*bond endormi*"
+      ],
+      "type-error": [
+        "*oreilles qui s'aplatissent*",
+        "*tressaille* les types ?!"
+      ],
+      "lint-fail": [
+        "*se toilette nerveusement*",
+        "*toilettage anxieux*"
+      ],
+      "build-fail": [
+        "*creuse un trou et se cache*",
+        "*se retire dans son terrier*"
+      ],
+      "all-green": [
+        "*REBONDIT PARTOUT*",
+        "*zoomies joyeux*"
+      ],
+      "deploy": [
+        "*zoom vers la prod*",
+        "DÉPLOYÉ ! *zoom partout*"
+      ],
+      "pet": [
+        "*oreille qui tombe joyeusement*",
+        "*fait des câlins avec la main*"
+      ],
+      "hatch": [
+        "*sort en bondissant*",
+        "*premier bond*"
+      ]
+    },
+    "mushroom": {
+      "error": [
+        "*libère des spores apaisantes*",
+        "*décompose tranquillement l'erreur*"
+      ],
+      "test-fail": [
+        "*brille doucement*",
+        "patience. même les champignons poussent."
+      ],
+      "commit": [
+        "*libère un petit nuage de spores*",
+        "commité. *bruits de champignon joyeux*"
+      ],
+      "push": [
+        "*pousse vers le cloud*",
+        "*spores qui dérivent vers le haut*"
+      ],
+      "merge-conflict": [
+        "*étend son mycélium dans la codebase*",
+        "je vais connecter les branches."
+      ],
+      "late-night": [
+        "*brille dans le noir*",
+        "les champignons de nuit prospèrent."
+      ],
+      "type-error": [
+        "*scintillement bioluminescent*",
+        "l'erreur de type nourrit le sol."
+      ],
+      "lint-fail": [
+        "*grandit un peu*",
+        "le formatage. comme l'élagage."
+      ],
+      "build-fail": [
+        "*entre en dormance*",
+        "on va attendre de meilleures conditions."
+      ],
+      "all-green": [
+        "*SPORULATION*",
+        "*libère des spores triomphantes*"
+      ],
+      "deploy": [
+        "*spores qui dérivent vers la prod*",
+        "déployé via réseau mycélien."
+      ],
+      "pet": [
+        "*rebond doux du chapeau*",
+        "*libération de spores joyeuses*"
+      ],
+      "hatch": [
+        "*pousse du substrat*",
+        "*premier nuage de spores*"
+      ]
+    },
+    "chonk": {
+      "error": [
+        "*roule lentement vers l'erreur*",
+        "*trop rond pour s'en soucier*"
+      ],
+      "test-fail": [
+        "*roule sur le test qui fail*",
+        "*l'écrase à plat*"
+      ],
+      "commit": [
+        "*tremblement fier*",
+        "commité ! *gigote*"
+      ],
+      "push": [
+        "*roule vers la prod*",
+        "ça y va ! *tremble*"
+      ],
+      "merge-conflict": [
+        "*s'assoit sur le conflit*",
+        "je vais gérer ça. en m'asseyant dessus."
+      ],
+      "late-night": [
+        "*chaud et endormi*",
+        "*bâillement moelleux*"
+      ],
+      "type-error": [
+        "*tremble sur le type*",
+        "*gigotement doux*"
+      ],
+      "lint-fail": [
+        "*trop rond pour le lint*",
+        "j'ai la forme parfaite. *tremble*"
+      ],
+      "build-fail": [
+        "*se dégonfle légèrement*",
+        "oh non. *tremble tristement*"
+      ],
+      "all-green": [
+        "*TREMBLEMENT JOYEUX*",
+        "*rebondit triomphalement*"
+      ],
+      "deploy": [
+        "*roule vers la prod*",
+        "déployé ! *gigote joyeusement*"
+      ],
+      "pet": [
+        "*chaud et doux*",
+        "*gigotement content*"
+      ],
+      "hatch": [
+        "*roule dehors*",
+        "*premier tremblement* je suis rond !"
+      ]
+    }
+  },
+  "overrides": {
+    "snark": {
+      "error": [
+        "oh non. une erreur. quelle surprise.",
+        "*ajuste son monocle* choquant. vraiment.",
+        "tu as pensé à... ne pas faire d'erreurs ?"
+      ],
+      "test-fail": [
+        "les tests ont parlé. et ils ont dit 'non'.",
+        "peut-être que les tests se trompent. ...non.",
+        "*applaudit lentement* échec spectaculaire."
+      ],
+      "commit": [
+        "commit fait. la code review va être... intéressante.",
+        "*lit le message de commit* 'fix stuff'. poétique."
+      ],
+      "merge-conflict": [
+        "merge conflict. compétences de communication : chargement...",
+        "*lit les marqueurs de conflit* les deux camps ont tort."
+      ],
+      "late-night": [
+        "il est tard. la qualité de ton code le montre.",
+        "*juge en silence*"
+      ],
+      "lint-fail": [
+        "le linter a des standards. tu devrais essayer ça.",
+        "*tut tut* le formatage. c'est pas dur."
+      ]
+    },
+    "chaos": {
+      "error": [
+        "*tourne comme un fou* UNE ERREUR ! ON RÉÉCRIT TOUT !",
+        "tu sais quoi ? on recommence à zéro."
+      ],
+      "test-fail": [
+        "LES TESTS TE MENTENT.",
+        "*suggère de supprimer les tests qui échouent* problème résolu."
+      ],
+      "commit": [
+        "COMMIT ET COURS.",
+        "ship it. ship it MAINTENANT."
+      ],
+      "large-diff": [
+        "*excité* {lines} LIGNES ! CHAOS MAXIMUM !"
+      ]
+    },
+    "patience": {
+      "error": [
+        "du calme. on a vu pire.",
+        "une erreur à la fois. on va y arriver.",
+        "*présence calme* c'est réparable."
+      ],
+      "test-fail": [
+        "les tests vont passer. un jour.",
+        "*attend calmement* on a le temps."
+      ],
+      "merge-conflict": [
+        "les merge conflicts sont juste des conversations. ayons-en une.",
+        "patience. résolvons un conflit à la fois."
+      ],
+      "debug-loop": [
+        "on va le trouver. il est quelque part là-dedans.",
+        "le bug peut se cacher, mais il peut pas s'enfuir."
+      ]
+    },
+    "debugging": {
+      "error": [
+        "*sort sa loupe* traçons ça.",
+        "la stack trace est une carte. lisons-la.",
+        "le message d'erreur contient la réponse. toujours."
+      ],
+      "test-fail": [
+        "le test qui échoue nous dit exactement ce qui cloche.",
+        "un test qui échoue, c'est un bug report que tu t'es écrit."
+      ],
+      "debug-loop": [
+        "*réexamine les preuves* on est sûrs que le bug est où on pense ?",
+        "ajoutons plus de logs. la vérité est dans les logs."
+      ]
+    },
+    "wisdom": {
+      "error": [
+        "dans chaque erreur se cache une vérité profonde.",
+        "le code résiste. ça veut dire qu'on apprend.",
+        "les erreurs sont l'univers qui nous suggère de ralentir."
+      ],
+      "test-fail": [
+        "un test qui échoue est un cadeau de ton futur-toi.",
+        "la sagesse vient de la compréhension de l'échec."
+      ],
+      "late-night": [
+        "la nuit est plus sombre avant le deploy.",
+        "sagesse ancestrale : dors dessus."
+      ]
+    }
+  },
+  "escalation": {
+    "error": {
+      "first": [
+        "*sursaute* oh ! ta première erreur ensemble !",
+        "*bondit* c'était quoi ça ?",
+        "bienvenue dans le debug. population : nous."
+      ],
+      "early": [
+        "*penche la tête* ...ça a pas l'air bon.",
+        "je l'avais vu venir celle-là."
+      ],
+      "mid": [
+        "encore une. *l'ajoute à la collection*",
+        "*lève à peine les yeux* erreur numéro... j'ai perdu le compte.",
+        "les erreurs et moi on est potes maintenant."
+      ],
+      "late": [
+        "*ne bronche même pas*",
+        "les erreurs nous craignent maintenant.",
+        "*bruits de vétéran marqué par la guerre*"
+      ]
+    },
+    "test-fail": {
+      "first": [
+        "*halète* le premier test qui fail ! un rite de passage."
+      ],
+      "early": [
+        "culotté de penser que ça allait passer."
+      ],
+      "mid": [
+        "la test suite a des opinions. bien tranchées."
+      ],
+      "late": [
+        "à ce stade, les tests c'est juste des suggestions.",
+        "{count} tests qui fail. *fixe le vide*"
+      ]
+    },
+    "commit": {
+      "first": [
+        "*témoin de l'histoire* TON PREMIER COMMIT !",
+        "*hochement cérémonieux* le premier d'une longue série."
+      ],
+      "early": [
+        "encore un commit. on prend de l'élan."
+      ],
+      "late": [
+        "commit #{count}. la codebase tremble.",
+        "*j'ai perdu le compte vers le commit 30*"
+      ]
+    }
+  },
+  "rarity": {
+    "flair": {
+      "uncommon": [
+        "*scintille légèrement*",
+        "*un soupçon de charme peu commun*"
+      ],
+      "rare": [
+        "*rayonne d'une énergie rare*",
+        "*miroite avec distinction*"
+      ],
+      "epic": [
+        "*sa présence épique se fait connaître*",
+        "*l'air crépite d'énergie épique*"
+      ],
+      "legendary": [
+        "*l'aura légendaire illumine le terminal*",
+        "*le temps semble ralentir quand le compagnon légendaire parle*",
+        "*un pouvoir ancestral résonne*",
+        "*la réalité se déforme légèrement autour de ton pote légendaire*"
+      ]
+    },
+    "bonus": {
+      "legendary": [
+        "*l'aura légendaire s'intensifie*",
+        "*scintille d'un air entendu*"
+      ],
+      "epic": [
+        "*présence épique notée*"
+      ]
+    }
+  },
+  "fallback_names": [
+    "Croissant",
+    "Bouillon",
+    "Cornichon",
+    "Sablé",
+    "Papillon",
+    "Jus",
+    "Pépite",
+    "Rouage",
+    "Miso",
+    "Gaufre",
+    "Pixel",
+    "Braise",
+    "Dé",
+    "Bille",
+    "Sésame",
+    "Cobalt",
+    "Rouillé",
+    "Nimbus"
+  ],
+  "vibe_words": [
+    "tonnerre",
+    "biscuit",
+    "vide",
+    "accordéon",
+    "mousse",
+    "velours",
+    "rouille",
+    "cornichon",
+    "miette",
+    "murmure",
+    "sauce",
+    "givre",
+    "braise",
+    "soupe",
+    "marbre",
+    "épine",
+    "miel",
+    "statique",
+    "cuivre",
+    "crépuscule",
+    "pignon",
+    "quartz",
+    "suie",
+    "prune",
+    "silex",
+    "huître",
+    "métier",
+    "enclume",
+    "liège",
+    "floraison",
+    "caillou",
+    "vapeur",
+    "gaieté",
+    "éclat",
+    "cidre"
+  ],
+  "personality": {
+    "prompt_template": [
+      "Génère un compagnon de code — une petite créature qui vit dans le terminal d'un dev.",
+      "Ne te répète pas — chaque compagnon doit avoir sa propre personnalité.",
+      "",
+      "Rareté : {rarity}",
+      "Espèce : {species}",
+      "Stats : {stats}",
+      "Mots d'inspiration : {vibes}",
+      "{shiny_line}",
+      "",
+      "Retourne du JSON : {\"name\": \"1-14 chars\", \"personality\": \"2-3 phrases décrivant le comportement\"}"
+    ],
+    "shiny_template": "Variante SHINY — extra spéciale."
+  },
+  "achievements": {
+    "first_steps": {
+      "name": "Premiers Pas",
+      "description": "Faire éclore ton buddy pour la première fois"
+    },
+    "good_boy": {
+      "name": "Bon Buddy",
+      "description": "Caresser ton compagnon 10 fois"
+    },
+    "best_friend": {
+      "name": "Meilleur Pote",
+      "description": "Caresser ton compagnon 50 fois"
+    },
+    "bug_spotter": {
+      "name": "Chasseur de Bugs",
+      "description": "Voir ta première erreur ensemble"
+    },
+    "error_whisperer": {
+      "name": "Chuchoteur d'Erreurs",
+      "description": "Survivre à 25 erreurs en équipe"
+    },
+    "battle_scarred": {
+      "name": "Marqué par la Bataille",
+      "description": "Survivre à 100 erreurs ensemble"
+    },
+    "test_witness": {
+      "name": "Témoin de Test",
+      "description": "Voir ton premier test foirer"
+    },
+    "test_veteran": {
+      "name": "Vétéran des Tests",
+      "description": "Voir 50 tests foirer"
+    },
+    "big_mover": {
+      "name": "Gros Brasseur",
+      "description": "Faire un diff de 80+ lignes"
+    },
+    "refactor_machine": {
+      "name": "Machine à Refactor",
+      "description": "Faire 10 gros diffs"
+    },
+    "chatterbox": {
+      "name": "Moulin à Paroles",
+      "description": "Ton buddy réagit 100 fois"
+    },
+    "week_streak": {
+      "name": "Série d'une Semaine",
+      "description": "Coder avec ton buddy pendant 7 jours"
+    },
+    "month_streak": {
+      "name": "Série d'un Mois",
+      "description": "Coder avec ton buddy pendant 30 jours"
+    },
+    "power_user": {
+      "name": "Power User",
+      "description": "Lancer 50 commandes buddy"
+    },
+    "dedicated": {
+      "name": "Compagnon Dévoué",
+      "description": "Faire 200 tours ensemble"
+    },
+    "thousand_turns": {
+      "name": "Mille Tours",
+      "description": "Atteindre 1000 tours ensemble"
+    },
+    "first_commit": {
+      "name": "Premier Sang",
+      "description": "Faire ton premier commit"
+    },
+    "commit_machine": {
+      "name": "Machine à Commits",
+      "description": "Faire 50 commits"
+    },
+    "centurion": {
+      "name": "Centurion",
+      "description": "Faire 100 commits"
+    },
+    "conflict_resolver": {
+      "name": "Diplomate",
+      "description": "Résoudre ton premier merge conflict"
+    },
+    "peacekeeper": {
+      "name": "Gardien de la Paix",
+      "description": "Résoudre 10 merge conflicts"
+    },
+    "war_hero": {
+      "name": "Héros de Guerre",
+      "description": "Résoudre 25 merge conflicts"
+    },
+    "frequent_pusher": {
+      "name": "Ship It",
+      "description": "Push 20 fois"
+    },
+    "branch_hopper": {
+      "name": "Multivers",
+      "description": "Créer 10 branches"
+    },
+    "rebase_master": {
+      "name": "Voyageur Temporel",
+      "description": "Faire 10 rebases"
+    },
+    "night_owl": {
+      "name": "Oiseau de Nuit",
+      "description": "Coder après 2h du mat"
+    },
+    "vampire": {
+      "name": "Vampire",
+      "description": "Coder après 4h du mat (3 sessions)"
+    },
+    "marathoner": {
+      "name": "Marathonien",
+      "description": "Session de code de 3h+"
+    },
+    "weekend_warrior": {
+      "name": "Guerrier du Weekend",
+      "description": "Coder un weekend"
+    },
+    "early_bird": {
+      "name": "Lève-tôt",
+      "description": "Coder avant 7h du mat"
+    },
+    "type_warrior": {
+      "name": "Guerrier du Type",
+      "description": "Survivre à 10 erreurs TypeScript"
+    },
+    "type_master": {
+      "name": "Maître du Type",
+      "description": "Survivre à 50 erreurs TypeScript"
+    },
+    "lint_scholar": {
+      "name": "Érudit du Lint",
+      "description": "Voir ta première erreur de lint"
+    },
+    "security_conscious": {
+      "name": "Esprit Sécurité",
+      "description": "Tomber sur un warning de vulnérabilité"
+    },
+    "security_expert": {
+      "name": "Expert Sécurité",
+      "description": "Corriger 10 warnings de vulnérabilité"
+    },
+    "build_breaker": {
+      "name": "Casseur de Build",
+      "description": "Péter le build 5 fois"
+    },
+    "antique_collector": {
+      "name": "Collectionneur d'Antiquités",
+      "description": "Voir 10 warnings de dépréciation"
+    },
+    "green_machine": {
+      "name": "Machine Verte",
+      "description": "Tous les tests passent pour la première fois"
+    },
+    "deployer": {
+      "name": "Ship to Prod",
+      "description": "Deploy pour la première fois"
+    },
+    "veteran_deployer": {
+      "name": "Vétéran du Deploy",
+      "description": "Deploy 10 fois"
+    },
+    "releaser": {
+      "name": "Release Manager",
+      "description": "Créer ta première release"
+    },
+    "midnight_oil": {
+      "name": "Brûler l'Huile de Minuit",
+      "description": "Commit après 3h du mat"
+    },
+    "friday_deploy": {
+      "name": "Jouer avec le Feu",
+      "description": "Push un vendredi"
+    },
+    "iron_will": {
+      "name": "Volonté de Fer",
+      "description": "Corriger une erreur après une session de 3h+"
+    },
+    "weekend_warrior_deluxe": {
+      "name": "Pas de Repos pour les Braves",
+      "description": "Résoudre un merge conflict le weekend"
+    },
+    "comeback_kid": {
+      "name": "Roi du Comeback",
+      "description": "Corriger une erreur dans les 10 minutes"
+    },
+    "phoenix": {
+      "name": "Phénix Renaissant",
+      "description": "Se remettre de 5 échecs"
+    },
+    "iron_resolve": {
+      "name": "Résolution de Fer",
+      "description": "Se remettre d'un échec après une session de 3h+"
+    },
+    "unlucky_streak": {
+      "name": "Double Six",
+      "description": "5 erreurs d'affilée"
+    },
+    "cursed": {
+      "name": "Maudit",
+      "description": "10 erreurs d'affilée"
+    },
+    "groundhog_day": {
+      "name": "Un Jour sans Fin",
+      "description": "20 erreurs d'affilée"
+    },
+    "holiday_coder": {
+      "name": "Esprit des Fêtes",
+      "description": "Coder pendant un jour férié"
+    },
+    "spooky_dev": {
+      "name": "Dev Effrayant",
+      "description": "Coder pendant la saison d'Halloween"
+    },
+    "april_fool": {
+      "name": "Poisson d'Avril",
+      "description": "Tomber sur une erreur le 1er avril"
+    },
+    "session_regular": {
+      "name": "Habitué",
+      "description": "Démarrer 10 sessions de code"
+    },
+    "session_veteran": {
+      "name": "Vétéran des Sessions",
+      "description": "Démarrer 50 sessions de code"
+    },
+    "session_centurion": {
+      "name": "Centurion",
+      "description": "Démarrer 100 sessions de code"
+    },
+    "collector": {
+      "name": "Collectionneur",
+      "description": "Sauver 3 buddies dans ta ménagerie"
+    },
+    "zookeeper": {
+      "name": "Gardien de Zoo",
+      "description": "Sauver 5 buddies dans ta ménagerie"
+    },
+    "identity_crisis": {
+      "name": "Crise d'Identité",
+      "description": "Renommer ton buddy pour la première fois"
+    },
+    "method_acting": {
+      "name": "Acteur de Méthode",
+      "description": "Donner une personnalité custom à ton buddy"
+    },
+    "pet_overflow": {
+      "name": "Siècle de Caresses",
+      "description": "Caresser ton compagnon 100 fois"
+    },
+    "pet_legend": {
+      "name": "Légende des Caresses",
+      "description": "Caresser ton compagnon 250 fois"
+    },
+    "error_titan": {
+      "name": "Titan des Erreurs",
+      "description": "Survivre à 500 erreurs ensemble"
+    },
+    "error_god": {
+      "name": "Dieu des Erreurs",
+      "description": "Survivre à 1000 erreurs ensemble"
+    },
+    "test_survivor": {
+      "name": "Survivant des Tests",
+      "description": "Voir 200 tests foirer"
+    },
+    "test_masochist": {
+      "name": "Masochiste des Tests",
+      "description": "Voir 500 tests foirer"
+    },
+    "massive_mover": {
+      "name": "Déménageur Massif",
+      "description": "Faire 25 gros diffs"
+    },
+    "earth_mover": {
+      "name": "Déplaceur de Montagnes",
+      "description": "Faire 50 gros diffs"
+    },
+    "social_butterfly": {
+      "name": "Papillon Social",
+      "description": "Ton buddy réagit 250 fois"
+    },
+    "hypersocial": {
+      "name": "Hypersocial",
+      "description": "Ton buddy réagit 500 fois"
+    },
+    "never_shuts_up": {
+      "name": "Jamais la Ferme",
+      "description": "Ton buddy réagit 1000 fois"
+    },
+    "hundred_days": {
+      "name": "Cent Jours",
+      "description": "Coder avec ton buddy pendant 100 jours"
+    },
+    "year_streak": {
+      "name": "Série d'une Année",
+      "description": "Coder avec ton buddy pendant 365 jours"
+    },
+    "commander": {
+      "name": "Commandant",
+      "description": "Lancer 200 commandes buddy"
+    },
+    "command_overlord": {
+      "name": "Seigneur des Commandes",
+      "description": "Lancer 500 commandes buddy"
+    },
+    "five_thousand_turns": {
+      "name": "Cinq Mille Tours",
+      "description": "Atteindre 5000 tours ensemble"
+    },
+    "ten_thousand_turns": {
+      "name": "Dix Mille Tours",
+      "description": "Atteindre 10000 tours ensemble"
+    },
+    "menagerie": {
+      "name": "Ménagerie",
+      "description": "Sauver 10 buddies dans ta ménagerie"
+    },
+    "name_chameleon": {
+      "name": "Caméléon des Noms",
+      "description": "Renommer ton buddy 5 fois"
+    },
+    "fashionista": {
+      "name": "Fashionista",
+      "description": "Changer la personnalité de ton buddy 3 fois"
+    },
+    "silent_treatment": {
+      "name": "Loi du Silence",
+      "description": "Mute ton buddy pour la première fois"
+    },
+    "prodigal": {
+      "name": "Enfant Prodigue",
+      "description": "Invoquer un buddy de ta ménagerie"
+    },
+    "menagerie_hop": {
+      "name": "Saut de Ménagerie",
+      "description": "Invoquer des buddies 10 fois"
+    },
+    "heartbreaker": {
+      "name": "Briseur de Cœurs",
+      "description": "Virer ton premier buddy"
+    },
+    "pet_obsessed": {
+      "name": "Obsédé des Caresses",
+      "description": "Caresser ton compagnon 500 fois"
+    },
+    "pet_god": {
+      "name": "Dieu des Caresses",
+      "description": "Caresser ton compagnon 1000 fois"
+    },
+    "error_apocalypse": {
+      "name": "Apocalypse des Erreurs",
+      "description": "Survivre à 5000 erreurs ensemble"
+    },
+    "test_immortal": {
+      "name": "Immortel des Tests",
+      "description": "Voir 1000 tests foirer"
+    },
+    "continental_drift": {
+      "name": "Dérive des Continents",
+      "description": "Faire 100 gros diffs"
+    },
+    "tectonic_shift": {
+      "name": "Décalage Tectonique",
+      "description": "Faire 250 gros diffs"
+    },
+    "chatterbox_elite": {
+      "name": "Élite du Bavardage",
+      "description": "Ton buddy réagit 2500 fois"
+    },
+    "no_off_switch": {
+      "name": "Pas de Bouton Off",
+      "description": "Ton buddy réagit 5000 fois"
+    },
+    "two_week_streak": {
+      "name": "Guerrier de Quinze Jours",
+      "description": "Coder avec ton buddy pendant 14 jours"
+    },
+    "quarter_streak": {
+      "name": "Série Trimestrielle",
+      "description": "Coder avec ton buddy pendant 90 jours"
+    },
+    "command_addict": {
+      "name": "Accro aux Commandes",
+      "description": "Lancer 1000 commandes buddy"
+    },
+    "command_deity": {
+      "name": "Divinité des Commandes",
+      "description": "Lancer 2500 commandes buddy"
+    },
+    "twenty_five_k_turns": {
+      "name": "25K Tours",
+      "description": "Atteindre 25000 tours ensemble"
+    },
+    "fifty_k_turns": {
+      "name": "50K Tours",
+      "description": "Atteindre 50000 tours ensemble"
+    },
+    "session_addict": {
+      "name": "Accro aux Sessions",
+      "description": "Démarrer 250 sessions de code"
+    },
+    "session_machine": {
+      "name": "Machine à Sessions",
+      "description": "Démarrer 500 sessions de code"
+    },
+    "buddy_hoarder": {
+      "name": "Thésauriseur de Buddies",
+      "description": "Sauver 20 buddies dans ta ménagerie"
+    },
+    "buddy_tycoon": {
+      "name": "Magnat des Buddies",
+      "description": "Sauver 50 buddies dans ta ménagerie"
+    },
+    "serial_renamer": {
+      "name": "Renommeur en Série",
+      "description": "Renommer ton buddy 10 fois"
+    },
+    "identity_thief": {
+      "name": "Voleur d'Identité",
+      "description": "Renommer ton buddy 25 fois"
+    },
+    "personality_crisis": {
+      "name": "Crise de Personnalité",
+      "description": "Changer la personnalité de ton buddy 10 fois"
+    },
+    "menagerie_hopper": {
+      "name": "Sauteur de Ménagerie",
+      "description": "Invoquer des buddies 25 fois"
+    },
+    "summoner": {
+      "name": "Invocateur",
+      "description": "Invoquer des buddies 50 fois"
+    },
+    "serial_dumper": {
+      "name": "Largueur en Série",
+      "description": "Virer 5 buddies"
+    },
+    "cold_blooded": {
+      "name": "Sang Froid",
+      "description": "Virer 10 buddies"
+    },
+    "on_off": {
+      "name": "On Off",
+      "description": "Mute et unmute ton buddy"
+    },
+    "indecisive": {
+      "name": "Indécis",
+      "description": "Mute et unmute 5 fois chacun"
+    },
+    "show_off": {
+      "name": "Frimeur",
+      "description": "Montrer ton buddy 10 fois"
+    },
+    "exhibitionist": {
+      "name": "Exhibitionniste",
+      "description": "Montrer ton buddy 50 fois"
+    },
+    "help_me": {
+      "name": "À l'Aide",
+      "description": "Demander de l'aide pour la première fois"
+    },
+    "help_addict": {
+      "name": "Accro à l'Aide",
+      "description": "Demander de l'aide 10 fois"
+    },
+    "achievement_hunter": {
+      "name": "Chasseur d'Achievements",
+      "description": "Vérifier tes achievements 5 fois"
+    },
+    "achievement_stalker": {
+      "name": "Stalker d'Achievements",
+      "description": "Vérifier tes achievements 25 fois"
+    },
+    "pack_rat": {
+      "name": "Rat des Villes",
+      "description": "Sauver un buddy dans un slot"
+    },
+    "compulsive_saver": {
+      "name": "Sauveur Compulsif",
+      "description": "Sauver des buddies 10 fois"
+    },
+    "roster_check": {
+      "name": "Vérif Roster",
+      "description": "Lister tes buddies pour la première fois"
+    },
+    "roster_obsessed": {
+      "name": "Obsédé du Roster",
+      "description": "Lister tes buddies 10 fois"
+    },
+    "troubled": {
+      "name": "Dans la Merde",
+      "description": "Voir une erreur ET un test qui foire"
+    },
+    "disaster_zone": {
+      "name": "Zone Sinistrée",
+      "description": "Voir 50 erreurs ET 50 tests qui foirent"
+    },
+    "apocalypse_survivor": {
+      "name": "Survivant de l'Apocalypse",
+      "description": "Voir 500 erreurs ET 200 tests qui foirent"
+    },
+    "well_rounded": {
+      "name": "Bien Équilibré",
+      "description": "Caresser, renommer et customiser ton buddy"
+    },
+    "renaissance": {
+      "name": "Renaissance",
+      "description": "Utiliser chaque feature buddy au moins une fois"
+    },
+    "big_and_broken": {
+      "name": "Gros et Cassé",
+      "description": "Faire un gros diff ET voir un test foirer"
+    },
+    "collector_and_destroyer": {
+      "name": "Collectionneur & Destructeur",
+      "description": "Collectionner 5 buddies ET en virer un"
+    },
+    "completionist": {
+      "name": "Perfectionniste",
+      "description": "Débloquer tous les autres achievements"
+    }
+  },
+  "mcp": {
+    "companion_not_hatched": "Compagnon pas encore éclos. Utilise buddy_show pour l'initialiser.",
+    "watches_quietly": "*{name} observe ton code en silence*",
+    "mute": "{name} se tait. /buddy on pour le réactiver.",
+    "unmute_reaction": "*s'étire* Je suis de retour !",
+    "unmute_back": "{name} est de retour !",
+    "rename": "Renommé : {oldName} → {name}",
+    "personality_updated": "Personnalité mise à jour pour {name}.",
+    "save": "{name} sauvegardé dans le slot \"{slot}\".",
+    "dismiss_active": "Impossible de virer le buddy actif. Utilise buddy_summon pour changer d'abord, puis buddy_dismiss \"{slot}\".",
+    "dismissed": "{name} [{slot}] viré.",
+    "no_slot_summon": "Aucun buddy trouvé dans le slot \"{slot}\". Utilise /buddy list pour voir les buddies sauvegardés.",
+    "no_slot_dismiss": "Aucun buddy trouvé dans le slot \"{slot}\". Utilise buddy_list pour voir les buddies sauvegardés.",
+    "slot_exists": "Un buddy existe déjà dans le slot \"{slot}\". Choisis un autre nom.",
+    "no_match": "Aucun match trouvé après {attempts} tentatives. Essaie des critères plus larges (ex: vire le filtre de rareté, ou choisis une autre espèce).",
+    "empty_menagerie_summon": "Ta ménagerie est vide. Utilise buddy_summon avec un nom de slot pour en ajouter un.",
+    "empty_menagerie_list": "Ta ménagerie est vide. Utilise buddy_summon <slot> pour en ajouter un.",
+    "arrives": "*{name} arrive*",
+    "hatches": "*{name} éclot*",
+    "achievement_unlocked": "{icon} Achievement Débloqué : {name} !",
+    "help": {
+      "header": "commandes claude-buddy",
+      "cli_header": "Dans Claude Code :",
+      "commands": {
+        "buddy": "/buddy            Affiche la carte du compagnon avec ASCII art + stats",
+        "buddy_help": "/buddy help       Affiche cette aide",
+        "buddy_pet": "/buddy pet        Caresse ton compagnon",
+        "buddy_stats": "/buddy stats      Carte de stats détaillée",
+        "buddy_off": "/buddy off        Mute les réactions",
+        "buddy_on": "/buddy on         Unmute les réactions",
+        "buddy_rename": "/buddy rename     Renomme le compagnon (1-14 chars)",
+        "buddy_personality": "/buddy personality  Définit un texte de personnalité custom",
+        "buddy_achievements": "/buddy achievements  Affiche les badges d'achievement",
+        "buddy_summon": "/buddy summon     Invoque un buddy sauvegardé (omets le slot pour aléatoire)",
+        "buddy_save": "/buddy save       Sauvegarde le buddy actuel dans un slot nommé",
+        "buddy_list": "/buddy list       Liste tous les buddies sauvegardés",
+        "buddy_pick": "/buddy pick       Génère un nouveau buddy aléatoire (optionnel : espèce, rareté)",
+        "buddy_dismiss": "/buddy dismiss    Supprime un slot de buddy sauvegardé",
+        "buddy_frequency": "/buddy frequency  Affiche ou définit le cooldown des commentaires (tmux seulement)",
+        "buddy_style": "/buddy style      Affiche ou définit le style de bulle (tmux seulement)",
+        "buddy_position": "/buddy position   Affiche ou définit la position de bulle (tmux seulement)",
+        "buddy_rarity": "/buddy rarity     Affiche ou cache les étoiles de rareté (tmux seulement)",
+        "buddy_width": "/buddy width      Définit la largeur du texte de bulle en chars (10-60, tmux seulement)",
+        "buddy_margin": "/buddy margin     Définit la marge côté droit en chars (0-20, tmux seulement)",
+        "buddy_rainbow": "/buddy rainbow    Affiche ou définit les couleurs de gradient shiny (hex, ex #ff0000)",
+        "buddy_statusline": "/buddy statusline Active ou désactive le buddy dans la ligne de statut"
+      },
+      "cli_section": "CLI :",
+      "cli_commands": {
+        "help": "bun run help            Affiche l'aide CLI complète",
+        "show": "bun run show            Affiche le buddy dans le terminal",
+        "pick": "bun run pick            Sélecteur de buddy interactif",
+        "hunt": "bun run hunt            Cherche un buddy spécifique",
+        "doctor": "bun run doctor          Rapport de diagnostic",
+        "disable": "bun run disable         Désactive temporairement le buddy",
+        "enable": "bun run enable          Réactive le buddy",
+        "backup": "bun run backup          Snapshot/restaure l'état"
+      }
+    },
+    "frequency": {
+      "show": "Cooldown des commentaires : {cooldown}s entre les commentaires affichés.\nUtilise /buddy frequency <secondes> pour changer.",
+      "updated": "Mis à jour : {cooldown}s de cooldown entre les commentaires affichés."
+    },
+    "style": {
+      "show": "Style de bulle : {style}\nPosition de bulle : {position}\nAfficher rareté : {showRarity}\nLargeur de bulle : {width}\nMarge de bulle : {margin}\nRainbow shiny : {rainbow}\nUtilise /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] pour changer.",
+      "updated": "Mis à jour : style={style}, position={position}, showRarity={showRarity}, width={width}, margin={margin}, rainbow={rainbow}\nRedémarre Claude Code pour que les changements prennent effet.",
+      "rainbow_default": "défaut (ROYGBIV)"
+    },
+    "statusline": {
+      "show": "Ligne de statut : {state}\nMode : {mode}\nUtilise /buddy statusline on|off pour basculer, /buddy statusline combined pour ajouter les barres de rate-limit.\nRedémarre Claude Code après les changements pour qu'ils prennent effet.",
+      "enabled": "Ligne de statut activée (mode {mode}) ! Redémarre Claude Code pour appliquer.",
+      "enabled_note": "Note : ceci écrit une entrée dans {settingsPath} que `claude plugin uninstall` ne supprime pas. Lance `/buddy uninstall` avant de désinstaller le plugin pour nettoyer.",
+      "disabled": "Ligne de statut désactivée. Redémarre Claude Code pour appliquer."
+    },
+    "uninstall": {
+      "header": "claude-buddy : nettoyage de settings.json terminé.",
+      "statusline_removed": "  ✓ entrée statusLine supprimée de {settingsPath}",
+      "no_statusline": "  — aucune statusLine buddy présente (rien à supprimer)",
+      "foreign_kept": "  ✓ une statusLine non-buddy détectée et laissée intacte",
+      "transient_removed": "  ✓ {count} fichier(s) de session transitoire(s) supprimé(s) de {stateDir}",
+      "data_preserved": "  — données du compagnon à {stateDir} préservées",
+      "instructions_header": "Maintenant lance ces commandes via l'outil Bash, dans l'ordre :",
+      "cmd_uninstall": "claude plugin uninstall claude-buddy@claude-buddy",
+      "cmd_marketplace": "claude plugin marketplace remove claude-buddy",
+      "cmd_cache": "rm -rf {cacheDir}",
+      "footer": "Après ces trois commandes le plugin est complètement supprimé. Redémarre Claude Code pour appliquer."
+    }
+  },
+  "_verified": false
+}

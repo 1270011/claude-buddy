@@ -58,12 +58,26 @@ import {
   incrementEvent, checkAndAward, trackActiveDay,
   renderAchievementsCardMarkdown,
 } from "./achievements.ts";
+import { t, setLocale, AVAILABLE_LOCALES, VERIFIED_LOCALES } from "./i18n.ts";
+
+{
+  const cfg = loadConfig();
+  if (cfg.language) setLocale(cfg.language);
+}
+
+function achNotice(newAch: { icon: string; name: string }[]): string {
+  if (newAch.length === 0) return "";
+  return "\n" + newAch.map((a) => t("mcp.achievement_unlocked", { icon: a.icon, name: a.name })).join("\n");
+}
 
 function getInstructions(): string {
   const companion = loadCompanion();
   if (!companion)
-    return "Companion not yet hatched. Use buddy_show to initialize.";
+    return t("mcp.companion_not_hatched");
   const b = companion.bones;
+  const notHatched = t("mcp.companion_not_hatched");
+  if (!companion)
+    return notHatched;
   return [
     `A ${b.rarity} ${b.species} named ${companion.name} watches from the status line.`,
     `Personality: ${companion.personality}`,
@@ -103,7 +117,7 @@ function ensureCompanion(): Companion {
   if (saved.length > 0) {
     const { slot, companion: rescued } = saved[0];
     saveActiveSlot(slot);
-    writeStatusState(rescued, `*${rescued.name} arrives*`);
+    writeStatusState(rescued, t("mcp.arrives", { name: rescued.name }));
     return rescued;
   }
 
@@ -145,7 +159,7 @@ server.tool(
     const companion = ensureCompanion();
     const reaction = loadReaction();
     const reactionText =
-      reaction?.reaction ?? `*${companion.name} watches your code quietly*`;
+      reaction?.reaction ?? t("mcp.watches_quietly", { name: companion.name });
 
     // Use markdown rendering for the MCP tool response — Claude Code's UI
     // doesn't render raw ANSI escape codes, so we return pure markdown with
@@ -185,12 +199,10 @@ server.tool(
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
     return {
       content: [
-        { type: "text", text: `${face} ${companion.name}: "${reaction}"${achNotice}` },
+        { type: "text", text: `${face} ${companion.name}: "${reaction}"${achNoticeStr}` },
       ],
     };
   },
@@ -261,12 +273,10 @@ server.tool(
     writeStatusState(companion, comment, undefined, achName);
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
     return {
       content: [
-        { type: "text", text: `${face} ${companion.name}: "${comment}"${achNotice}` },
+        { type: "text", text: `${face} ${companion.name}: "${comment}"${achNoticeStr}` },
       ],
     };
   },
@@ -294,12 +304,10 @@ server.tool(
     incrementEvent("renames", 1);
 
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     return {
-      content: [{ type: "text", text: `Renamed: ${oldName} \u2192 ${name}${achNotice}` }],
+      content: [{ type: "text", text: t("mcp.rename", { oldName, name }) + achNoticeStr }],
     };
   },
 );
@@ -324,13 +332,11 @@ server.tool(
     incrementEvent("personalities_set", 1);
 
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     return {
       content: [
-        { type: "text", text: `Personality updated for ${companion.name}.${achNotice}` },
+        { type: "text", text: t("mcp.personality_updated", { name: companion.name }) + achNoticeStr },
       ],
     };
   },
@@ -368,6 +374,7 @@ server.tool(
       "  /buddy width      Set bubble text width in chars (10-60, tmux only)",
       "  /buddy margin     Set right-side margin in chars (0-20, tmux only)",
       "  /buddy rainbow    Show or set shiny gradient colors (hex, e.g. #ff0000)",
+      "  /buddy language   Show or set buddy language (e.g. 'en', 'es', 'ja')",
       "  /buddy statusline Enable or disable buddy in the status line",
       "",
       "CLI:",
@@ -518,15 +525,13 @@ server.tool(
     incrementEvent("mutes", 1);
 
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} goes quiet. /buddy on to unmute.${achNotice}`,
+          text: t("mcp.mute", { name: companion.name }) + achNoticeStr,
         },
       ],
     };
@@ -535,17 +540,15 @@ server.tool(
 
 server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
   const companion = ensureCompanion();
-  writeStatusState(companion, "*stretches* I'm back!", false);
-  saveReaction("*stretches* I'm back!", "pet");
+  writeStatusState(companion, t("mcp.unmute_reaction"), false);
+  saveReaction(t("mcp.unmute_reaction"), "pet");
   incrementEvent("commands_run", 1, activeSlot());
   incrementEvent("unmutes", 1);
 
   const newAch = checkAndAward(activeSlot());
-  const achNotice = newAch.length > 0
-    ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-    : "";
+  const achNoticeStr = achNotice(newAch);
 
-  return { content: [{ type: "text", text: `${companion.name} is back!${achNotice}` }] };
+  return { content: [{ type: "text", text: t("mcp.unmute_back", { name: companion.name }) + achNoticeStr }] };
 });
 
 // ─── Tool: buddy_statusline ─────────────────────────────────────────────────
@@ -710,7 +713,7 @@ server.tool(
           content: [
             {
               type: "text",
-              text: "Your menagerie is empty. Use buddy_summon with a slot name to add one.",
+              text: t("mcp.empty_menagerie_summon"),
             },
           ],
         };
@@ -727,29 +730,27 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `No buddy found in slot "${targetSlot}". Use /buddy list to see saved buddies.`,
+            text: t("mcp.no_slot", { slot: targetSlot }) + " Use /buddy list to see saved buddies.",
           },
         ],
       };
     }
 
     saveActiveSlot(targetSlot);
-    writeStatusState(companion, `*${companion.name} arrives*`);
+    writeStatusState(companion, t("mcp.arrives", { name: companion.name }));
     incrementEvent("summons", 1);
 
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
     const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
       companion.personality,
-      `*${companion.name} arrives*`,
+      t("mcp.arrives", { name: companion.name }),
     );
-    return { content: [{ type: "text", text: `${card}${achNotice}` }] };
+    return { content: [{ type: "text", text: `${card}${achNoticeStr}` }] };
   },
 );
 
@@ -777,15 +778,13 @@ server.tool(
     incrementEvent("saves", 1);
 
     const newAch = checkAndAward(activeSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     return {
       content: [
         {
           type: "text",
-          text: `${companion.name} saved to slot "${targetSlot}".${achNotice}`,
+          text: t("mcp.save", { name: companion.name, slot: targetSlot }) + achNoticeStr,
         },
       ],
     };
@@ -809,7 +808,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: "Your menagerie is empty. Use buddy_summon <slot> to add one.",
+            text: t("mcp.empty_menagerie_list"),
           },
         ],
       };
@@ -843,7 +842,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `Cannot dismiss the active buddy. Use buddy_summon to switch first, then buddy_dismiss "${targetSlot}".`,
+            text: t("mcp.dismiss_active", { slot: targetSlot }),
           },
         ],
       };
@@ -855,7 +854,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `No buddy found in slot "${targetSlot}". Use buddy_list to see saved buddies.`,
+            text: t("mcp.no_slot", { slot: targetSlot }) + " Use buddy_list to see saved buddies.",
           },
         ],
       };
@@ -865,13 +864,11 @@ server.tool(
 
     incrementEvent("dismissals", 1);
     const newAch = checkAndAward(loadActiveSlot());
-    const achNotice = newAch.length > 0
-      ? `\n${newAch.map((a) => `${a.icon} Achievement Unlocked: ${a.name}!`).join("\n")}`
-      : "";
+    const achNoticeStr = achNotice(newAch);
 
     return {
       content: [
-        { type: "text", text: `${companion.name} [${targetSlot}] dismissed.${achNotice}` },
+        { type: "text", text: t("mcp.dismissed", { name: companion.name, slot: targetSlot }) + achNoticeStr },
       ],
     };
   },
@@ -915,7 +912,7 @@ server.tool(
 
     if (!bones) {
       return {
-        content: [{ type: "text", text: `No match found after ${maxAttempts.toLocaleString()} attempts. Try broader criteria (e.g. drop the rarity filter, or pick a different species).` }],
+        content: [{ type: "text", text: t("mcp.no_match", { attempts: maxAttempts.toLocaleString() }) }],
       };
     }
 
@@ -924,7 +921,7 @@ server.tool(
 
     if (loadCompanionSlot(slot)) {
       return {
-        content: [{ type: "text", text: `A buddy in slot "${slot}" already exists. Pick a different name.` }],
+        content: [{ type: "text", text: t("mcp.slot_exists", { slot }) }],
       };
     }
 
@@ -938,16 +935,68 @@ server.tool(
 
     saveCompanionSlot(companion, slot);
     saveActiveSlot(slot);
-    writeStatusState(companion, `*${buddyName} hatches*`);
+    writeStatusState(companion, t("mcp.hatches", { name: buddyName }));
 
     const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
       companion.personality,
-      `*${buddyName} hatches*`,
+      t("mcp.hatches", { name: buddyName }),
     );
 
     return { content: [{ type: "text", text: card }] };
+  },
+);
+
+// ─── Tool: buddy_language ─────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_language",
+  "Set or show the buddy's language. Returns current language and available options if called without arguments.",
+  {
+    language: z
+      .string()
+      .min(2)
+      .max(5)
+      .optional()
+      .describe(
+        "Language code to switch to (e.g. 'en', 'es', 'ja'). Omit to show current language.",
+      ),
+  },
+  async ({ language }) => {
+    if (language === undefined) {
+      const cfg = loadConfig();
+      const available = Object.entries(AVAILABLE_LOCALES)
+        .map(([code, name]) => {
+          const badge = VERIFIED_LOCALES.includes(code) ? "" : " (AI-generated, unreviewed)";
+          return `  ${code}: ${name}${badge}`;
+        })
+        .join("\n");
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Current language: ${cfg.language}\nAvailable:\n${available}`,
+          },
+        ],
+      };
+    }
+    setLocale(language);
+    saveConfig({ language });
+    const available = Object.entries(AVAILABLE_LOCALES)
+      .map(([code, name]) => {
+        const badge = VERIFIED_LOCALES.includes(code) ? "" : " (AI-generated, unreviewed)";
+        return `  ${code}: ${name}${badge}`;
+      })
+      .join("\n");
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Language set to ${language}.\nAvailable:\n${available}`,
+        },
+      ],
+    };
   },
 );
 

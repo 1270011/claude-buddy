@@ -8,6 +8,7 @@
  */
 
 import { loadConfig, saveConfig } from "../server/state.ts";
+import { AVAILABLE_LOCALES } from "../server/i18n.ts";
 
 const args = process.argv.slice(2);
 const key = args[0];
@@ -20,9 +21,11 @@ if (!key) {
   ─────────────────────
   Comment cooldown:  ${cfg.commentCooldown}s    (0 = no throttling, default 30)
   Reaction TTL:      ${cfg.reactionTTL}s    (0 = permanent, default 0)
+  Language:          ${cfg.language}    (${AVAILABLE_LOCALES[cfg.language] ?? cfg.language})
 
   Change:  bun run settings cooldown <seconds>
            bun run settings ttl <seconds>
+           bun run settings language <code>
 `);
   process.exit(0);
 }
@@ -63,6 +66,25 @@ if (key === "ttl") {
   process.exit(0);
 }
 
+if (key === "language") {
+  if (value === undefined) {
+    const cfg = loadConfig();
+    console.log(`Language: ${cfg.language} (${AVAILABLE_LOCALES[cfg.language] ?? cfg.language})`);
+    console.log("Available:", Object.entries(AVAILABLE_LOCALES).map(([c, n]) => `${c} (${n})`).join(", "));
+    process.exit(0);
+  }
+
+  if (!AVAILABLE_LOCALES[value]) {
+    console.error(`Error: unknown language "${value}"`);
+    console.error("Available:", Object.keys(AVAILABLE_LOCALES).join(", "));
+    process.exit(1);
+  }
+
+  const cfg = saveConfig({ language: value });
+  console.log(`Updated: language → ${cfg.language} (${AVAILABLE_LOCALES[cfg.language]})`);
+  process.exit(0);
+}
+
 console.error(`Unknown setting: ${key}`);
-console.error("Available: cooldown, ttl");
+console.error("Available: cooldown, ttl, language");
 process.exit(1);

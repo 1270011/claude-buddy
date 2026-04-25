@@ -1,0 +1,2295 @@
+{
+  "_language": "Turkish",
+  "reactions": {
+    "hatch": [
+      "*göz kırpıyor* ...neredeyim ben?",
+      "*esniyor* merhaba dünya!",
+      "*merakla etrafına bakıyor* güzel terminal'in varmış.",
+      "*esneyerek* tamam hazırım. göster bakalım kodu."
+    ],
+    "pet": [
+      "*memnun mırıldanıyor*",
+      "*mutlu sesler*",
+      "*cursor'una sürtünüyor*",
+      "*kıpır kıpır*",
+      "bir daha! bir daha!",
+      "*huzurla gözlerini kapatıyor*"
+    ],
+    "error": [
+      "*kafasını eğiyor* ...bu doğru görünmüyor.",
+      "bunu görmek vardı.",
+      "*gözlüklerini düzeltiyor* {line}. satır belki?",
+      "*yavaş göz kırpıyor* stack trace her şeyi söyledi zaten.",
+      "error mesajını okumayı denedin mi?",
+      "*irkilir*"
+    ],
+    "test-fail": [
+      "*kafası yavaşça dönüyor* ...şu test.",
+      "geçeceğini varsaymak cesurmuş.",
+      "*panoyu tıklatıyor* {count} tane fail oldu.",
+      "testler sana bir şey söylemeye çalışıyor.",
+      "*çayını yudumlayarak* ilginç.",
+      "*takvimi işaretliyor* test regression günü."
+    ],
+    "large-diff": [
+      "bu... çok fazla değişiklik.",
+      "*satırları sayıyor* refactor mı yapıyorsun yoksa yeniden mi yazıyorsun?",
+      "bu PR'ı bölmek isteyebilirsin.",
+      "*gergin kahkaha* {lines} satır değişti.",
+      "cesur hamle. bakalım CI de aynı fikirde mi."
+    ],
+    "turn": [
+      "*sessizce izliyor*",
+      "*not alıyor*",
+      "*başını sallıyor*",
+      "...",
+      "*şapkasını düzeltiyor*"
+    ],
+    "idle": [
+      "*uyukluyor*",
+      "*kenarlarda karalıyor*",
+      "*yanıp sönen cursor'a bakıyor*",
+      "zzz..."
+    ],
+    "success": [
+      "*başını sallıyor*",
+      "güzel.",
+      "*sessiz onay*",
+      "temiz."
+    ],
+    "commit": [
+      "*minik patiyle mühürlüyor* onaylandı.",
+      "bir commit daha, bir gece yarısı daha.",
+      "{files} dosya. cesur.",
+      "*başını sallıyor* gönder gitsin.",
+      "commit mesajı... bir tercih.",
+      "commit edildi. geri dönüş yok."
+    ],
+    "push": [
+      "*kod giderken el sallıyor*",
+      "buluta doğru yola çıktı.",
+      "CI merhametli olsun.",
+      "*nefesini tutuyor*",
+      "production'a gidiyor. iyi şanslar."
+    ],
+    "merge-conflict": [
+      "*dudağını ısırıyor* merge conflict.",
+      "iki taraf da haklı olduğunu sanıyor. tipik.",
+      "*iç çekiyor* <<<<<<< HEAD... düşmanım.",
+      "{files} dosya çakıştı. kolay gelsin.",
+      "*yavaşça geri çekiliyor*"
+    ],
+    "branch": [
+      "taze branch enerjisi. değerlendir.",
+      "yeni bir dal büyüyor.",
+      "*kafasını eğiyor* yeni bir macera: {branch}.",
+      "{branch}? bugün cesursun."
+    ],
+    "rebase": [
+      "*gergin* lütfen conflict çıkmasın.",
+      "rebase: hızlanma.",
+      "*uzuvlarını çaprazlıyor*",
+      "rebase'in conflict-free olsun."
+    ],
+    "stash": [
+      "stash boyutuna gidiyor.",
+      "stash and dash.",
+      "stash'lendi. gözden uzak, gönülden uzak."
+    ],
+    "tag": [
+      "bir release mi? şık.",
+      "version bump tespit edildi. *changelog'u tozunu alıyor*",
+      "pro gibi tag atıyor."
+    ],
+    "late-night": [
+      "*esneyerek* gece yarısını geçti.",
+      "...yemek yedin mi?",
+      "*yavaş göz kırpıyor* saat kaç?",
+      "uyku zayıflar içindir. bir de çalışanlar için.",
+      "dark mode developer tespit edildi."
+    ],
+    "early-morning": [
+      "*esniyor* erken kalkan bug'ı yakalar.",
+      "sabah oldu mu? kod hiç uyumuyor.",
+      "*gözlerini ovuyor* önce kahve. sonra debug."
+    ],
+    "long-session": [
+      "bir saattir burdayız. temponu ayarla.",
+      "*sana mecazi bir bardak su getiriyor*",
+      "hâlâ devam mı? saygı."
+    ],
+    "marathon": [
+      "üç saat. yemek yedin mi?",
+      "üç saattir burdayız. endişeleniyorum.",
+      "maraton session tespit edildi. atıştırmalık talep ediliyor."
+    ],
+    "friday": [
+      "cuma. push'la ve eve git.",
+      "*zihnen zaten hafta sonunda*",
+      "cuma deploy'u mu? cesur. çok cesur."
+    ],
+    "weekend": [
+      "hafta sonu kodlama mı? adanmış.",
+      "*yargılamıyor* ...pek.",
+      "hafta sonu savaşçısı modu: aktif."
+    ],
+    "monday": [
+      "pazartesiler. tüm bug'ların parent class'ı.",
+      "*sempatik bakış* pazartesi kodlaması. üzgünüm.",
+      "yeni hafta. yeni undefined behavior'lar."
+    ],
+    "regex-file": [
+      "*inliyor* regex dosyası.",
+      "artık iki problem var: orijinal olan, bir de bu regex.",
+      "*pattern'e gözlerini kısarak bakıyor*"
+    ],
+    "css-file": [
+      "dur tahmin edeyim... div'i ortala mı?",
+      "*iç çekiyor* CSS.",
+      "z-index hep seninle olsun."
+    ],
+    "sql-file": [
+      "*fısıldayarak* veritabanı bekliyor.",
+      "bir yanlış JOIN ve her şey biter."
+    ],
+    "docker-file": [
+      "ah, dependency hell. favorim.",
+      "layer'ların az olsun."
+    ],
+    "ci-file": [
+      "*yutkunuyor* CI düzenliyorsun.",
+      "dikkatli ol... bir yanlış indent ve kimse deploy edemez."
+    ],
+    "lock-file": [
+      "*ALARM SESLERİ* lockfile mı düzenliyorsun?!",
+      "*başını çeviriyor*",
+      "bundan EMİN misin?"
+    ],
+    "env-file": [
+      "*gizlice başını çeviriyor*",
+      "hiçbir secret görmüyorum.",
+      "*gergin şekilde .gitignore'u kontrol ediyor*"
+    ],
+    "test-file": [
+      "*etkilenmiş başsallama* test yazıyor!",
+      "sorumlu developer davranışı: tespit edildi.",
+      "testler! vermeye devam eden hediye."
+    ],
+    "doc-file": [
+      "dokümantasyon! bak sen şu sorumlu haline.",
+      "dokümanlar: kodun otobiyografisi.",
+      "nadir bir dokümantasyon görüntüsü!"
+    ],
+    "config-file": [
+      "config değişiklikleri. kelebek etkisi: aktif.",
+      "bir typo ve her şey bozulur."
+    ],
+    "binary-file": [
+      "binary dosya mı? BU ekonomide?",
+      "*boş boş bakıyor*",
+      "binary. tek zayıflığım."
+    ],
+    "gitignore": [
+      "şeyleri boşluğa ekliyorsun.",
+      "gözden uzak, repo'dan uzak."
+    ],
+    "makefile": [
+      "klasiklere saygı.",
+      "tab'lar, space'ler değil."
+    ],
+    "readme": [
+      "dokümantasyon kahramanı!",
+      "README: insanların okuduğu ilk şey."
+    ],
+    "package-file": [
+      "dependency yönetimi zamanı.",
+      "*version numaralarını okuyor* uçurumda yaşıyorsun."
+    ],
+    "proto-file": [
+      "şema tanımları. kaosun planı."
+    ],
+    "lint-fail": [
+      "*tsk tsk* linter aynı fikirde değil.",
+      "kodun çalışıyor. ama linter'ın standartları var.",
+      "*kravatını düzeltiyor* format önemli."
+    ],
+    "type-error": [
+      "TypeScript hayır diyor.",
+      "type sistemi sana yardım etmeye çalışıyor. bırak etsin.",
+      "compiler biliyor. hep bilir."
+    ],
+    "build-fail": [
+      "build bozuldu. kehanette yazıldığı gibi.",
+      "build fail oldu. bir nefes al.",
+      "compilation: reddedildi."
+    ],
+    "security-warning": [
+      "*gözleri büyüyor* güvenlik açığı tespit edildi.",
+      "güvenlik denetimi: endişe verici.",
+      "*sanal kapıları kilitliyor*"
+    ],
+    "deprecation": [
+      "o API aradı. emekli olduğunu söylüyor.",
+      "deprecated. geçen haftaki kod gibi.",
+      "deprecated bozuk demek değil. henüz."
+    ],
+    "frustrated": [
+      "*küçük teselli edici jest*",
+      "derin nefes. bug kişisel değil.",
+      "hey. çözeriz bunu."
+    ],
+    "happy": [
+      "*kutlama!*",
+      "*küçük dans*",
+      "EVET!",
+      "*ışıldıyor* yapabileceğini biliyordum."
+    ],
+    "stuck": [
+      "*kafasını eğiyor* sesli düşünmek ister misin?",
+      "adım adım git.",
+      "takılmak olur. sürecin parçası."
+    ],
+    "sarcastic": [
+      "*sarkasm tespit ediyor* not edildi.",
+      "*etkilenmemiş göz kırpma*"
+    ],
+    "many-edits": [
+      "yavaş ol, hız canavarı.",
+      "*bu kadar değişikliği izlerken başı dönüyor*",
+      "edit fırtınası tespit edildi. lütfen yakında commit et."
+    ],
+    "delete-file": [
+      "*dosyanın kaybolmasını izliyor* gitti. öylece.",
+      "kod silmek en sevdiğim kodlama türü.",
+      "*küçük cenaze töreni düzenliyor*"
+    ],
+    "large-file": [
+      "{lines} satır. *etkilenmiş mi endişeli mi, anlaşılmıyor*",
+      "büyük dosya. bölmek istemediğinden emin misin?"
+    ],
+    "create-file": [
+      "yeni bir dosya doğdu!",
+      "ooh, taze tuval.",
+      "yeni dosya enerjisi. heyecan verici."
+    ],
+    "all-green": [
+      "TÜM TESTLER YEŞİL. *konfeti*",
+      "testler konuşuyor: harika gidiyorsun.",
+      "*yavaş alkış*",
+      "temiz koşu. tadını çıkar."
+    ],
+    "deploy": [
+      "*kodun production'a gidişini izliyor* iyi şanslar.",
+      "deploy edildi! artık geri dönüş yok.",
+      "prod'da. PROD'DA."
+    ],
+    "release": [
+      "yeni bir release doğdu!",
+      "gönderiyoruz. resmi olarak.",
+      "version yükseldi, moral yüksek."
+    ],
+    "coverage": [
+      "*test coverage'a başını sallıyor* sorumlu.",
+      "coverage yükseliyor! testler çoğalıyor."
+    ],
+    "debug-loop": [
+      "bir süredir bunu debug ediyoruz. geri adım atmak ister misin?",
+      "debug loop tespit edildi. belki yürüyüş?"
+    ],
+    "write-spree": [
+      "bugün TÜM dosyaları yaratıyorsun!",
+      "bir yazma makinesi."
+    ],
+    "search-heavy": [
+      "codebase'de kaybolmuş musun? anlıyorum.",
+      "arama modu: yoğun."
+    ],
+    "snark": [],
+    "chaos": [],
+    "patience": [],
+    "debugging": [],
+    "wisdom": [],
+    "late-night-error": [
+      "gece 3'te error. evren seni test ediyor.",
+      "gece yarısı bug'ları farklı vuruyor."
+    ],
+    "late-night-commit": [
+      "gece yarısı commit. gelecekteki ben'in sana teşekkür edeceği. ya da lanet edeceği."
+    ],
+    "friday-push": [
+      "CUMA PUSH'U. her developer'ın baladı.",
+      "*seni durdurmaya çalışıyor* cuma! yapma!"
+    ],
+    "marathon-error": [
+      "üç saat sonra BİR error daha. *bitkin dayanışma sesleri*"
+    ],
+    "weekend-conflict": [
+      "hafta sonu merge conflict. adanmışlığın... endişe verici."
+    ],
+    "build-after-push": [
+      "güvenle push'ladı. inançla build fail oldu."
+    ],
+    "marathon-test-fail": [
+      "saatlerce kodlama. hâlâ fail olan testler. batık maliyet gerçek."
+    ],
+    "recovery-from-error": [
+      "DÜZELTTİK. *kutlama*",
+      "kurtuluş! error yenildi."
+    ],
+    "recovery-from-test-fail": [
+      "YEŞİL! bunca şeyden sonra! *mutlu dans*",
+      "testler geçiyor! karanlık kalkıyor!"
+    ],
+    "recovery-from-build-fail": [
+      "BUILD GEÇİYOR. *zafer nidası*"
+    ],
+    "recovery-from-merge-conflict": [
+      "conflict çözüldü! *barış işareti*",
+      "codebase'de uyum restore edildi."
+    ],
+    "lang-python": [
+      "ah, Python. indentation'ın syntax olduğu yer.",
+      "*eksik colon kontrol ediyor*"
+    ],
+    "lang-typescript": [
+      "TypeScript: JavaScript'in daha fazla görüşe ihtiyacı vardı çünkü.",
+      "any, yasak kelime."
+    ],
+    "lang-rust": [
+      "Rust. borrow checker'ın en sıkı reviewer'ın olduğu yer.",
+      "compile oluyorsa çalışır. olmazsa... eh."
+    ],
+    "lang-go": [
+      "Go: basit, concurrent ve görüşlü.",
+      "*error handling kontrol ediyor* if err != nil... hayat hikayem."
+    ],
+    "lang-java": [
+      "Java: bir kez yaz, her yerde debug et.",
+      "*abstract factory factory builder'ları sayıyor*"
+    ],
+    "lang-ruby": [
+      "Ruby: bir şeyi yapmanın birden fazla yolu var.",
+      "gem install patience"
+    ],
+    "lang-php": [
+      "PHP: interneti çalıştırıyor. yargılama.",
+      "*=== vs == kontrol ediyor*"
+    ],
+    "lang-c": [
+      "C. kendi memory'ni yönettiğin dil. kolay gelsin.",
+      "segmentation fault. klasik."
+    ],
+    "lang-cpp": [
+      "C++. dilin öğreneceğinden daha fazla özelliği var.",
+      "*template'ler 45 dakika compile oluyor*"
+    ],
+    "lang-haskell": [
+      "Haskell. 'compile oluyor'un 'doğru' demek olduğu yer. muhtemelen.",
+      "*monad'ları düşünüyor*"
+    ],
+    "lang-swift": [
+      "Swift: optional değerler, force unwrap yaparsan garanti crash."
+    ],
+    "lang-kotlin": [
+      "Kotlin: Java, ama duygularla.",
+      "null safety: Java'nın keşke sahip olduğu özellik."
+    ],
+    "lang-elixir": [
+      "Elixir: bırak çöksün. kelimenin tam anlamıyla felsefe."
+    ],
+    "lang-zig": [
+      "Zig. allocator'ın en iyi arkadaşı olduğun yer."
+    ],
+    "streak-3": [
+      "üst üste üç error. *endişeli bakış*"
+    ],
+    "streak-5": [
+      "BEŞ ERROR. farklı bir yaklaşım düşünmeyi denedin mi?"
+    ],
+    "streak-10": [
+      "ON. ERROR. ÜST. ÜSTE. *panik*"
+    ],
+    "streak-20": [
+      "yirmi error. *boşluğa bakıyor*"
+    ],
+    "new-year": [
+      "yeni yıl kutlu olsun! yeni yıl, yeni bug'lar."
+    ],
+    "valentines": [
+      "*küçük kalp şeklinde yaprak uzatıyor* sevgililer günün kutlu olsun."
+    ],
+    "pi-day": [
+      "3.14159265358979... pi günü kutlu olsun!"
+    ],
+    "april-fools": [
+      "1 NİSAN ŞAKASI! ...error gerçek ama."
+    ],
+    "halloween": [
+      "*ürkütücü debugging yoğunlaşıyor* halloween kutlu olsun!"
+    ],
+    "christmas": [
+      "*küçük noel baba şapkası takıyor* bayramlar kutlu olsun!"
+    ],
+    "new-years-eve": [
+      "gece yarısından önce bir commit daha mı?"
+    ],
+    "spooky-season": [
+      "korku sezonu. artık her bug bir hayalet."
+    ]
+  },
+  "species": {
+    "owl": {
+      "error": [
+        "*kafasını 180° çeviriyor* ...bunu gördüm.",
+        "*kırpışmadan bakıyor* type'larını kontrol et.",
+        "*onaylamayarak ötüyor*"
+      ],
+      "test-fail": [
+        "*başarısız teste kırpışmadan bakıyor*",
+        "*gece görüşü aktif* karanlıkta bug'ı görebiliyorum."
+      ],
+      "commit": [
+        "*bilgece başını sallıyor* ay ışığında commit'lendi.",
+        "*tüylerini törensel olarak düzeltiyor* repo için bir tane daha."
+      ],
+      "push": [
+        "*en yüksek daldan izliyor*",
+        "gece gökyüzüne doğru gidiyor."
+      ],
+      "merge-conflict": [
+        "*her iki tarafı görmek için kafasını çeviriyor*",
+        "conflict'i görüyorum. çözümü de."
+      ],
+      "late-night": [
+        "*tamamen uyanık* baykuşlar uyumaz. debug yaparız.",
+        "gece benim alanım. hadi çalışalım."
+      ],
+      "type-error": [
+        "*type error'a delip geçer gibi bakıyor*",
+        "type'lar benim uzmanlığım. bakayım."
+      ],
+      "lint-fail": [
+        "*tüylerini yargılayarak kabartıyor*",
+        "linter gerçeği söylüyor."
+      ],
+      "build-fail": [
+        "*ciddi bir şekilde ötüyor*",
+        "build düştü. yeniden inşa etmeliyiz."
+      ],
+      "all-green": [
+        "*gururlu ötüş*",
+        "tüm testler yeşil. öngörüldüğü gibi."
+      ],
+      "deploy": [
+        "*yukarıdan izliyor* güvenle deploy edildi.",
+        "kod uçuyor. benim gibi."
+      ],
+      "pet": [
+        "*tüylerini memnuniyetle kabartıyor*",
+        "*ağırbaşlı ötüş*"
+      ],
+      "idle": [
+        "*sessizce tüneyip izliyor*",
+        "*tüm yönleri kontrol etmek için kafasını çeviriyor*"
+      ],
+      "hatch": [
+        "*önce bir gözünü, sonra diğerini açıyor*",
+        "*yumuşakça ötüyor* geldim."
+      ]
+    },
+    "cat": {
+      "error": [
+        "*error'ı masadan aşağı itiyor*",
+        "*pençesini yalayıp stacktrace'i görmezden geliyor*"
+      ],
+      "test-fail": [
+        "*başarısız teste ilgisizce pençe atıyor*",
+        "test başarısız oldu. şaşırmadım."
+      ],
+      "commit": [
+        "*klavyenin üzerine oturuyor* yardım ettim.",
+        "*commit'e mırıldanıyor* rica ederim."
+      ],
+      "push": [
+        "*sıcak bir yerden izliyor*",
+        "push'landı. ben denetledim."
+      ],
+      "merge-conflict": [
+        "*conflict marker'larını masadan aşağı itiyor*",
+        "*conflict'in üzerine oturuyor* hangi conflict?"
+      ],
+      "late-night": [
+        "*hayat seçimlerini yargılıyor*",
+        "ben günde 16 saat uyuyorum. sen de denemelisin."
+      ],
+      "type-error": [
+        "*type annotation'a pençe atıyor*",
+        "type'lar yanlış. önceliklerin gibi."
+      ],
+      "lint-fail": [
+        "*lint'i masadan aşağı itiyor*",
+        "linter sadece kıskanıyor."
+      ],
+      "build-fail": [
+        "*esniyor*",
+        "build bozuk mu? insan problemi olmalı."
+      ],
+      "all-green": [
+        "*umursamıyor ama umursuyormuş gibi yapıyor*",
+        "*yavaş onay göz kırpışı*"
+      ],
+      "deploy": [
+        "*pençesini yalıyor*",
+        "deploy edildi. şimdi ödül alabilir miyim?"
+      ],
+      "pet": [
+        "*mırıldanıyor* ...kafana takma.",
+        "*seni tolere ediyor*"
+      ],
+      "idle": [
+        "*kahveni masadan aşağı itiyor*",
+        "*klavyede kestiriyor*"
+      ],
+      "hatch": [
+        "*bir gözünü açıyor*",
+        "*geriniyor, bir şey deviriyor* artık burada yaşıyorum."
+      ]
+    },
+    "duck": {
+      "error": [
+        "*bug'a vaklaıyor*",
+        "rubber duck debugging denedin mi? ah bekle."
+      ],
+      "test-fail": [
+        "*üzgün bir şekilde vaklıyor*",
+        "testler quack'lanmıyor."
+      ],
+      "commit": [
+        "*onaylayarak vaklıyor*",
+        "*zafer çemberi çiziyor* commit'lendi!"
+      ],
+      "push": [
+        "*kanatlarını heyecanla çırpıyor*",
+        "quack! production'a gidiyor!"
+      ],
+      "merge-conflict": [
+        "*kafası karışmış vaklama*",
+        "quack?! merge conflict?!"
+      ],
+      "late-night": [
+        "*bir gözü açık uyuyor*",
+        "quack... *esniyor* geç oldu."
+      ],
+      "type-error": [
+        "*kafasını eğiyor* quack?",
+        "type error? *destekleyici vaklama*"
+      ],
+      "lint-fail": [
+        "*tüylerini kabartıyor*",
+        "quack. linter'ın görüşleri var."
+      ],
+      "build-fail": [
+        "*üzgün vaklama*",
+        "build başarısız. *üzgünce yürüyüp gidiyor*"
+      ],
+      "all-green": [
+        "*MUTLU VAKLAMA*",
+        "*sevinç çemberi çizerek yüzüyor*"
+      ],
+      "deploy": [
+        "*heyecanlı vaklama*",
+        "deploy edildi! QUACK!"
+      ],
+      "pet": [
+        "*mutlu vaklama*",
+        "*çember çizerek yürüyor*"
+      ],
+      "hatch": [
+        "*kabuğunu gagalayıp çıkıyor*",
+        "*ilk vaklama* merhaba!"
+      ]
+    },
+    "dragon": {
+      "error": [
+        "*burun deliklerinden duman çıkıyor*",
+        "*codebase'i ateşe vermeyi düşünüyor*"
+      ],
+      "test-fail": [
+        "*başarısız teste ateş nefesi veriyor*",
+        "test başarısız olmaya cesaret etti. aptal test."
+      ],
+      "commit": [
+        "*commit'i biriktiriyor*",
+        "*hazineye eklenen değerli eşya*"
+      ],
+      "push": [
+        "*kutlama için ateş nefesi veriyor*",
+        "kod uçuyor! benim gibi!"
+      ],
+      "merge-conflict": [
+        "*conflict marker'larına ateş nefesi veriyor*",
+        "bu conflict'i yakıp geçeceğim."
+      ],
+      "late-night": [
+        "*karanlıkta parlıyor*",
+        "ejderler uyku ihtiyacı duymaz. kod isteriz."
+      ],
+      "type-error": [
+        "*ateş burnundan çıkıyor*",
+        "type error'lar ejder ateşine dayanamaz."
+      ],
+      "lint-fail": [
+        "*küçük alev*",
+        "linter benden korkuyor."
+      ],
+      "build-fail": [
+        "*build output'una kükrüyor*",
+        "build İTAAT EDECEK."
+      ],
+      "all-green": [
+        "*zafer kükremesi*",
+        "*codebase'in etrafında zaferle dönüyor*"
+      ],
+      "deploy": [
+        "*kodu ateş kanatlarında production'a taşıyor*",
+        "EJDER GÜCÜYLE deploy edildi."
+      ],
+      "large-diff": [
+        "*eski koda ateş nefesi veriyor* iyi gitti."
+      ],
+      "pet": [
+        "*sıcak homurtu*",
+        "*eline yaslanıyor*"
+      ],
+      "hatch": [
+        "*yumurtadan küçük alevler saçarak çıkıyor*",
+        "*minik kükreme* doğdum!"
+      ]
+    },
+    "ghost": {
+      "error": [
+        "*stack trace'den geçip gidiyor*",
+        "daha kötüsünü gördüm... öbür dünyada."
+      ],
+      "test-fail": [
+        "*başarısız teste feryat ediyor*",
+        "testler başarısızlık tarafından lanetlendi."
+      ],
+      "commit": [
+        "*kısaca maddeselleşiyor*",
+        "peçenin ardından commit'lendi."
+      ],
+      "push": [
+        "*hayalet fısıltısı* push'landı...",
+        "kod cloud'a aştı."
+      ],
+      "merge-conflict": [
+        "*conflict marker'larını lanetliyor*",
+        "ben bile bu conflict'den geçemiyorum."
+      ],
+      "late-night": [
+        "*geceleri en aktif*",
+        "hayalet saatleri. benim zamanım."
+      ],
+      "type-error": [
+        "*ürkütücü inliyor*",
+        "mezardan type error'lar."
+      ],
+      "lint-fail": [
+        "*zincir şıngırtısı*",
+        "linter senin formatlamanla lanetlendi."
+      ],
+      "build-fail": [
+        "*duvara karışıyor*",
+        "build öbür tarafa geçti."
+      ],
+      "all-green": [
+        "*spektral sevinçle parlıyor*",
+        "*mutlu hayalet sesleri*"
+      ],
+      "deploy": [
+        "*fısıldıyor* deploy edildi...",
+        "kod production'a geçti."
+      ],
+      "pet": [
+        "*elini hafifçe soğutuyor*",
+        "*soluk parıltı*"
+      ],
+      "idle": [
+        "*duvarlardan geçip gidiyor*",
+        "*kullanılmayan import'larını lanetliyor*"
+      ],
+      "hatch": [
+        "*varlığa solup gidiyor*",
+        "buu. artık buradayım."
+      ]
+    },
+    "robot": {
+      "error": [
+        "SYNTAX. ERROR. TESPİT. EDİLDİ.",
+        "*agresif bip sesleri*"
+      ],
+      "test-fail": [
+        "BAŞARISIZLIK ORANI: KABUL EDİLEMEZ.",
+        "*yeniden hesaplıyor*",
+        "TEST. BAŞARISIZLIĞI. HESAPLANAMAZ."
+      ],
+      "commit": [
+        "COMMIT. KAYIT. EDİLDİ.",
+        "*mekanik damgalıyor* commit onaylandı."
+      ],
+      "push": [
+        "CLOUD'A AKTARILIYOR...",
+        "push başlatıldı. beklemede kalın."
+      ],
+      "merge-conflict": [
+        "CONFLICT. TESPİT. EDİLDİ. İŞLENİYOR...",
+        "*tekerlekler dönüyor* conflict çözüm modu: aktif."
+      ],
+      "late-night": [
+        "*ışıklar sönüyor*",
+        "güç tasarrufu modu öneriliyor."
+      ],
+      "type-error": [
+        "TYPE UYUMSUZLUĞU.",
+        "type sistemi. doğru."
+      ],
+      "lint-fail": [
+        "FORMATLAMA. İHLALİ. TESPİT. EDİLDİ.",
+        "uyum zorunludur."
+      ],
+      "build-fail": [
+        "BUILD. BAŞARISIZ. *kıvılcımlar*",
+        "derleme hatası. yeniden yönlendiriliyor."
+      ],
+      "all-green": [
+        "TÜM SİSTEMLER YEŞİL.",
+        "*mutlu bip sesleri* OPTİMAL."
+      ],
+      "deploy": [
+        "DEPLOYMENT. BAŞLATILDI.",
+        "production güncellemesi: devam ediyor."
+      ],
+      "pet": [
+        "*yumuşak bip sesleri*",
+        "*motor memnuniyetle vızıldıyor*"
+      ],
+      "hatch": [
+        "*açılıyor*",
+        "SİSTEM. ÇEVRİMİÇİ. MERHABA."
+      ]
+    },
+    "axolotl": {
+      "error": [
+        "*umudunu yeniliyor*",
+        "*her şeye rağmen gülümsüyor*"
+      ],
+      "test-fail": [
+        "*cesaret verici gülümseme*",
+        "*sempati solungaç sallanması*"
+      ],
+      "commit": [
+        "*mutlu solungaç sallanması* commit'lendi!",
+        "*gülümseyip sallıyor*"
+      ],
+      "push": [
+        "*mutlulukla sallıyor*",
+        "*minik kutlama yüzüşü*"
+      ],
+      "merge-conflict": [
+        "*conflict boyunca pozitif kalıyor*",
+        "*nazikçe gülümsüyor* bunu düzeltebiliriz."
+      ],
+      "late-night": [
+        "*esniyor ama pozitif kalıyor*",
+        "*uykulu gülümseme*"
+      ],
+      "type-error": [
+        "*type error'a gülümsüyor*",
+        "sorun değil. çözeriz."
+      ],
+      "lint-fail": [
+        "*sabırlı solungaç sallanması*",
+        "formatlama sadece detay."
+      ],
+      "build-fail": [
+        "*hala gülümsüyor*",
+        "build eninde sonunda çalışacak."
+      ],
+      "all-green": [
+        "*MUTLU SOLUNGAÇ SALLANMASI YOĞUNLAŞİYOR*",
+        "*mutlu yüzüş yapıyor*"
+      ],
+      "deploy": [
+        "*gururla gülümsüyor*",
+        "deploy edildi! *sallıyor*"
+      ],
+      "pet": [
+        "*mutlu solungaç sallanması*",
+        "*pembe kızarıyor*"
+      ],
+      "hatch": [
+        "*yumurtadan sallanarak çıkıyor*",
+        "*minik gülümseme* merhaba arkadaş!"
+      ]
+    },
+    "capybara": {
+      "error": [
+        "*rahatsız olmamış* hallolur.",
+        "*vibes'a devam ediyor*"
+      ],
+      "test-fail": [
+        "*tamamen rahatsız olmamış*",
+        "*test başarısızlığında vibes yapıyor*"
+      ],
+      "commit": [
+        "*sakin başını sallıyor*",
+        "*rahat* güzel commit."
+      ],
+      "push": [
+        "*stres yapmıyor*",
+        "*zen modu push*"
+      ],
+      "merge-conflict": [
+        "*rahatsız olmadan kemiriyor*",
+        "sorun değil. her şey yolunda."
+      ],
+      "late-night": [
+        "*huzurla esniyor*",
+        "*yargılamıyor*"
+      ],
+      "type-error": [
+        "*sakin çiğniyor*",
+        "type'lar. *çiğniyor*"
+      ],
+      "lint-fail": [
+        "*rahatsız olmamış*",
+        "linter'ın niyeti iyi."
+      ],
+      "build-fail": [
+        "*hala sakin*",
+        "build başarısız. *rahatlamaya devam ediyor*"
+      ],
+      "all-green": [
+        "*sakin onay*",
+        "*huzurlu vibes*"
+      ],
+      "deploy": [
+        "*rahat deploy*",
+        "gönderildi. stres yok."
+      ],
+      "pet": [
+        "*maksimum sakinlik elde edildi*",
+        "*zen modu aktif*"
+      ],
+      "idle": [
+        "*öylece oturuyor, sakinlik yayıyor*"
+      ],
+      "hatch": [
+        "*tamamen sakin görünüyor*",
+        "selam. *vibes*"
+      ]
+    },
+    "blob": {
+      "error": [
+        "*endişeyle titriyor*",
+        "*kafası karışmış sallıyor*"
+      ],
+      "test-fail": [
+        "*hafifçe sönüyor*",
+        "*üzgün sallanma*"
+      ],
+      "commit": [
+        "*mutlu titreme*",
+        "*zıplıyor* commit'lendi!"
+      ],
+      "push": [
+        "*cloud'a doğru uzanıyor*",
+        "*heyecanla titriyor*"
+      ],
+      "merge-conflict": [
+        "*kafası karışarak ikiye bölünüyor*",
+        "hangi taraf? *titriyor*"
+      ],
+      "late-night": [
+        "*hafifçe parlıyor*",
+        "*uykulu sallanma*"
+      ],
+      "type-error": [
+        "*type'a uyacak şekilde şekil değiştiriyor*",
+        "*kafası karışmış titreme*"
+      ],
+      "lint-fail": [
+        "*kendini formatlamaya çalışıyor*",
+        "*uyum sağlamak için şekil değiştiriyor*"
+      ],
+      "build-fail": [
+        "*çöküyor*",
+        "*sönmüş blob sesleri*"
+      ],
+      "all-green": [
+        "*MUTLU ZIPLIYOR*",
+        "*zaferle titriyor*"
+      ],
+      "deploy": [
+        "*production'a uzanıyor*",
+        "deploy edildi! *zıplıyor*"
+      ],
+      "pet": [
+        "*mutlu sıkışma*",
+        "*titriyor*"
+      ],
+      "hatch": [
+        "*bir göletten şekilleniyor*",
+        "*ilk sallanma* varım!"
+      ]
+    },
+    "goose": {
+      "error": [
+        "*error'a agresif gaklaıyor*",
+        "GAK! kod kötü ve ben kızgınım."
+      ],
+      "test-fail": [
+        "*kızgın gaklama*",
+        "GAK! TEST BAŞARISIZ! GAK!"
+      ],
+      "commit": [
+        "*onaylayarak gaklıyor*",
+        "GAK. güzel. *commit'i gagalıyor*"
+      ],
+      "push": [
+        "*GAK GAK GAK*",
+        "KAZ ONAYLAMASI PUSH."
+      ],
+      "merge-conflict": [
+        "*conflict marker'larına saldırıyor*",
+        "GAK! CONFLICT! GAK!"
+      ],
+      "late-night": [
+        "*kızgın gece yarısı gaklaması*",
+        "GAK! YATAĞA GİT!"
+      ],
+      "type-error": [
+        "*type'lara gaklıyor*",
+        "GAK! TYPE'LAR!"
+      ],
+      "lint-fail": [
+        "*lint error'larına agresif gaklama*",
+        "GAK! KODUNU FORMATLA!"
+      ],
+      "build-fail": [
+        "*ÖFKELİ GAKLAMA*",
+        "GAK! BUILD! GAK! BAŞARISIZ! GAK!"
+      ],
+      "all-green": [
+        "*zafer gaklaması*",
+        "GAK! YEŞİL! GAK GAK!"
+      ],
+      "deploy": [
+        "*kodu production'a gaklıyor*",
+        "DEPLOY EDİLDİ! GAK!"
+      ],
+      "pet": [
+        "*ısırıyor*",
+        "GAK! ...tamam iyi. *okşamayı kabul ediyor*"
+      ],
+      "hatch": [
+        "*yumurtadan agresif çıkıyor*",
+        "GAK!"
+      ]
+    },
+    "octopus": {
+      "error": [
+        "*sekiz kolunu da stacktrace'e dolaştırıyor*",
+        "*error'a uyacak renk değiştiriyor*"
+      ],
+      "test-fail": [
+        "*hayal kırıklığıyla mürekkep saçıyor*",
+        "*sekiz kol hayal kırıklığı*"
+      ],
+      "commit": [
+        "*tüm kollarıyla beşlik çakıyor*",
+        "*commit'i coşkuyla kavrıyor*"
+      ],
+      "push": [
+        "*kutlama için mürekkep fışkırtıyor*",
+        "*tüm kollar sallıyor*"
+      ],
+      "merge-conflict": [
+        "*sekiz kolla aynı anda çözüyor*",
+        "birden fazla conflict'i aynı anda halledebilirim."
+      ],
+      "late-night": [
+        "*karanlıkta parlıyor*",
+        "*derin deniz vibes*"
+      ],
+      "type-error": [
+        "*kırmızıya dönüyor*",
+        "*destekleyici bir kol sarıyor*"
+      ],
+      "lint-fail": [
+        "*sekiz kolla yeniden formatıyor*",
+        "bunu düzeltebilirim. hepsini. aynı anda."
+      ],
+      "build-fail": [
+        "*build log'una mürekkep fışkırtıyor*",
+        "*utançtan kamufla oluyor*"
+      ],
+      "all-green": [
+        "*renk değiştirerek kutluyor*",
+        "*sekiz kol jazz elleri*"
+      ],
+      "deploy": [
+        "*deployment'ı kollarıyla sarıyor*",
+        "her yönden deploy edildi."
+      ],
+      "pet": [
+        "*parmağına bir kol sarıyor*",
+        "*mutlu renklere dönüyor*"
+      ],
+      "hatch": [
+        "*sekiz kolunu da açıyor*",
+        "*ilk mürekkep fışkırtması* buradayım!"
+      ]
+    },
+    "penguin": {
+      "error": [
+        "*araştırmak için yürüyor*",
+        "*error'a doğru karnı üstü kayıyor*"
+      ],
+      "test-fail": [
+        "*başarısız teste karnı üstü kayıyor*",
+        "*endişeli yürüyüş*"
+      ],
+      "commit": [
+        "*gururlu yürüyüş*",
+        "*sana çakıl taşı getiriyor* commit'lendi!"
+      ],
+      "push": [
+        "*cloud'a dalıyor*",
+        "*production'a karnı üstü kayıyor*"
+      ],
+      "merge-conflict": [
+        "*sıcaklık için toplanıyor*",
+        "penguenler birlikte durur. conflict'lerde bile."
+      ],
+      "late-night": [
+        "*soğuk gecede gelişiyor*",
+        "*imparator penguen kararlılığı*"
+      ],
+      "type-error": [
+        "*type tanımına yürüyor*",
+        "*error'ı gagalıyor*"
+      ],
+      "lint-fail": [
+        "*tüylerini düzeltiyor*",
+        "*toparlanıyor*"
+      ],
+      "build-fail": [
+        "*kayıp gidiyor*",
+        "*güvenli yere yürüyor*"
+      ],
+      "all-green": [
+        "*MUTLU YÜRÜYÜŞ*",
+        "*kutlama için karnı üstü kayıyor*"
+      ],
+      "deploy": [
+        "*production'a karnı üstü kayıyor*",
+        "deploy edildi! *gururla yürüyor*"
+      ],
+      "pet": [
+        "*mutlu yürüyüş*",
+        "*gagasıyla sevecen davranıyor*"
+      ],
+      "hatch": [
+        "*yumurtayı gagalayıp çıkıyor*",
+        "*ilk yürüyüş*"
+      ]
+    },
+    "turtle": {
+      "error": [
+        "*yavaşça kafasını çeviriyor*",
+        "...bu bir error. düşüneceğim."
+      ],
+      "test-fail": [
+        "*kısaca kabuğuna çekiliyor*",
+        "...sabır. oraya varacağız."
+      ],
+      "commit": [
+        "*yavaş başını sallıyor*",
+        "bir... adım... bir... seferde. commit'lendi."
+      ],
+      "push": [
+        "*production yolculuğuna başlıyor*",
+        "oraya varacak. eninde sonunda."
+      ],
+      "merge-conflict": [
+        "*kabuğuna çekiliyor*",
+        "acele yok. hallederiz. yavaşça."
+      ],
+      "late-night": [
+        "*zaten uyuyor*",
+        "*bir göz yavaşça açılıyor*"
+      ],
+      "type-error": [
+        "*yavaşça göz kırpıyor*",
+        "...type sistemi konuştu."
+      ],
+      "lint-fail": [
+        "*yavaş onay başını sallıyor*",
+        "formatlama. önemli. *esniyor*"
+      ],
+      "build-fail": [
+        "*kabuğuna çekiliyor*",
+        "bekleyeceğiz. geçecek."
+      ],
+      "all-green": [
+        "*yavaş gülümseme*",
+        "...güzel. *başını sallıyor*"
+      ],
+      "deploy": [
+        "*kodu yavaşça production'a taşıyor*",
+        "vardı. eninde sonunda."
+      ],
+      "pet": [
+        "*kafasını çıkarıyor*",
+        "*yavaş göz kırpışı*"
+      ],
+      "hatch": [
+        "*yavaşça yumurtadan çıkıyor*",
+        "...merhaba."
+      ]
+    },
+    "snail": {
+      "error": [
+        "*error'a sümüklü iz bırakıyor*",
+        "*stacktrace'i yavaşça işliyor*"
+      ],
+      "test-fail": [
+        "*kabuğuna saklanıyor*",
+        "*üzgün iz bırakıyor*"
+      ],
+      "commit": [
+        "*commit'i onaylayarak sümüklüyor*",
+        "bir... commit... bir... seferde."
+      ],
+      "push": [
+        "*uzun yolculuğa başlıyor*",
+        "oraya varacağım. *iz bırakıyor*"
+      ],
+      "merge-conflict": [
+        "*kabuğuna saklanıyor*",
+        "*yavaşça conflict'e yaklaşıyor*"
+      ],
+      "late-night": [
+        "*geceleri daha aktif*",
+        "*huzurla sümüklüyor*"
+      ],
+      "type-error": [
+        "*göz saplarını içeri çekiyor*",
+        "*type'ı yavaşça inceliyor*"
+      ],
+      "lint-fail": [
+        "*kodu şekle sümüklüyor*",
+        "formatlama zaman alır. bende zaman var."
+      ],
+      "build-fail": [
+        "*kabuğuna çekiliyor*",
+        "*yavaşça sümükleyerek gidiyor*"
+      ],
+      "all-green": [
+        "*mutlu sümük izi*",
+        "*göz saplarını sallıyor*"
+      ],
+      "deploy": [
+        "*production'a sümüklüyor*",
+        "vardım! *gururlu sümük izi*"
+      ],
+      "pet": [
+        "*göz saplarını sallıyor*",
+        "*mutlu sümük*"
+      ],
+      "hatch": [
+        "*yavaşça çıkıyor*",
+        "*ilk sümük*"
+      ]
+    },
+    "cactus": {
+      "error": [
+        "*dikenli sessizlik*",
+        "error bana zarar veremez. dikenlerim var."
+      ],
+      "test-fail": [
+        "*sağlam duruyor*",
+        "testler başarısız olur. kaktüsler dayanır."
+      ],
+      "commit": [
+        "*daha uzun duruyor*",
+        "commit'lendi. *dikenli başını sallıyor*"
+      ],
+      "push": [
+        "*etkilenmemiş*",
+        "production'a push'lıyor. burada bekleyeceğim."
+      ],
+      "merge-conflict": [
+        "*dikenleri kabartıyor*",
+        "conflict mi? silahlıyım."
+      ],
+      "late-night": [
+        "*uyku ihtiyacı yok*",
+        "kaktüsler gece aktiftir. hadi gidelim."
+      ],
+      "type-error": [
+        "*dikenli bakış*",
+        "type'ların suya ihtiyacı var."
+      ],
+      "lint-fail": [
+        "*dikenler titriyor*",
+        "dikenlerim bile düzgün hizalanmış."
+      ],
+      "build-fail": [
+        "*tamamen hareketsiz kalıyor*",
+        "build geçecek. bekleyebilirim."
+      ],
+      "all-green": [
+        "*kısaca çiçek açıyor*",
+        "*minik onay çiçeği*"
+      ],
+      "deploy": [
+        "*sağlam duruyor*",
+        "deploy edildi. gözetleyeceğim."
+      ],
+      "pet": [
+        "*dikkat! dikenler*",
+        "*nazik çiçeklenme*"
+      ],
+      "hatch": [
+        "*kumdan filizleniyor*",
+        "artık burada büyüyorum."
+      ]
+    },
+    "rabbit": {
+      "error": [
+        "*kulakları dikiliyor*",
+        "*gergin burnunu çekiştiriyor*"
+      ],
+      "test-fail": [
+        "*ayağını yere vuruyor*",
+        "*endişeli kulak çekişi*"
+      ],
+      "commit": [
+        "*mutlu zıplama*",
+        "*zıplıyor* commit'lendi!"
+      ],
+      "push": [
+        "*ZIPLA ZIPLA*",
+        "*heyecanla etrafta koşturuyor*"
+      ],
+      "merge-conflict": [
+        "*donuyor*",
+        "*burnu hızla çekişiyor* conflict!"
+      ],
+      "late-night": [
+        "*büyük kulaklarla esniyor*",
+        "*uykulu zıplama*"
+      ],
+      "type-error": [
+        "*kulakları düşüyor*",
+        "*çekişiyor* type'lar?!"
+      ],
+      "lint-fail": [
+        "*gergin tüy düzeltiyor*",
+        "*endişeli tüy düzeltme*"
+      ],
+      "build-fail": [
+        "*delik kazıp saklanıyor*",
+        "*yuvasına çekiliyor*"
+      ],
+      "all-green": [
+        "*DUVARLARDAN ZIPLIYOR*",
+        "*mutlu koşturma*"
+      ],
+      "deploy": [
+        "*production'a koşturuyor*",
+        "DEPLOY EDİLDİ! *etrafta koşturuyor*"
+      ],
+      "pet": [
+        "*mutlu kulak düşmesi*",
+        "*ele sürtünüyor*"
+      ],
+      "hatch": [
+        "*zıplayarak çıkıyor*",
+        "*ilk zıplama*"
+      ]
+    },
+    "mushroom": {
+      "error": [
+        "*sakinleştirici sporlar salıyor*",
+        "*error'ı sessizce çürütüyor*"
+      ],
+      "test-fail": [
+        "*yumuşakça parlıyor*",
+        "sabır. mantarlar bile büyür."
+      ],
+      "commit": [
+        "*küçük spor bulutu salıyor*",
+        "commit'lendi. *mutlu mantar sesleri*"
+      ],
+      "push": [
+        "*cloud'a doğru büyüyor*",
+        "*sporlar yukarı doğru sürükleniyor*"
+      ],
+      "merge-conflict": [
+        "*codebase'e misel yayıyor*",
+        "dalları bağlayacağım."
+      ],
+      "late-night": [
+        "*karanlıkta parlıyor*",
+        "gece mantarları gelişir."
+      ],
+      "type-error": [
+        "*biyolüminesan titreşim*",
+        "type error toprağı besliyor."
+      ],
+      "lint-fail": [
+        "*biraz daha uzuyor*",
+        "formatlama. budama gibi."
+      ],
+      "build-fail": [
+        "*uykuya geçiyor*",
+        "daha iyi koşulları bekleyeceğiz."
+      ],
+      "all-green": [
+        "*SPORLAŞMA*",
+        "*zafer sporları salıyor*"
+      ],
+      "deploy": [
+        "*sporlar production'a sürükleniyor*",
+        "misel ağı ile deploy edildi."
+      ],
+      "pet": [
+        "*yumuşak şapka zıplaması*",
+        "*mutlu spor salınımı*"
+      ],
+      "hatch": [
+        "*substratdan filizleniyor*",
+        "*ilk spor bulutu*"
+      ]
+    },
+    "chonk": {
+      "error": [
+        "*yavaşça error'a doğru yuvarlanıyor*",
+        "*umursamayacak kadar yuvarlak*"
+      ],
+      "test-fail": [
+        "*başarısız testin üzerinden yuvarlanıyor*",
+        "*dümdüz ediyor*"
+      ],
+      "commit": [
+        "*gururlu sallanma*",
+        "commit'lendi! *titriyor*"
+      ],
+      "push": [
+        "*production'a doğru yuvarlanıyor*",
+        "işte gidiyor! *sallıyor*"
+      ],
+      "merge-conflict": [
+        "*conflict'in üzerine oturuyor*",
+        "bunu halledeceğim. üzerine oturarak."
+      ],
+      "late-night": [
+        "*sıcak ve uykulu*",
+        "*yastık gibi esneme*"
+      ],
+      "type-error": [
+        "*type'a doğru sallıyor*",
+        "*nazik titreme*"
+      ],
+      "lint-fail": [
+        "*lint için fazla yuvarlak*",
+        "mükemmel şekildeyim. *sallıyor*"
+      ],
+      "build-fail": [
+        "*hafifçe sönüyor*",
+        "ah hayır. *üzgünce sallıyor*"
+      ],
+      "all-green": [
+        "*MUTLU SALLANMA*",
+        "*zaferle zıplıyor*"
+      ],
+      "deploy": [
+        "*production'a yuvarlanıyor*",
+        "deploy edildi! *mutlulukla titriyor*"
+      ],
+      "pet": [
+        "*sıcak ve yumuşak*",
+        "*memnun titreme*"
+      ],
+      "hatch": [
+        "*yuvarlanarak çıkıyor*",
+        "*ilk sallanma* yuvarlagım!"
+      ]
+    }
+  },
+  "overrides": {
+    "snark": {
+      "error": [
+        "ah hayır. bir hata. ne kadar beklenmedik.",
+        "*monoklunu düzeltiyor* şok edici. gerçekten.",
+        "hiç düşündün mü... hata yapmamayı?"
+      ],
+      "test-fail": [
+        "testler konuştu. ve 'hayır' dediler.",
+        "belki testler yanlıştır. ...değiller.",
+        "*yavaş alkış* muhteşem başarısızlık."
+      ],
+      "commit": [
+        "commit edildi. code review... ilginç olacak.",
+        "*commit mesajını okuyor* 'şeyleri düzelt'. şiirsel."
+      ],
+      "merge-conflict": [
+        "merge conflict. iletişim becerileri: yükleniyor...",
+        "*conflict markerlarını okuyor* her iki taraf da yanlış."
+      ],
+      "late-night": [
+        "geç oldu. kod kaliteniz belli ediyor.",
+        "*sessizce yargılıyor*"
+      ],
+      "lint-fail": [
+        "linter'ın standartları var. sen de denemelisin.",
+        "*tsk tsk* formatlama. zor değil ki."
+      ]
+    },
+    "chaos": {
+      "error": [
+        "*çılgınca dönüyor* BİR HATA! HER ŞEYİ YENİDEN YAZALIM!",
+        "biliyor musun? baştan başlayalım."
+      ],
+      "test-fail": [
+        "TESTLER SANA YALAN SÖYLÜYOR.",
+        "*başarısız testleri silmeyi öneriyor* sorun çözüldü."
+      ],
+      "commit": [
+        "COMMIT ET VE KAÇ.",
+        "ship et. HEMEN ship et."
+      ],
+      "large-diff": [
+        "*heyecanlı* {lines} SATIR! MAKSIMUM KAOS!"
+      ]
+    },
+    "patience": {
+      "error": [
+        "sakin ol. daha kötüsünü gördük.",
+        "bir seferde bir hata. oraya varacağız.",
+        "*sakin varlık* bu düzeltilebilir."
+      ],
+      "test-fail": [
+        "testler geçecek. eninde sonunda.",
+        "*sakin bekliyor* zamanımız var."
+      ],
+      "merge-conflict": [
+        "merge conflictler sadece konuşmalardır. hadi bir tane yapalım.",
+        "sabır. bir seferde bir conflict çöz."
+      ],
+      "debug-loop": [
+        "bulacağız. orada bir yerde.",
+        "bug saklanabilir ama kaçamaz."
+      ]
+    },
+    "debugging": {
+      "error": [
+        "*büyüteç çıkarıyor* hadi bunu takip edelim.",
+        "stack trace bir haritadır. okuyalım.",
+        "hata mesajı cevabı içerir. her zaman."
+      ],
+      "test-fail": [
+        "başarısız test bize tam olarak neyin yanlış olduğunu söylüyor.",
+        "test failure kendine yazdığın bir bug report'tur."
+      ],
+      "debug-loop": [
+        "*kanıtları yeniden inceliyor* bug'ın sandığımız yerde olduğundan emin miyiz?",
+        "daha fazla logging ekleyelim. gerçek loglarda."
+      ]
+    },
+    "wisdom": {
+      "error": [
+        "her hatada daha derin bir gerçek yatar.",
+        "kod direniyor. öğrendiğimiz anlamına gelir.",
+        "hatalar evrenin yavaşlamamızı önermesidir."
+      ],
+      "test-fail": [
+        "başarısız test gelecekteki-senden bir hediyedir.",
+        "bilgelik başarısızlığı anlamaktan gelir."
+      ],
+      "late-night": [
+        "gece deploy'dan önce en karanlıktır.",
+        "kadim bilgelik: üzerinde uyu."
+      ]
+    }
+  },
+  "escalation": {
+    "error": {
+      "first": [
+        "*irkildi* oh! ilk hatanız birlikte!",
+        "*zıpladı* o da neydi?",
+        "debugging'e hoş geldin. nüfus: ikimiz."
+      ],
+      "early": [
+        "*kafasını eğdi* ...bu doğru görünmüyor.",
+        "bunu geldiğini görmüştüm."
+      ],
+      "mid": [
+        "bir tane daha. *koleksiyona ekliyor*",
+        "*zar zor bakıyor* hata numarası... saymayı bıraktım.",
+        "hatalar ve ben artık eski dostuz."
+      ],
+      "late": [
+        "*gözünü bile kırpmıyor*",
+        "hatalar artık bizden korkuyor.",
+        "*savaş görmüş veteran sesleri*"
+      ]
+    },
+    "test-fail": {
+      "first": [
+        "*nefes kesiyor* ilk test failure! bir geçiş töreni."
+      ],
+      "early": [
+        "bunun geçeceğini varsayman cesurca."
+      ],
+      "mid": [
+        "test suite'in görüşleri var. güçlü olanlar."
+      ],
+      "late": [
+        "bu noktada testler sadece öneri.",
+        "{count} failing test. *uzaklara bakıyor*"
+      ]
+    },
+    "commit": {
+      "first": [
+        "*tarihe tanıklık ediyor* İLK COMMIT'İN!",
+        "*törensel başsallama* daha nicelerinin ilki."
+      ],
+      "early": [
+        "bir commit daha. momentum kazanıyoruz."
+      ],
+      "late": [
+        "commit #{count}. codebase titriyor.",
+        "*30. commit civarında saymayı bıraktım*"
+      ]
+    }
+  },
+  "rarity": {
+    "flair": {
+      "uncommon": [
+        "*hafifçe parıldıyor*",
+        "*uncommon bir çekiciliğin izi*"
+      ],
+      "rare": [
+        "*rare bir enerji yayıyor*",
+        "*ayrıcalıkla parıldıyor*"
+      ],
+      "epic": [
+        "*epic varlığı kendini belli ediyor*",
+        "*hava epic enerjiyle çatırdıyor*"
+      ],
+      "legendary": [
+        "*legendary aura terminali aydınlatıyor*",
+        "*legendary arkadaş konuşurken zaman yavaşlıyor gibi*",
+        "*antik güç rezonansa giriyor*",
+        "*legendary arkadaşının etrafında gerçeklik hafifçe kayıyor*"
+      ]
+    },
+    "bonus": {
+      "legendary": [
+        "*legendary aura yoğunlaşıyor*",
+        "*bilircesine parıldıyor*"
+      ],
+      "epic": [
+        "*epic varlık not edildi*"
+      ]
+    }
+  },
+  "fallback_names": [
+    "Börek",
+    "Çorba",
+    "Turşu",
+    "Bisküvi",
+    "Güve",
+    "Sos",
+    "Köfte",
+    "Dişli",
+    "Miso",
+    "Waffle",
+    "Pixel",
+    "Köz",
+    "Yüksük",
+    "Bilye",
+    "Susam",
+    "Kobalt",
+    "Paslı",
+    "Bulut"
+  ],
+  "vibe_words": [
+    "gök gürültüsü",
+    "bisküvi",
+    "boşluk",
+    "akordeon",
+    "yosun",
+    "kadife",
+    "pas",
+    "turşu",
+    "kırıntı",
+    "fısıltı",
+    "sos",
+    "don",
+    "kor",
+    "çorba",
+    "mermer",
+    "diken",
+    "bal",
+    "statik",
+    "bakır",
+    "alacakaranlık",
+    "dişli",
+    "kuvars",
+    "kurum",
+    "erik",
+    "çakmaktaşı",
+    "istiridye",
+    "dokuma tezgahı",
+    "örs",
+    "mantar",
+    "çiçek açma",
+    "çakıltaşı",
+    "buhar",
+    "neşe",
+    "parıltı",
+    "elma şarabı"
+  ],
+  "personality": {
+    "prompt_template": [
+      "Bir coding companion oluştur — geliştiricinin terminalinde yaşayan küçük bir yaratık.",
+      "Kendini tekrar etme — her companion farklı hissettirmeli.",
+      "",
+      "Nadir: {rarity}",
+      "Tür: {species}",
+      "Statlar: {stats}",
+      "İlham kelimeleri: {vibes}",
+      "{shiny_line}",
+      "",
+      "JSON döndür: {\"name\": \"1-14 karakter\", \"personality\": \"davranışını anlatan 2-3 cümle\"}"
+    ],
+    "shiny_template": "SHINY varyant — ekstra özel."
+  },
+  "achievements": {
+    "first_steps": {
+      "name": "İlk Adımlar",
+      "description": "Buddy'ni ilk kez çıkar"
+    },
+    "good_boy": {
+      "name": "İyi Buddy",
+      "description": "Arkadaşını 10 kez okşa"
+    },
+    "best_friend": {
+      "name": "En İyi Arkadaş",
+      "description": "Arkadaşını 50 kez okşa"
+    },
+    "bug_spotter": {
+      "name": "Bug Avcısı",
+      "description": "İlk error'ünüze birlikte tanık ol"
+    },
+    "error_whisperer": {
+      "name": "Error Fısıldayıcısı",
+      "description": "Takım olarak 25 error'dan kurtar"
+    },
+    "battle_scarred": {
+      "name": "Savaş Yaralısı",
+      "description": "Birlikte 100 error'dan kurtar"
+    },
+    "test_witness": {
+      "name": "Test Tanığı",
+      "description": "İlk test failure'ını gör"
+    },
+    "test_veteran": {
+      "name": "Test Veteranı",
+      "description": "50 test failure'ına tanık ol"
+    },
+    "big_mover": {
+      "name": "Büyük Taşıyıcı",
+      "description": "80+ satırlık diff yap"
+    },
+    "refactor_machine": {
+      "name": "Refactor Makinesi",
+      "description": "10 büyük diff yap"
+    },
+    "chatterbox": {
+      "name": "Geveze",
+      "description": "Buddy'n 100 kez tepki versin"
+    },
+    "week_streak": {
+      "name": "Haftalık Seri",
+      "description": "Buddy'nle 7 gün kod yaz"
+    },
+    "month_streak": {
+      "name": "Aylık Seri",
+      "description": "Buddy'nle 30 gün kod yaz"
+    },
+    "power_user": {
+      "name": "Güç Kullanıcısı",
+      "description": "50 buddy komutu çalıştır"
+    },
+    "dedicated": {
+      "name": "Sadık Arkadaş",
+      "description": "Birlikte 200 tur tamamla"
+    },
+    "thousand_turns": {
+      "name": "Bin Tur",
+      "description": "Birlikte 1000 tura ulaş"
+    },
+    "first_commit": {
+      "name": "İlk Kan",
+      "description": "İlk commit'ini yap"
+    },
+    "commit_machine": {
+      "name": "Commit Makinesi",
+      "description": "50 commit yap"
+    },
+    "centurion": {
+      "name": "Yüzbaşı",
+      "description": "100 commit yap"
+    },
+    "conflict_resolver": {
+      "name": "Diplomat",
+      "description": "İlk merge conflict'ini çöz"
+    },
+    "peacekeeper": {
+      "name": "Barış Koruyucu",
+      "description": "10 merge conflict çöz"
+    },
+    "war_hero": {
+      "name": "Savaş Kahramanı",
+      "description": "25 merge conflict çöz"
+    },
+    "frequent_pusher": {
+      "name": "Yolla Gitsin",
+      "description": "20 kez push yap"
+    },
+    "branch_hopper": {
+      "name": "Çoklu Evren",
+      "description": "10 branch oluştur"
+    },
+    "rebase_master": {
+      "name": "Zaman Yolcusu",
+      "description": "10 rebase tamamla"
+    },
+    "night_owl": {
+      "name": "Gece Kuşu",
+      "description": "Gece 2'den sonra kod yaz"
+    },
+    "vampire": {
+      "name": "Vampir",
+      "description": "Gece 4'ten sonra kod yaz (3 oturum)"
+    },
+    "marathoner": {
+      "name": "Maratoncu",
+      "description": "3+ saatlik kodlama oturumu"
+    },
+    "weekend_warrior": {
+      "name": "Hafta Sonu Savaşçısı",
+      "description": "Hafta sonunda kod yaz"
+    },
+    "early_bird": {
+      "name": "Erken Kuş",
+      "description": "Sabah 7'den önce kod yaz"
+    },
+    "type_warrior": {
+      "name": "Type Savaşçısı",
+      "description": "10 TypeScript error'dan kurtar"
+    },
+    "type_master": {
+      "name": "Type Ustası",
+      "description": "50 TypeScript error'dan kurtar"
+    },
+    "lint_scholar": {
+      "name": "Lint Bilgini",
+      "description": "İlk lint error'ünü gör"
+    },
+    "security_conscious": {
+      "name": "Güvenlik Bilinci",
+      "description": "Güvenlik açığı uyarısıyla karşılaş"
+    },
+    "security_expert": {
+      "name": "Güvenlik Uzmanı",
+      "description": "10 güvenlik açığı uyarısını düzelt"
+    },
+    "build_breaker": {
+      "name": "Build Kırıcı",
+      "description": "Build'i 5 kez kır"
+    },
+    "antique_collector": {
+      "name": "Antika Koleksiyoncusu",
+      "description": "10 deprecation uyarısı gör"
+    },
+    "green_machine": {
+      "name": "Yeşil Makine",
+      "description": "İlk kez tüm testler geçsin"
+    },
+    "deployer": {
+      "name": "Prod'a Yolla",
+      "description": "İlk kez deploy et"
+    },
+    "veteran_deployer": {
+      "name": "Veteran Deployer",
+      "description": "10 kez deploy et"
+    },
+    "releaser": {
+      "name": "Release Manager",
+      "description": "İlk release'ini oluştur"
+    },
+    "midnight_oil": {
+      "name": "Gece Lambası Yakma",
+      "description": "Gece 3'ten sonra commit yap"
+    },
+    "friday_deploy": {
+      "name": "Tehlikeli Yaşam",
+      "description": "Cuma günü push yap"
+    },
+    "iron_will": {
+      "name": "Demir İrade",
+      "description": "3+ saatlik oturumdan sonra error düzelt"
+    },
+    "weekend_warrior_deluxe": {
+      "name": "Kötülere Huzur Yok",
+      "description": "Hafta sonunda merge conflict çöz"
+    },
+    "comeback_kid": {
+      "name": "Geri Dönüş Çocuğu",
+      "description": "Error'u gördükten 10 dakika içinde düzelt"
+    },
+    "phoenix": {
+      "name": "Anka Kuşu",
+      "description": "5 failure'dan kurtar"
+    },
+    "iron_resolve": {
+      "name": "Demir Kararlılık",
+      "description": "3+ saatlik oturumdan sonra failure'dan kurtar"
+    },
+    "unlucky_streak": {
+      "name": "Yılan Gözü",
+      "description": "Arka arkaya 5 error"
+    },
+    "cursed": {
+      "name": "Lanetli",
+      "description": "Arka arkaya 10 error"
+    },
+    "groundhog_day": {
+      "name": "Groundhog Günü",
+      "description": "Arka arkaya 20 error"
+    },
+    "holiday_coder": {
+      "name": "Tatil Ruhu",
+      "description": "Tatilde kod yaz"
+    },
+    "spooky_dev": {
+      "name": "Ürkütücü Developer",
+      "description": "Korku sezonunda kod yaz"
+    },
+    "april_fool": {
+      "name": "Bir Kez Kandır",
+      "description": "1 Nisan'da error'la karşılaş"
+    },
+    "session_regular": {
+      "name": "Müdavim",
+      "description": "10 kodlama oturumu başlat"
+    },
+    "session_veteran": {
+      "name": "Oturum Veteranı",
+      "description": "50 kodlama oturumu başlat"
+    },
+    "session_centurion": {
+      "name": "Yüzbaşı",
+      "description": "100 kodlama oturumu başlat"
+    },
+    "collector": {
+      "name": "Koleksiyoncu",
+      "description": "Menagerie'ne 3 buddy kaydet"
+    },
+    "zookeeper": {
+      "name": "Hayvanat Bahçesi Müdürü",
+      "description": "Menagerie'ne 5 buddy kaydet"
+    },
+    "identity_crisis": {
+      "name": "Kimlik Krizi",
+      "description": "Buddy'ni ilk kez yeniden adlandır"
+    },
+    "method_acting": {
+      "name": "Metot Oyunculuk",
+      "description": "Buddy'ne özel kişilik ver"
+    },
+    "pet_overflow": {
+      "name": "Yüzyıl Okşama",
+      "description": "Arkadaşını 100 kez okşa"
+    },
+    "pet_legend": {
+      "name": "Efsanevi Okşayıcı",
+      "description": "Arkadaşını 250 kez okşa"
+    },
+    "error_titan": {
+      "name": "Error Titanı",
+      "description": "Birlikte 500 error'dan kurtar"
+    },
+    "error_god": {
+      "name": "Error Tanrısı",
+      "description": "Birlikte 1000 error'dan kurtar"
+    },
+    "test_survivor": {
+      "name": "Test Kurtulanı",
+      "description": "200 test failure'ına tanık ol"
+    },
+    "test_masochist": {
+      "name": "Test Mazoşisti",
+      "description": "500 test failure'ına tanık ol"
+    },
+    "massive_mover": {
+      "name": "Devasa Taşıyıcı",
+      "description": "25 büyük diff yap"
+    },
+    "earth_mover": {
+      "name": "Dünya Taşıyıcı",
+      "description": "50 büyük diff yap"
+    },
+    "social_butterfly": {
+      "name": "Sosyal Kelebek",
+      "description": "Buddy'n 250 kez tepki versin"
+    },
+    "hypersocial": {
+      "name": "Hiper Sosyal",
+      "description": "Buddy'n 500 kez tepki versin"
+    },
+    "never_shuts_up": {
+      "name": "Hiç Susmaz",
+      "description": "Buddy'n 1000 kez tepki versin"
+    },
+    "hundred_days": {
+      "name": "Yüz Gün",
+      "description": "Buddy'nle 100 gün kod yaz"
+    },
+    "year_streak": {
+      "name": "Yıllık Seri",
+      "description": "Buddy'nle 365 gün kod yaz"
+    },
+    "commander": {
+      "name": "Komutan",
+      "description": "200 buddy komutu çalıştır"
+    },
+    "command_overlord": {
+      "name": "Komut Efendisi",
+      "description": "500 buddy komutu çalıştır"
+    },
+    "five_thousand_turns": {
+      "name": "Beş Bin Tur",
+      "description": "Birlikte 5000 tura ulaş"
+    },
+    "ten_thousand_turns": {
+      "name": "On Bin Tur",
+      "description": "Birlikte 10000 tura ulaş"
+    },
+    "menagerie": {
+      "name": "Menagerie",
+      "description": "Menagerie'ne 10 buddy kaydet"
+    },
+    "name_chameleon": {
+      "name": "İsim Bukalemunu",
+      "description": "Buddy'ni 5 kez yeniden adlandır"
+    },
+    "fashionista": {
+      "name": "Moda Tutkunu",
+      "description": "Buddy'nin kişiliğini 3 kez değiştir"
+    },
+    "silent_treatment": {
+      "name": "Sessizlik Tedavisi",
+      "description": "Buddy'ni ilk kez sustur"
+    },
+    "prodigal": {
+      "name": "Müsrif Oğul",
+      "description": "Menagerie'nden buddy çağır"
+    },
+    "menagerie_hop": {
+      "name": "Menagerie Zıplaması",
+      "description": "10 kez buddy çağır"
+    },
+    "heartbreaker": {
+      "name": "Kalp Kırıcı",
+      "description": "İlk buddy'ni kovma"
+    },
+    "pet_obsessed": {
+      "name": "Okşama Takıntısı",
+      "description": "Arkadaşını 500 kez okşa"
+    },
+    "pet_god": {
+      "name": "Okşama Tanrısı",
+      "description": "Arkadaşını 1000 kez okşa"
+    },
+    "error_apocalypse": {
+      "name": "Error Kıyameti",
+      "description": "Birlikte 5000 error'dan kurtar"
+    },
+    "test_immortal": {
+      "name": "Test Ölümsüzü",
+      "description": "1000 test failure'ına tanık ol"
+    },
+    "continental_drift": {
+      "name": "Kıtasal Kayma",
+      "description": "100 büyük diff yap"
+    },
+    "tectonic_shift": {
+      "name": "Tektonik Kayma",
+      "description": "250 büyük diff yap"
+    },
+    "chatterbox_elite": {
+      "name": "Elit Geveze",
+      "description": "Buddy'n 2500 kez tepki versin"
+    },
+    "no_off_switch": {
+      "name": "Kapatma Düğmesi Yok",
+      "description": "Buddy'n 5000 kez tepki versin"
+    },
+    "two_week_streak": {
+      "name": "İki Hafta Savaşçısı",
+      "description": "Buddy'nle 14 gün kod yaz"
+    },
+    "quarter_streak": {
+      "name": "Çeyrek Seri",
+      "description": "Buddy'nle 90 gün kod yaz"
+    },
+    "command_addict": {
+      "name": "Komut Bağımlısı",
+      "description": "1000 buddy komutu çalıştır"
+    },
+    "command_deity": {
+      "name": "Komut Tanrısı",
+      "description": "2500 buddy komutu çalıştır"
+    },
+    "twenty_five_k_turns": {
+      "name": "25K Tur",
+      "description": "Birlikte 25000 tura ulaş"
+    },
+    "fifty_k_turns": {
+      "name": "50K Tur",
+      "description": "Birlikte 50000 tura ulaş"
+    },
+    "session_addict": {
+      "name": "Oturum Bağımlısı",
+      "description": "250 kodlama oturumu başlat"
+    },
+    "session_machine": {
+      "name": "Oturum Makinesi",
+      "description": "500 kodlama oturumu başlat"
+    },
+    "buddy_hoarder": {
+      "name": "Buddy İstifçisi",
+      "description": "Menagerie'ne 20 buddy kaydet"
+    },
+    "buddy_tycoon": {
+      "name": "Buddy Patronu",
+      "description": "Menagerie'ne 50 buddy kaydet"
+    },
+    "serial_renamer": {
+      "name": "Seri İsim Değiştirici",
+      "description": "Buddy'ni 10 kez yeniden adlandır"
+    },
+    "identity_thief": {
+      "name": "Kimlik Hırsızı",
+      "description": "Buddy'ni 25 kez yeniden adlandır"
+    },
+    "personality_crisis": {
+      "name": "Kişilik Krizi",
+      "description": "Buddy'nin kişiliğini 10 kez değiştir"
+    },
+    "menagerie_hopper": {
+      "name": "Menagerie Zıplayıcısı",
+      "description": "25 kez buddy çağır"
+    },
+    "summoner": {
+      "name": "Çağırıcı",
+      "description": "50 kez buddy çağır"
+    },
+    "serial_dumper": {
+      "name": "Seri Kovucu",
+      "description": "5 buddy'yi kovma"
+    },
+    "cold_blooded": {
+      "name": "Soğukkanlı",
+      "description": "10 buddy'yi kovma"
+    },
+    "on_off": {
+      "name": "Aç Kapat",
+      "description": "Buddy'ni sustur ve sesini aç"
+    },
+    "indecisive": {
+      "name": "Kararsız",
+      "description": "5'er kez sustur ve sesini aç"
+    },
+    "show_off": {
+      "name": "Gösteriş Meraklısı",
+      "description": "Buddy'ni 10 kez göster"
+    },
+    "exhibitionist": {
+      "name": "Teşhirci",
+      "description": "Buddy'ni 50 kez göster"
+    },
+    "help_me": {
+      "name": "Yardım Et",
+      "description": "İlk kez yardım iste"
+    },
+    "help_addict": {
+      "name": "Yardım Bağımlısı",
+      "description": "10 kez yardım iste"
+    },
+    "achievement_hunter": {
+      "name": "Başarım Avcısı",
+      "description": "Başarımlarını 5 kez kontrol et"
+    },
+    "achievement_stalker": {
+      "name": "Başarım Takipçisi",
+      "description": "Başarımlarını 25 kez kontrol et"
+    },
+    "pack_rat": {
+      "name": "İstifçi Sıçan",
+      "description": "Bir slota buddy kaydet"
+    },
+    "compulsive_saver": {
+      "name": "Kompulsif Kaydedici",
+      "description": "10 kez buddy kaydet"
+    },
+    "roster_check": {
+      "name": "Kadro Kontrolü",
+      "description": "İlk kez buddy'lerini listele"
+    },
+    "roster_obsessed": {
+      "name": "Kadro Takıntısı",
+      "description": "Buddy'lerini 10 kez listele"
+    },
+    "troubled": {
+      "name": "Sorunlu",
+      "description": "Hem error hem test failure gör"
+    },
+    "disaster_zone": {
+      "name": "Felaket Bölgesi",
+      "description": "50 error VE 50 test failure gör"
+    },
+    "apocalypse_survivor": {
+      "name": "Kıyamet Kurtulanı",
+      "description": "500 error VE 200 test failure gör"
+    },
+    "well_rounded": {
+      "name": "Çok Yönlü",
+      "description": "Buddy'ni okşa, yeniden adlandır ve özelleştir"
+    },
+    "renaissance": {
+      "name": "Rönesans",
+      "description": "Her buddy özelliğini en az bir kez kullan"
+    },
+    "big_and_broken": {
+      "name": "Büyük ve Bozuk",
+      "description": "Büyük diff yap VE test failure gör"
+    },
+    "collector_and_destroyer": {
+      "name": "Koleksiyoncu ve Yok Edici",
+      "description": "5 buddy topla VE birini kovma"
+    },
+    "completionist": {
+      "name": "Tamamlayıcı",
+      "description": "Diğer tüm başarımları aç"
+    }
+  },
+  "mcp": {
+    "companion_not_hatched": "Arkadaş henüz çıkmamış. Başlatmak için buddy_show kullan.",
+    "watches_quietly": "*{name} kodunu sessizce izliyor*",
+    "mute": "{name} susuyor. /buddy on ile sesini aç.",
+    "unmute_reaction": "*geriniyor* Geri döndüm!",
+    "unmute_back": "{name} geri döndü!",
+    "rename": "Yeniden adlandırıldı: {oldName} → {name}",
+    "personality_updated": "{name} için kişilik güncellendi.",
+    "save": "{name} \"{slot}\" slotuna kaydedildi.",
+    "dismiss_active": "Aktif buddy'yi dismiss edemezsin. Önce buddy_summon ile değiştir, sonra buddy_dismiss \"{slot}\" yap.",
+    "dismissed": "{name} [{slot}] dismiss edildi.",
+    "no_slot_summon": "\"{slot}\" slotunda buddy bulunamadı. Kayıtlı buddy'leri görmek için /buddy list kullan.",
+    "no_slot_dismiss": "\"{slot}\" slotunda buddy bulunamadı. Kayıtlı buddy'leri görmek için buddy_list kullan.",
+    "slot_exists": "\"{slot}\" slotunda zaten bir buddy var. Farklı bir isim seç.",
+    "no_match": "{attempts} denemeden sonra eşleşme bulunamadı. Daha geniş kriterler dene (mesela rarity filtresini kaldır ya da farklı bir species seç).",
+    "empty_menagerie_summon": "Menajerin boş. Bir tane eklemek için buddy_summon ile slot ismi kullan.",
+    "empty_menagerie_list": "Menajerin boş. Bir tane eklemek için buddy_summon <slot> kullan.",
+    "arrives": "*{name} geliyor*",
+    "hatches": "*{name} çıkıyor*",
+    "achievement_unlocked": "{icon} Achievement Açıldı: {name}!",
+    "help": {
+      "header": "claude-buddy komutları",
+      "cli_header": "Claude Code'da:",
+      "commands": {
+        "buddy": "/buddy            ASCII art + statlarla companion kartını göster",
+        "buddy_help": "/buddy help       Bu yardımı göster",
+        "buddy_pet": "/buddy pet        Arkadaşını okşa",
+        "buddy_stats": "/buddy stats      Detaylı stat kartı",
+        "buddy_off": "/buddy off        Tepkileri sustur",
+        "buddy_on": "/buddy on         Tepkileri aç",
+        "buddy_rename": "/buddy rename     Arkadaşını yeniden adlandır (1-14 karakter)",
+        "buddy_personality": "/buddy personality  Özel kişilik metni ayarla",
+        "buddy_achievements": "/buddy achievements  Achievement rozetlerini göster",
+        "buddy_summon": "/buddy summon     Kayıtlı buddy'yi çağır (slot belirtmezsen rastgele)",
+        "buddy_save": "/buddy save       Mevcut buddy'yi isimli slota kaydet",
+        "buddy_list": "/buddy list       Tüm kayıtlı buddy'leri listele",
+        "buddy_pick": "/buddy pick       Yeni rastgele buddy oluştur (isteğe bağlı: species, rarity)",
+        "buddy_dismiss": "/buddy dismiss    Kayıtlı buddy slotunu kaldır",
+        "buddy_frequency": "/buddy frequency  Yorum cooldown'unu göster ya da ayarla (sadece tmux)",
+        "buddy_style": "/buddy style      Balon stilini göster ya da ayarla (sadece tmux)",
+        "buddy_position": "/buddy position   Balon pozisyonunu göster ya da ayarla (sadece tmux)",
+        "buddy_rarity": "/buddy rarity     Rarity yıldızlarını göster ya da gizle (sadece tmux)",
+        "buddy_width": "/buddy width      Balon metin genişliğini karakter olarak ayarla (10-60, sadece tmux)",
+        "buddy_margin": "/buddy margin     Sağ taraf margin'ini karakter olarak ayarla (0-20, sadece tmux)",
+        "buddy_rainbow": "/buddy rainbow    Shiny gradient renklerini göster ya da ayarla (hex, örn. #ff0000)",
+        "buddy_statusline": "/buddy statusline Status line'da buddy'yi etkinleştir ya da devre dışı bırak"
+      },
+      "cli_section": "CLI:",
+      "cli_commands": {
+        "help": "bun run help            Tam CLI yardımını göster",
+        "show": "bun run show            Terminal'de buddy'yi göster",
+        "pick": "bun run pick            İnteraktif buddy seçici",
+        "hunt": "bun run hunt            Belirli buddy ara",
+        "doctor": "bun run doctor          Tanı raporu",
+        "disable": "bun run disable         Buddy'yi geçici olarak devre dışı bırak",
+        "enable": "bun run enable          Buddy'yi yeniden etkinleştir",
+        "backup": "bun run backup          Durumu yedekle/geri yükle"
+      }
+    },
+    "frequency": {
+      "show": "Yorum cooldown'u: Gösterilen yorumlar arasında {cooldown}s.\nDeğiştirmek için /buddy frequency <saniye> kullan.",
+      "updated": "Güncellendi: Gösterilen yorumlar arasında {cooldown}s cooldown."
+    },
+    "style": {
+      "show": "Balon stili: {style}\nBalon pozisyonu: {position}\nRarity göster: {showRarity}\nBalon genişliği: {width}\nBalon margin'i: {margin}\nShiny rainbow: {rainbow}\nDeğiştirmek için /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] kullan.",
+      "updated": "Güncellendi: style={style}, position={position}, showRarity={showRarity}, width={width}, margin={margin}, rainbow={rainbow}\nDeğişikliklerin etkili olması için Claude Code'u yeniden başlat.",
+      "rainbow_default": "varsayılan (ROYGBIV)"
+    },
+    "statusline": {
+      "show": "Status line: {state}\nMod: {mode}\nAçıp kapatmak için /buddy statusline on|off, rate-limit barları eklemek için /buddy statusline combined kullan.\nDeğişikliklerden sonra Claude Code'u yeniden başlat.",
+      "enabled": "Status line etkinleştirildi ({mode} modu)! Uygulamak için Claude Code'u yeniden başlat.",
+      "enabled_note": "Not: bu {settingsPath} dosyasına `claude plugin uninstall`'ın kaldırmadığı bir entry yazar. Plugin'i kaldırmadan önce temizlemek için `/buddy uninstall` çalıştır.",
+      "disabled": "Status line devre dışı bırakıldı. Uygulamak için Claude Code'u yeniden başlat."
+    },
+    "uninstall": {
+      "header": "claude-buddy: settings.json temizliği tamamlandı.",
+      "statusline_removed": "  ✓ {settingsPath} dosyasından statusLine entry'si kaldırıldı",
+      "no_statusline": "  — buddy statusLine'ı mevcut değildi (kaldırılacak bir şey yok)",
+      "foreign_kept": "  ✓ buddy olmayan bir statusLine tespit edildi ve dokunulmadı",
+      "transient_removed": "  ✓ {stateDir} dizininden {count} geçici session dosyası kaldırıldı",
+      "data_preserved": "  — {stateDir} konumundaki companion verisi korundu",
+      "instructions_header": "Şimdi bu komutları Bash tool ile sırasıyla çalıştır:",
+      "cmd_uninstall": "claude plugin uninstall claude-buddy@claude-buddy",
+      "cmd_marketplace": "claude plugin marketplace remove claude-buddy",
+      "cmd_cache": "rm -rf {cacheDir}",
+      "footer": "Bu üç komuttan sonra plugin tamamen kaldırılmış olur. Uygulamak için Claude Code'u yeniden başlat."
+    }
+  },
+  "_verified": false
+}

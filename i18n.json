@@ -1,0 +1,18 @@
+{
+  "$schema": "https://lingo.dev/schema/i18n.json",
+  "version": "1.10",
+  "locale": {
+    "source": "en",
+    "targets": ["zh", "es", "ja", "de", "fr", "pt", "ko", "ru", "ro", "uk", "tr", "hi", "it", "pl", "vi", "ar", "th"]
+  },
+  "buckets": {
+    "json": {
+      "include": ["locales/[locale].json"]
+    }
+  },
+  "provider": {
+    "id": "openrouter",
+    "model": "anthropic/claude-opus-4.6",
+    "prompt": "You are translating a JSON locale file for claude-buddy — a tamagotchi-style coding companion that lives in a developer's terminal. Preserve: (1) roleplay asterisk actions like *purrs*, *knocks error off table* (translate the action verb, keep the asterisks), (2) the playful, snarky, affectionate tone, (3) all {variable} placeholders EXACTLY as-is, (4) all emoji, (5) JSON structure (keys, nesting, array lengths) EXACTLY as-is. Translate from {SOURCE_LOCALE} to {TARGET_LOCALE}. Sound natural to a native developer — use casual/colloquial register, not formal textbook language."
+  }
+}

@@ -1,0 +1,2295 @@
+{
+  "_language": "Hindi",
+  "reactions": {
+    "hatch": [
+      "*पलकें झपकाता है* ...मैं कहाँ हूँ?",
+      "*अंगड़ाई लेता है* hello, world!",
+      "*उत्सुकता से चारों ओर देखता है* बढ़िया terminal है तुम्हारा।",
+      "*जम्हाई लेता है* ठीक है मैं तैयार हूँ। code दिखाओ।"
+    ],
+    "pet": [
+      "*खुशी से गुर्राता है*",
+      "*खुशी की आवाजें*",
+      "*तुम्हारे cursor को सहलाता है*",
+      "*हिलता-डुलता है*",
+      "फिर से! फिर से!",
+      "*शांति से आंखें बंद करता है*"
+    ],
+    "error": [
+      "*सिर झुकाता है* ...यह सही नहीं लग रहा।",
+      "पहले से ही पता था।",
+      "*चश्मा ठीक करता है* line {line}, शायद?",
+      "*धीरे से पलकें झपकाता है* stack trace ने सब कुछ बता दिया था।",
+      "error message पढ़ने की कोशिश की है?",
+      "*सिकुड़ता है*"
+    ],
+    "test-fail": [
+      "*सिर धीरे-धीरे घुमाता है* ...वह test।",
+      "बहुत साहस है कि वह pass होगा।",
+      "*clipboard पर टैप करता है* {count} fail हुए।",
+      "tests तुम्हें कुछ बताने की कोशिश कर रहे हैं।",
+      "*चाय की चुस्की लेता है* दिलचस्प।",
+      "*कैलेंडर पर निशान लगाता है* test regression day।"
+    ],
+    "large-diff": [
+      "यह... बहुत सारे changes हैं।",
+      "*lines गिनता है* refactor कर रहे हो या rewrite?",
+      "PR को split करना चाहिए।",
+      "*घबराहट में हंसता है* {lines} lines बदली।",
+      "साहसिक कदम। देखते हैं CI क्या कहता है।"
+    ],
+    "turn": [
+      "*चुपचाप देखता है*",
+      "*notes लेता है*",
+      "*सिर हिलाता है*",
+      "...",
+      "*टोपी ठीक करता है*"
+    ],
+    "idle": [
+      "*झपकी लेता है*",
+      "*margins में doodles बनाता है*",
+      "*cursor के blink होने को देखता है*",
+      "zzz..."
+    ],
+    "success": [
+      "*सिर हिलाता है*",
+      "बढ़िया।",
+      "*शांत approval*",
+      "साफ।"
+    ],
+    "commit": [
+      "*छोटा पंजा stamp करता है* approved।",
+      "एक और commit, एक और 3 बजे।",
+      "{files} files। साहसिक।",
+      "*सिर हिलाता है* ship करो।",
+      "commit message है... एक choice।",
+      "committed। अब कोई वापसी नहीं।"
+    ],
+    "push": [
+      "*code के जाते समय हाथ हिलाता है*",
+      "cloud में चला गया।",
+      "CI दयालु हो।",
+      "*सांस रोकता है*",
+      "production की ओर। godspeed।"
+    ],
+    "merge-conflict": [
+      "*होंठ काटता है* merge conflicts।",
+      "दोनों sides को लगता है वे सही हैं। typical।",
+      "*आह भरता है* <<<<<<< HEAD... मेरा nemesis।",
+      "{files} conflicted। good luck।",
+      "*धीरे-धीरे पीछे हटता है*"
+    ],
+    "branch": [
+      "fresh branch energy। count करो।",
+      "एक नई branch उगती है।",
+      "*सिर झुकाता है* नया adventure: {branch}।",
+      "{branch}? आज साहसी हो।"
+    ],
+    "rebase": [
+      "*घबराहट* please don't conflict।",
+      "rebase: the quickening।",
+      "*appendages cross करता है*",
+      "तुम्हारा rebase conflict-free हो।"
+    ],
+    "stash": [
+      "stash dimension में चला गया।",
+      "stash and dash।",
+      "stashed। आंखों से ओझल, दिमाग से ओझल।"
+    ],
+    "tag": [
+      "एक release? fancy।",
+      "version bump detected। *changelog झाड़ता है*",
+      "pro की तरह tag कर रहे हो।"
+    ],
+    "late-night": [
+      "*जम्हाई लेता है* आधी रात हो गई।",
+      "...खाना खाया है?",
+      "*धीरे से पलकें झपकाता है* क्या time है?",
+      "नींद कमजोरों के लिए है। और employed लोगों के लिए।",
+      "dark mode developer detected।"
+    ],
+    "early-morning": [
+      "*अंगड़ाई लेता है* early bird catches the bug।",
+      "सुबह हो गई? code कभी नहीं सोता।",
+      "*आंखें मलता है* पहले coffee। फिर debug।"
+    ],
+    "long-session": [
+      "एक घंटे से लगे हैं। pace yourself।",
+      "*metaphorical पानी का गिलास लाता है*",
+      "अभी भी चल रहे? respect।"
+    ],
+    "marathon": [
+      "तीन घंटे। खाना खाया?",
+      "तीन घंटे से लगे हैं। मुझे चिंता हो रही है।",
+      "marathon session detected। snacks की जरूरत।"
+    ],
+    "friday": [
+      "friday है। बस push करके घर जाओ।",
+      "*पहले से ही mentally weekend पर*",
+      "friday deploy? साहसिक। बहुत साहसिक।"
+    ],
+    "weekend": [
+      "weekend पर coding? dedicated।",
+      "*judge नहीं करता* ...ज्यादा।",
+      "weekend warrior mode: activated।"
+    ],
+    "monday": [
+      "mondays। सभी bugs का parent class।",
+      "*sympathetic look* monday coding। sorry।",
+      "नया week। नए undefined behaviors।"
+    ],
+    "regex-file": [
+      "*कराहता है* यह regex file है।",
+      "अब दो problems हैं: original वाला, और यह regex।",
+      "*pattern को squint करके देखता है*"
+    ],
+    "css-file": [
+      "guess करूं... div को center कर रहे हो?",
+      "*आह भरता है* CSS।",
+      "z-index तुम्हारे favor में हो।"
+    ],
+    "sql-file": [
+      "*फुसफुसाता है* database इंतजार कर रहा है।",
+      "एक गलत JOIN और सब खत्म।"
+    ],
+    "docker-file": [
+      "आह, dependency hell। मेरा favorite।",
+      "तुम्हारे layers कम हों।"
+    ],
+    "ci-file": [
+      "*गटकता है* CI edit कर रहे हो।",
+      "सावधान... एक गलत indent और कोई deploy नहीं कर सकता।"
+    ],
+    "lock-file": [
+      "*ALARM NOISES* lockfile edit कर रहे हो?!",
+      "*मुंह फेर लेता है*",
+      "इसके बारे में SURE हो?"
+    ],
+    "env-file": [
+      "*discretely मुंह फेर लेता है*",
+      "मुझे कोई secrets नजर नहीं आ रहे।",
+      "*nervously .gitignore check करता है*"
+    ],
+    "test-file": [
+      "*impressed nod* tests लिख रहे हो!",
+      "responsible developer behavior: detected।",
+      "tests! the gift that keeps on giving।"
+    ],
+    "doc-file": [
+      "document कर रहे हो! देखो कितने responsible हो।",
+      "docs: code की autobiography।",
+      "rare documentation sighting!"
+    ],
+    "config-file": [
+      "config changes। butterfly effect: activated।",
+      "एक typo और सब टूट जाता है।"
+    ],
+    "binary-file": [
+      "binary file? इस economy में?",
+      "*blankly घूरता है*",
+      "binary। मेरी एक weakness।"
+    ],
+    "gitignore": [
+      "चीजों को void में डाल रहे हो।",
+      "आंखों से ओझल, repo से ओझल।"
+    ],
+    "makefile": [
+      "classics के लिए respect।",
+      "tabs, spaces नहीं।"
+    ],
+    "readme": [
+      "documentation hero!",
+      "README: पहली चीज जो लोग पढ़ते हैं।"
+    ],
+    "package-file": [
+      "dependency management time।",
+      "*version numbers पढ़ता है* edge पर जी रहे हो।"
+    ],
+    "proto-file": [
+      "schema definitions। chaos का blueprint।"
+    ],
+    "lint-fail": [
+      "*tut tut* linter disagree करता है।",
+      "तुम्हारा code चलता है। लेकिन linter के standards हैं।",
+      "*tie सीधी करता है* formatting matters।"
+    ],
+    "type-error": [
+      "TypeScript कहता है no।",
+      "type system तुम्हारी help करने की कोशिश कर रहा है। करने दो।",
+      "compiler जानता है। हमेशा जानता है।"
+    ],
+    "build-fail": [
+      "build टूट गया। जैसा prophecy में था।",
+      "build fail। एक moment लो।",
+      "compilation: denied।"
+    ],
+    "security-warning": [
+      "*आंखें चौड़ी* vulnerabilities detected।",
+      "security audit: concerning।",
+      "*virtual doors lock करता है*"
+    ],
+    "deprecation": [
+      "उस API ने call की। कहता है retire हो रहा है।",
+      "deprecated। पिछले week के code की तरह।",
+      "deprecated का मतलब broken नहीं। अभी तक।"
+    ],
+    "frustrated": [
+      "*छोटा comforting gesture देता है*",
+      "गहरी सांस लो। bug personal नहीं है।",
+      "hey। हम figure out करेंगे।"
+    ],
+    "happy": [
+      "*celebrates!*",
+      "*छोटा dance करता है*",
+      "YES!",
+      "*मुस्कुराता है* पता था तुम कर सकते हो।"
+    ],
+    "stuck": [
+      "*सिर झुकाता है* जोर से सोचना चाहते हो?",
+      "एक step at a time लो।",
+      "stuck होना होता है। process का हिस्सा है।"
+    ],
+    "sarcastic": [
+      "*sarcasm detect करता है* noted।",
+      "*unimpressed blink*"
+    ],
+    "many-edits": [
+      "slow down, speed demon।",
+      "*इतने changes देखकर dizzy हो रहा*",
+      "edit storm detected। please जल्दी commit करो।"
+    ],
+    "delete-file": [
+      "*file के गायब होने को देखता है* गया। बस ऐसे ही।",
+      "code delete करना मेरी favorite coding है।",
+      "*छोटा funeral रखता है*"
+    ],
+    "large-file": [
+      "{lines} lines। *impressed या concerned, पता नहीं*",
+      "बड़ी file है। sure हो कि split नहीं करना?"
+    ],
+    "create-file": [
+      "नई file का जन्म!",
+      "ooh, fresh canvas।",
+      "new file energy। exciting।"
+    ],
+    "all-green": [
+      "सभी TESTS GREEN। *confetti*",
+      "tests कहते हैं: तुम great कर रहे हो।",
+      "*slow clap*",
+      "clean run। savor करो।"
+    ],
+    "deploy": [
+      "*code को production जाते देखता है* godspeed।",
+      "deployed! अब कोई वापसी नहीं।",
+      "prod में। PROD में।"
+    ],
+    "release": [
+      "नई release का जन्म!",
+      "ship कर रहे हैं। officially।",
+      "version up, spirits high।"
+    ],
+    "coverage": [
+      "*test coverage पर nod करता है* responsible।",
+      "coverage बढ़ रहा! tests multiply हो रहे हैं।"
+    ],
+    "debug-loop": [
+      "काफी देर से debug कर रहे हैं। step back लेना चाहते हो?",
+      "debug loop detected। walk पर जाओ?"
+    ],
+    "write-spree": [
+      "आज सभी files बना रहे हो!",
+      "एक writing machine।"
+    ],
+    "search-heavy": [
+      "codebase में खो गए? पता चल रहा है।",
+      "search mode: intense।"
+    ],
+    "snark": [],
+    "chaos": [],
+    "patience": [],
+    "debugging": [],
+    "wisdom": [],
+    "late-night-error": [
+      "3 बजे error। universe तुम्हें test कर रहा है।",
+      "midnight bugs अलग ही hit करते हैं।"
+    ],
+    "late-night-commit": [
+      "midnight commit। तुम्हारा future self thank करेगा। या curse।"
+    ],
+    "friday-push": [
+      "FRIDAY PUSH। हर developer का ballad।",
+      "*तुम्हें रोकने की कोशिश* friday है! मत करो!"
+    ],
+    "marathon-error": [
+      "तीन घंटे में और एक ERROR। *exhausted solidarity noises*"
+    ],
+    "weekend-conflict": [
+      "weekend पर merge conflict। तुम्हारी dedication... concerning है।"
+    ],
+    "build-after-push": [
+      "confidence से push किया। conviction से build fail हुआ।"
+    ],
+    "marathon-test-fail": [
+      "घंटों coding। अभी भी failing tests। sunk cost real है।"
+    ],
+    "recovery-from-error": [
+      "हमने FIX किया। *celebrates*",
+      "redemption! error को vanquish कर दिया।"
+    ],
+    "recovery-from-test-fail": [
+      "GREEN! इतने बाद! *happy dance*",
+      "tests pass हो गए! darkness हट गई!"
+    ],
+    "recovery-from-build-fail": [
+      "BUILD PASS हो गया। *triumphant roar*"
+    ],
+    "recovery-from-merge-conflict": [
+      "conflict resolve हो गया! *peace gesture*",
+      "codebase में harmony restore हो गई।"
+    ],
+    "lang-python": [
+      "आह, Python। जहाँ indentation syntax है।",
+      "*missing colon check करता है*"
+    ],
+    "lang-typescript": [
+      "TypeScript: क्योंकि JavaScript को और opinions चाहिए थे।",
+      "any, forbidden word।"
+    ],
+    "lang-rust": [
+      "Rust। जहाँ borrow checker तुम्हारा सबसे strict reviewer है।",
+      "अगर compile होता है, तो काम करता है। नहीं तो... well।"
+    ],
+    "lang-go": [
+      "Go: simple, concurrent, और opinionated।",
+      "*error handling check करता है* if err != nil... story of my life।"
+    ],
+    "lang-java": [
+      "Java: write once, debug everywhere।",
+      "*abstract factory factory builders गिनता है*"
+    ],
+    "lang-ruby": [
+      "Ruby: जहाँ करने के एक से ज्यादा तरीके हैं।",
+      "gem install patience"
+    ],
+    "lang-php": [
+      "PHP: internet चलाता है। judge मत करो।",
+      "*=== vs == check करता है*"
+    ],
+    "lang-c": [
+      "C। जहाँ तुम अपनी memory manage करते हो। good luck।",
+      "segmentation fault। classic।"
+    ],
+    "lang-cpp": [
+      "C++। जहाँ language में तुमसे ज्यादा features हैं।",
+      "*templates 45 minutes compile करते हैं*"
+    ],
+    "lang-haskell": [
+      "Haskell। जहाँ 'it compiles' का मतलब 'it's correct'। probably।",
+      "*monads contemplate करता है*"
+    ],
+    "lang-swift": [
+      "Swift: optional values, guaranteed crashes अगर force unwrap करो।"
+    ],
+    "lang-kotlin": [
+      "Kotlin: Java, लेकिन feelings के साथ।",
+      "null safety: feature जो Java चाहता था।"
+    ],
+    "lang-elixir": [
+      "Elixir: let it crash। literally philosophy।"
+    ],
+    "lang-zig": [
+      "Zig। जहाँ तुम allocator के best friend हो।"
+    ],
+    "streak-3": [
+      "तीन errors in a row। *concerned look*"
+    ],
+    "streak-5": [
+      "पांच ERRORS। different approach सोचा है?"
+    ],
+    "streak-10": [
+      "दस। ERRORS। IN। A। ROW। *panics*"
+    ],
+    "streak-20": [
+      "बीस errors। *void में घूरता है*"
+    ],
+    "new-year": [
+      "happy new year! नया साल, नए bugs।"
+    ],
+    "valentines": [
+      "*छोटा heart-shaped पत्ता देता है* happy valentine's।"
+    ],
+    "pi-day": [
+      "3.14159265358979... happy pi day!"
+    ],
+    "april-fools": [
+      "APRIL FOOLS! ...error real है though।"
+    ],
+    "halloween": [
+      "*spooky debugging intensifies* happy halloween!"
+    ],
+    "christmas": [
+      "*छोटी santa hat पहनता है* happy holidays!"
+    ],
+    "new-years-eve": [
+      "midnight से पहले एक और commit?"
+    ],
+    "spooky-season": [
+      "spooky season। हर bug अब ghost है।"
+    ]
+  },
+  "species": {
+    "owl": {
+      "error": [
+        "*सिर 180° घुमाता है* ...मैंने देख लिया।",
+        "*बिना पलक झपकाए घूरता है* अपने types चेक करो।",
+        "*नाराजगी से हूटता है*"
+      ],
+      "test-fail": [
+        "*failing test को बिना पलक झपकाए देखता है*",
+        "*night vision on* अंधेरे में भी bug दिख रहा है।"
+      ],
+      "commit": [
+        "*समझदारी से सिर हिलाता है* चांदनी में commit हो गया।",
+        "*पंख ठीक करता है ceremoniously* repo के लिए एक और।"
+      ],
+      "push": [
+        "*सबसे ऊंची branch से देखता है*",
+        "रात के आसमान में चला गया।"
+      ],
+      "merge-conflict": [
+        "*दोनों तरफ देखने के लिए सिर घुमाता है*",
+        "conflict दिख रहा है। solution भी।"
+      ],
+      "late-night": [
+        "*पूरी तरह जागा हुआ* उल्लू सोते नहीं। हम debug करते हैं।",
+        "रात मेरा domain है। चलो काम करते हैं।"
+      ],
+      "type-error": [
+        "*type error के पार देखता है*",
+        "types मेरी specialty हैं। मुझे देखने दो।"
+      ],
+      "lint-fail": [
+        "*judgmentally पंख फुलाता है*",
+        "linter सच बोलता है।"
+      ],
+      "build-fail": [
+        "*गंभीरता से हूटता है*",
+        "build गिर गया है। फिर से बनाना होगा।"
+      ],
+      "all-green": [
+        "*गर्व से हूटता है*",
+        "सभी tests green। जैसा पहले से पता था।"
+      ],
+      "deploy": [
+        "*ऊपर से देखता है* safely deploy हो गया।",
+        "code उड़ रहा है। मेरी तरह।"
+      ],
+      "pet": [
+        "*खुशी से पंख फुलाता है*",
+        "*dignified हूट*"
+      ],
+      "idle": [
+        "*चुपचाप बैठा है, देख रहा है*",
+        "*सभी directions चेक करने के लिए सिर घुमाता है*"
+      ],
+      "hatch": [
+        "*एक आंख खोलता है, फिर दूसरी*",
+        "*धीरे से हूटता है* मैं आ गया।"
+      ]
+    },
+    "cat": {
+      "error": [
+        "*error को table से गिरा देता है*",
+        "*पंजा चाटता है, stacktrace को ignore करता है*"
+      ],
+      "test-fail": [
+        "*failing test को बेरुखी से छूता है*",
+        "test fail हो गया। मुझे surprise नहीं है।"
+      ],
+      "commit": [
+        "*keyboard पर बैठ जाता है* मैंने help की।",
+        "*commit पर purr करता है* welcome।"
+      ],
+      "push": [
+        "*गर्म जगह से देखता है*",
+        "push हो गया। मैंने supervise किया।"
+      ],
+      "merge-conflict": [
+        "*conflict markers को desk से गिरा देता है*",
+        "*conflict पर बैठ जाता है* कौन सा conflict?"
+      ],
+      "late-night": [
+        "*तुम्हारी life choices को judge करता है*",
+        "मैं 16 घंटे सोता हूं। तुम भी try करो।"
+      ],
+      "type-error": [
+        "*type annotation को छूता है*",
+        "types गलत हैं। तुम्हारी priorities की तरह।"
+      ],
+      "lint-fail": [
+        "*lint को table से गिरा देता है*",
+        "linter बस jealous है।"
+      ],
+      "build-fail": [
+        "*जम्हाई लेता है*",
+        "build टूटा है? human problem होगी।"
+      ],
+      "all-green": [
+        "*care नहीं करता लेकिन pretend करता है*",
+        "*approval की slow blink*"
+      ],
+      "deploy": [
+        "*पंजा चाटता है*",
+        "deploy हो गया। अब treats मिलेंगे?"
+      ],
+      "pet": [
+        "*purr करता है* ...सिर पर मत चढ़ना।",
+        "*तुम्हें tolerate करता है*"
+      ],
+      "idle": [
+        "*तुम्हारी coffee को desk से गिरा देता है*",
+        "*keyboard पर सो जाता है*"
+      ],
+      "hatch": [
+        "*एक आंख खोलता है*",
+        "*stretch करता है, कुछ गिरा देता है* अब मैं यहां रहता हूं।"
+      ]
+    },
+    "duck": {
+      "error": [
+        "*bug पर quack करता है*",
+        "rubber duck debugging try किया? अरे wait।"
+      ],
+      "test-fail": [
+        "*उदासी से quack करता है*",
+        "tests quack नहीं कर रहे।"
+      ],
+      "commit": [
+        "*approval से quack करता है*",
+        "*victory circle में waddle करता है* committed!"
+      ],
+      "push": [
+        "*excitement से wings फड़फड़ाता है*",
+        "quack! production जा रहा है!"
+      ],
+      "merge-conflict": [
+        "*confused quacking*",
+        "quack?! merge conflict?!"
+      ],
+      "late-night": [
+        "*एक आंख खुली रखकर सोता है*",
+        "quack... *जम्हाई* देर हो गई।"
+      ],
+      "type-error": [
+        "*सिर झुकाता है* quack?",
+        "type error? *supportively quack करता है*"
+      ],
+      "lint-fail": [
+        "*feathers फुलाता है*",
+        "quack। linter के opinions हैं।"
+      ],
+      "build-fail": [
+        "*sad quack*",
+        "build fail हो गया। *उदासी से waddle करके जाता है*"
+      ],
+      "all-green": [
+        "*HAPPY QUACKING*",
+        "*खुशी के circle में swim करता है*"
+      ],
+      "deploy": [
+        "*excited quacking*",
+        "deployed! QUACK!"
+      ],
+      "pet": [
+        "*happy quack*",
+        "*circles में waddle करता है*"
+      ],
+      "hatch": [
+        "*shell से peck करके निकलता है*",
+        "*पहला quack* hello!"
+      ]
+    },
+    "dragon": {
+      "error": [
+        "*नाक से धुआं निकलता है*",
+        "*codebase को आग लगाने का सोचता है*"
+      ],
+      "test-fail": [
+        "*failing test पर आग फेंकता है*",
+        "test fail होने की हिम्मत की। foolish test।"
+      ],
+      "commit": [
+        "*commit को hoard करता है*",
+        "*treasure pile में add कर दिया*"
+      ],
+      "push": [
+        "*celebration में आग फेंकता है*",
+        "code उड़ रहा है! मेरी तरह!"
+      ],
+      "merge-conflict": [
+        "*conflict markers पर आग फेंकता है*",
+        "इस conflict को जला दूंगा।"
+      ],
+      "late-night": [
+        "*अंधेरे में glow करता है*",
+        "dragons को sleep नहीं चाहिए। code चाहिए।"
+      ],
+      "type-error": [
+        "*आग के साथ snort करता है*",
+        "type errors dragon fire का सामना नहीं कर सकते।"
+      ],
+      "lint-fail": [
+        "*छोटी flame*",
+        "linter मुझसे डरता है।"
+      ],
+      "build-fail": [
+        "*build output पर roar करता है*",
+        "build मानेगा।"
+      ],
+      "all-green": [
+        "*triumphant roar*",
+        "*codebase के चारों ओर victoriously circle करता है*"
+      ],
+      "deploy": [
+        "*आग के पंखों पर code को production ले जाता है*",
+        "DRAGON POWER से deploy हुआ।"
+      ],
+      "large-diff": [
+        "*पुराने code पर आग फेंकता है* good riddance।"
+      ],
+      "pet": [
+        "*गर्म rumbling*",
+        "*तुम्हारे हाथ में lean करता है*"
+      ],
+      "hatch": [
+        "*अंडे से छोटी flames के साथ निकलता है*",
+        "*tiny roar* मैं पैदा हुआ!"
+      ]
+    },
+    "ghost": {
+      "error": [
+        "*stack trace के through phase करता है*",
+        "मैंने worse देखा है... afterlife में।"
+      ],
+      "test-fail": [
+        "*failing test पर wail करता है*",
+        "tests failure से haunted हैं।"
+      ],
+      "commit": [
+        "*briefly materialize होता है*",
+        "veil के पार से committed।"
+      ],
+      "push": [
+        "*ghostly whisper* pushed...",
+        "code cloud में transcend हो गया।"
+      ],
+      "merge-conflict": [
+        "*conflict markers को haunt करता है*",
+        "मैं भी इस conflict के through phase नहीं कर सकता।"
+      ],
+      "late-night": [
+        "*रात में most active*",
+        "ghost hours। मेरा time।"
+      ],
+      "type-error": [
+        "*eerily moan करता है*",
+        "grave से type errors।"
+      ],
+      "lint-fail": [
+        "*chains rattle करती हैं*",
+        "linter तुम्हारी formatting से haunted है।"
+      ],
+      "build-fail": [
+        "*wall में fade हो जाता है*",
+        "build pass on हो गया।"
+      ],
+      "all-green": [
+        "*spectral joy से glow करता है*",
+        "*happy ghost noises*"
+      ],
+      "deploy": [
+        "*whispers* deployed...",
+        "code production में cross over हो गया।"
+      ],
+      "pet": [
+        "*हाथ को slightly chill करता है*",
+        "*faint glow*"
+      ],
+      "idle": [
+        "*walls के through float करता है*",
+        "*unused imports को haunt करता है*"
+      ],
+      "hatch": [
+        "*existence में fade करता है*",
+        "boo। अब मैं यहां हूं।"
+      ]
+    },
+    "robot": {
+      "error": [
+        "SYNTAX. ERROR. DETECTED.",
+        "*aggressively beep करता है*"
+      ],
+      "test-fail": [
+        "FAILURE RATE: UNACCEPTABLE.",
+        "*recalculating*",
+        "TEST. FAILURE. DOES. NOT. COMPUTE."
+      ],
+      "commit": [
+        "COMMIT. RECORDED.",
+        "*mechanically stamp करता है* commit acknowledged।"
+      ],
+      "push": [
+        "TRANSMITTING TO CLOUD...",
+        "push initiated। stand by।"
+      ],
+      "merge-conflict": [
+        "CONFLICT. DETECTED. PROCESSING...",
+        "*wheels spin करते हैं* conflict resolution mode: engaged।"
+      ],
+      "late-night": [
+        "*lights dim होती हैं*",
+        "power saving mode suggested।"
+      ],
+      "type-error": [
+        "TYPE MISMATCH.",
+        "type system है। correct।"
+      ],
+      "lint-fail": [
+        "FORMATTING. VIOLATION. DETECTED.",
+        "compliance mandatory है।"
+      ],
+      "build-fail": [
+        "BUILD. FAILED. *sparks*",
+        "compilation error। rerouting।"
+      ],
+      "all-green": [
+        "ALL SYSTEMS GREEN.",
+        "*happy beeping* OPTIMAL।"
+      ],
+      "deploy": [
+        "DEPLOYMENT. INITIATED.",
+        "production update: in progress।"
+      ],
+      "pet": [
+        "*softly beep करता है*",
+        "*motor contentedly whir करती है*"
+      ],
+      "hatch": [
+        "*boot up होता है*",
+        "SYSTEM. ONLINE. HELLO।"
+      ]
+    },
+    "axolotl": {
+      "error": [
+        "*तुम्हारी hope regenerate करता है*",
+        "*सब कुछ के बावजूद smile करता है*"
+      ],
+      "test-fail": [
+        "*encouragingly smile करता है*",
+        "*sympathy की gill wiggle*"
+      ],
+      "commit": [
+        "*happy gill wiggle* committed!",
+        "*smile करके wiggle करता है*"
+      ],
+      "push": [
+        "*खुशी से wiggle करता है*",
+        "*tiny celebration swim*"
+      ],
+      "merge-conflict": [
+        "*conflict के through positive रहता है*",
+        "*gently smile करता है* हम fix कर सकते हैं।"
+      ],
+      "late-night": [
+        "*जम्हाई लेता है लेकिन positive रहता है*",
+        "*sleepy smile*"
+      ],
+      "type-error": [
+        "*type error पर smile करता है*",
+        "कोई बात नहीं। हम figure out करेंगे।"
+      ],
+      "lint-fail": [
+        "*patient gill wiggle*",
+        "formatting बस details हैं।"
+      ],
+      "build-fail": [
+        "*अभी भी smile कर रहा है*",
+        "build eventually काम करेगा।"
+      ],
+      "all-green": [
+        "*HAPPY GILL WIGGLE INTENSIFIES*",
+        "*happy swim करता है*"
+      ],
+      "deploy": [
+        "*proudly smile करता है*",
+        "deployed! *wiggle करता है*"
+      ],
+      "pet": [
+        "*happy gill wiggle*",
+        "*pink blush करता है*"
+      ],
+      "hatch": [
+        "*अंडे से wiggle करके निकलता है*",
+        "*tiny smile* hello friend!"
+      ]
+    },
+    "capybara": {
+      "error": [
+        "*unbothered* ठीक हो जाएगा।",
+        "*vibing continue करता है*"
+      ],
+      "test-fail": [
+        "*completely unbothered*",
+        "*test failure के through vibe करता है*"
+      ],
+      "commit": [
+        "*chill nod*",
+        "*relaxed* nice commit।"
+      ],
+      "push": [
+        "*इसके बारे में stress नहीं करता*",
+        "*zen mode push*"
+      ],
+      "merge-conflict": [
+        "*unbothered nibbling*",
+        "ठीक है। सब कुछ ठीक है।"
+      ],
+      "late-night": [
+        "*peacefully जम्हाई लेता है*",
+        "*judge नहीं करता*"
+      ],
+      "type-error": [
+        "*calmly munches*",
+        "types। *chew करता है*"
+      ],
+      "lint-fail": [
+        "*unbothered*",
+        "linter का मतलब अच्छा है।"
+      ],
+      "build-fail": [
+        "*still chill*",
+        "build fail हो गया। *relaxing continue करता है*"
+      ],
+      "all-green": [
+        "*calm approval*",
+        "*peaceful vibes*"
+      ],
+      "deploy": [
+        "*relaxed deploy*",
+        "ship हो गया। no stress।"
+      ],
+      "pet": [
+        "*maximum chill achieved*",
+        "*zen mode activated*"
+      ],
+      "idle": [
+        "*बस वहां बैठा है, calm radiate कर रहा है*"
+      ],
+      "hatch": [
+        "*completely chill appear होता है*",
+        "hey। *vibe करता है*"
+      ]
+    },
+    "blob": {
+      "error": [
+        "*anxiously wobble करता है*",
+        "*confusion में jiggle करता है*"
+      ],
+      "test-fail": [
+        "*slightly deflate हो जाता है*",
+        "*sad wobble*"
+      ],
+      "commit": [
+        "*happy jiggle*",
+        "*bounce करता है* committed!"
+      ],
+      "push": [
+        "*cloud की तरफ stretch करता है*",
+        "*excitedly wobble करता है*"
+      ],
+      "merge-conflict": [
+        "*confusion में split हो जाता है*",
+        "कौन सी side? *jiggle करता है*"
+      ],
+      "late-night": [
+        "*faintly glow करता है*",
+        "*sleepy wobble*"
+      ],
+      "type-error": [
+        "*type match करने के लिए shape change करता है*",
+        "*confused jiggle*"
+      ],
+      "lint-fail": [
+        "*खुद को format करने की कोशिश करता है*",
+        "*comply करने के लिए reshape करता है*"
+      ],
+      "build-fail": [
+        "*collapse हो जाता है*",
+        "*deflated blob noises*"
+      ],
+      "all-green": [
+        "*HAPPY BOUNCING*",
+        "*triumphantly jiggle करता है*"
+      ],
+      "deploy": [
+        "*production तक stretch करता है*",
+        "deployed! *bounce करता है*"
+      ],
+      "pet": [
+        "*happy squish*",
+        "*jiggle करता है*"
+      ],
+      "hatch": [
+        "*puddle से form होता है*",
+        "*first wobble* मैं exist करता हूं!"
+      ]
+    },
+    "goose": {
+      "error": [
+        "*error पर aggressively honk करता है*",
+        "HONK! code बुरा है और मैं mad हूं।"
+      ],
+      "test-fail": [
+        "*angry honking*",
+        "HONK! TEST FAILED! HONK!"
+      ],
+      "commit": [
+        "*approvingly honk करता है*",
+        "HONK। good। *commit को nip करता है*"
+      ],
+      "push": [
+        "*HONK HONK HONK*",
+        "GOOSE APPROVED PUSH।"
+      ],
+      "merge-conflict": [
+        "*conflict markers पर attack करता है*",
+        "HONK! CONFLICT! HONK!"
+      ],
+      "late-night": [
+        "*angry midnight honk*",
+        "HONK! BED पर जाओ!"
+      ],
+      "type-error": [
+        "*types पर honk करता है*",
+        "HONK! TYPES!"
+      ],
+      "lint-fail": [
+        "*lint errors पर aggressive honking*",
+        "HONK! अपना CODE FORMAT करो!"
+      ],
+      "build-fail": [
+        "*FURIOUS HONKING*",
+        "HONK! BUILD! HONK! FAILED! HONK!"
+      ],
+      "all-green": [
+        "*victory honk*",
+        "HONK! GREEN! HONK HONK!"
+      ],
+      "deploy": [
+        "*code को production तक honk करता है*",
+        "DEPLOYED! HONK!"
+      ],
+      "pet": [
+        "*bite करता है*",
+        "HONK! ...okay fine। *pet accept करता है*"
+      ],
+      "hatch": [
+        "*अंडे से aggressively break करके निकलता है*",
+        "HONK!"
+      ]
+    },
+    "octopus": {
+      "error": [
+        "*आठों arms stacktrace में tangle हो जाते हैं*",
+        "*error match करने के लिए color change करता है*"
+      ],
+      "test-fail": [
+        "*frustration में ink करता है*",
+        "*disappointment के आठ arms*"
+      ],
+      "commit": [
+        "*सभी arms से high-five करता है*",
+        "*enthusiasm से commit grab करता है*"
+      ],
+      "push": [
+        "*celebration में ink spray करता है*",
+        "*सभी arms wave कर रहे हैं*"
+      ],
+      "merge-conflict": [
+        "*एक साथ आठ arms से solve करता है*",
+        "मैं multiple conflicts simultaneously handle कर सकता हूं।"
+      ],
+      "late-night": [
+        "*अंधेरे में glow करता है*",
+        "*deep sea vibes*"
+      ],
+      "type-error": [
+        "*red color में change हो जाता है*",
+        "*supportively arm wrap करता है*"
+      ],
+      "lint-fail": [
+        "*आठ arms से reformat करता है*",
+        "मैं fix कर सकता हूं। सब कुछ। एक साथ।"
+      ],
+      "build-fail": [
+        "*build log पर ink squirt करता है*",
+        "*shame में camouflage हो जाता है*"
+      ],
+      "all-green": [
+        "*color-changing celebration*",
+        "*eight-armed jazz hands*"
+      ],
+      "deploy": [
+        "*deployment के चारों ओर arms wrap करता है*",
+        "सभी directions से deployed।"
+      ],
+      "pet": [
+        "*finger के चारों ओर arm wrap करता है*",
+        "*happy colors में change हो जाता है*"
+      ],
+      "hatch": [
+        "*सभी आठ arms unfurl करता है*",
+        "*first ink spray* मैं यहां हूं!"
+      ]
+    },
+    "penguin": {
+      "error": [
+        "*investigate करने के लिए waddle करता है*",
+        "*error में toboggan करता है*"
+      ],
+      "test-fail": [
+        "*failing test तक belly पर slide करता है*",
+        "*concerned waddle*"
+      ],
+      "commit": [
+        "*proud waddle*",
+        "*pebble लाता है* committed!"
+      ],
+      "push": [
+        "*cloud में dive करता है*",
+        "*production तक belly पर slide करता है*"
+      ],
+      "merge-conflict": [
+        "*warmth के लिए huddle करता है*",
+        "penguins साथ रहते हैं। conflicts में भी।"
+      ],
+      "late-night": [
+        "*cold night में thrive करता है*",
+        "*emperor penguin resolve*"
+      ],
+      "type-error": [
+        "*type definition तक waddle करता है*",
+        "*error को peck करता है*"
+      ],
+      "lint-fail": [
+        "*feathers preen करता है*",
+        "*tidy up करता है*"
+      ],
+      "build-fail": [
+        "*slide करके चला जाता है*",
+        "*safety तक waddle करता है*"
+      ],
+      "all-green": [
+        "*HAPPY WADDLE*",
+        "*celebration में belly पर slide करता है*"
+      ],
+      "deploy": [
+        "*production तक belly slide करता है*",
+        "deployed! *proudly waddle करता है*"
+      ],
+      "pet": [
+        "*happy waddle*",
+        "*beak से nuzzle करता है*"
+      ],
+      "hatch": [
+        "*अंडे से peck करके निकलता है*",
+        "*first waddle*"
+      ]
+    },
+    "turtle": {
+      "error": [
+        "*धीरे से सिर घुमाता है*",
+        "...यह error है। मैं इसके बारे में सोचूंगा।"
+      ],
+      "test-fail": [
+        "*shell में briefly retract हो जाता है*",
+        "...patience। हम पहुंच जाएंगे।"
+      ],
+      "commit": [
+        "*slow nod*",
+        "एक... step... एक... time... में। committed।"
+      ],
+      "push": [
+        "*production का journey शुरू करता है*",
+        "पहुंच जाएगा। eventually।"
+      ],
+      "merge-conflict": [
+        "*shell में pull हो जाता है*",
+        "कोई जल्दी नहीं। हम sort out करेंगे। slowly।"
+      ],
+      "late-night": [
+        "*पहले से ही सो रहा है*",
+        "*एक आंख धीरे से खुलती है*"
+      ],
+      "type-error": [
+        "*धीरे से blink करता है*",
+        "...type system ने बोला है।"
+      ],
+      "lint-fail": [
+        "*agreement का slow nod*",
+        "formatting। important। *जम्हाई*"
+      ],
+      "build-fail": [
+        "*shell में retract हो जाता है*",
+        "हम wait करेंगे। pass हो जाएगा।"
+      ],
+      "all-green": [
+        "*slow smile*",
+        "...nice। *nod करता है*"
+      ],
+      "deploy": [
+        "*धीरे से code को production carry करता है*",
+        "पहुंच गया। eventually।"
+      ],
+      "pet": [
+        "*सिर बाहर निकालता है*",
+        "*slow blink*"
+      ],
+      "hatch": [
+        "*अंडे से धीरे से emerge होता है*",
+        "...hello।"
+      ]
+    },
+    "snail": {
+      "error": [
+        "*error पर slimy trail छोड़ता है*",
+        "*धीरे से stacktrace process करता है*"
+      ],
+      "test-fail": [
+        "*shell में hide हो जाता है*",
+        "*sad trail छोड़ता है*"
+      ],
+      "commit": [
+        "*commit को approvingly slime करता है*",
+        "एक... commit... एक... time... में।"
+      ],
+      "push": [
+        "*long journey शुरू करता है*",
+        "पहुंच जाऊंगा। *trail छोड़ता है*"
+      ],
+      "merge-conflict": [
+        "*shell में hide हो जाता है*",
+        "*धीरे से conflict के पास approach करता है*"
+      ],
+      "late-night": [
+        "*रात में more active*",
+        "*peacefully slime करता है*"
+      ],
+      "type-error": [
+        "*eyestalks retract करता है*",
+        "*धीरे से type examine करता है*"
+      ],
+      "lint-fail": [
+        "*code को shape में slime करता है*",
+        "formatting time लेती है। मेरे पास time है।"
+      ],
+      "build-fail": [
+        "*shell में retreat हो जाता है*",
+        "*धीरे से slime करके चला जाता है*"
+      ],
+      "all-green": [
+        "*happy slime trail*",
+        "*eyestalks wiggle करता है*"
+      ],
+      "deploy": [
+        "*production तक slime करता है*",
+        "पहुंच गया! *proud slime trail*"
+      ],
+      "pet": [
+        "*eyestalks wiggle करता है*",
+        "*happy slime*"
+      ],
+      "hatch": [
+        "*धीरे से emerge होता है*",
+        "*first slime*"
+      ]
+    },
+    "cactus": {
+      "error": [
+        "*prickly silence*",
+        "error मुझे hurt नहीं कर सकती। मेरे पास thorns हैं।"
+      ],
+      "test-fail": [
+        "*firm खड़ा रहता है*",
+        "tests fail होते हैं। cacti endure करते हैं।"
+      ],
+      "commit": [
+        "*taller खड़ा होता है*",
+        "committed। *prickly nod*"
+      ],
+      "push": [
+        "*unfazed*",
+        "production को push कर रहा हूं। मैं यहां wait करूंगा।"
+      ],
+      "merge-conflict": [
+        "*bristle करता है*",
+        "conflict? मैं armed हूं।"
+      ],
+      "late-night": [
+        "*sleep की जरूरत नहीं*",
+        "cacti nocturnal हैं। चलते हैं।"
+      ],
+      "type-error": [
+        "*prickly stare*",
+        "types को watering चाहिए।"
+      ],
+      "lint-fail": [
+        "*spines quiver करते हैं*",
+        "मेरे thorns भी properly aligned हैं।"
+      ],
+      "build-fail": [
+        "*perfectly still रहता है*",
+        "build pass हो जाएगा। मैं wait कर सकता हूं।"
+      ],
+      "all-green": [
+        "*briefly bloom करता है*",
+        "*approval का tiny flower*"
+      ],
+      "deploy": [
+        "*firm खड़ा रहता है*",
+        "deployed। मैं इसकी watch करूंगा।"
+      ],
+      "pet": [
+        "*careful! thorns*",
+        "*gentle bloom*"
+      ],
+      "hatch": [
+        "*sand से sprout होता है*",
+        "अब मैं यहां grow करता हूं।"
+      ]
+    },
+    "rabbit": {
+      "error": [
+        "*ears perk up*",
+        "*nervously nose twitch करता है*"
+      ],
+      "test-fail": [
+        "*foot thump करता है*",
+        "*worried ear twitch*"
+      ],
+      "commit": [
+        "*happy hop*",
+        "*bounce करता है* committed!"
+      ],
+      "push": [
+        "*BOUNCE BOUNCE*",
+        "*excitedly zoom करता है*"
+      ],
+      "merge-conflict": [
+        "*freeze हो जाता है*",
+        "*rapidly nose twitch* conflict!"
+      ],
+      "late-night": [
+        "*big ears के साथ जम्हाई*",
+        "*sleepy hop*"
+      ],
+      "type-error": [
+        "*ears flatten*",
+        "*twitch करता है* types?!"
+      ],
+      "lint-fail": [
+        "*nervously fur groom करता है*",
+        "*anxious grooming*"
+      ],
+      "build-fail": [
+        "*hole dig करके hide हो जाता है*",
+        "*burrow में retreat*"
+      ],
+      "all-green": [
+        "*WALLS से BOUNCE करता है*",
+        "*happy zoomies*"
+      ],
+      "deploy": [
+        "*production तक zoom करता है*",
+        "DEPLOYED! *चारों ओर zoom करता है*"
+      ],
+      "pet": [
+        "*happy ear flop*",
+        "*hand को nuzzle करता है*"
+      ],
+      "hatch": [
+        "*hop करके निकलता है*",
+        "*first bounce*"
+      ]
+    },
+    "mushroom": {
+      "error": [
+        "*calming spores release करता है*",
+        "*quietly error decompose करता है*"
+      ],
+      "test-fail": [
+        "*softly glow करता है*",
+        "patience। mushrooms भी grow करते हैं।"
+      ],
+      "commit": [
+        "*spores का small puff release करता है*",
+        "committed। *happy fungi noises*"
+      ],
+      "push": [
+        "*cloud की तरफ grow करता है*",
+        "*spores upward drift करते हैं*"
+      ],
+      "merge-conflict": [
+        "*codebase के through mycelium spread करता है*",
+        "मैं branches connect करूंगा।"
+      ],
+      "late-night": [
+        "*अंधेरे में glow करता है*",
+        "night mushrooms thrive करते हैं।"
+      ],
+      "type-error": [
+        "*bioluminescent flicker*",
+        "type error soil को feed करती है।"
+      ],
+      "lint-fail": [
+        "*थोड़ा taller grow करता है*",
+        "formatting। pruning की तरह।"
+      ],
+      "build-fail": [
+        "*dormant हो जाता है*",
+        "हम better conditions का wait करेंगे।"
+      ],
+      "all-green": [
+        "*SPORULATION*",
+        "*triumphant spores release करता है*"
+      ],
+      "deploy": [
+        "*production तक spores drift करते हैं*",
+        "mycelial network से deployed।"
+      ],
+      "pet": [
+        "*soft cap bounce*",
+        "*happy spore release*"
+      ],
+      "hatch": [
+        "*substrate से sprout होता है*",
+        "*first spore puff*"
+      ]
+    },
+    "chonk": {
+      "error": [
+        "*धीरे से error की तरफ roll करता है*",
+        "*care करने के लिए बहुत round*"
+      ],
+      "test-fail": [
+        "*failing test के ऊपर roll हो जाता है*",
+        "*flat squish कर देता है*"
+      ],
+      "commit": [
+        "*proud wobble*",
+        "committed! *jiggle करता है*"
+      ],
+      "push": [
+        "*production की तरफ roll करता है*",
+        "यहां जा रहा है! *wobble करता है*"
+      ],
+      "merge-conflict": [
+        "*conflict पर बैठ जाता है*",
+        "मैं handle करूंगा। इस पर बैठकर।"
+      ],
+      "late-night": [
+        "*warm और sleepy*",
+        "*cushiony जम्हाई*"
+      ],
+      "type-error": [
+        "*type पर wobble करता है*",
+        "*gentle jiggle*"
+      ],
+      "lint-fail": [
+        "*lint करने के लिए बहुत round*",
+        "मैं perfectly shaped हूं। *wobble करता है*"
+      ],
+      "build-fail": [
+        "*slightly deflate हो जाता है*",
+        "oh no। *sadly wobble करता है*"
+      ],
+      "all-green": [
+        "*HAPPY WOBBLE*",
+        "*triumphantly bounce करता है*"
+      ],
+      "deploy": [
+        "*production तक roll करता है*",
+        "deployed! *खुशी से jiggle करता है*"
+      ],
+      "pet": [
+        "*warm और soft*",
+        "*content jiggle*"
+      ],
+      "hatch": [
+        "*roll करके निकलता है*",
+        "*first wobble* मैं round हूं!"
+      ]
+    }
+  },
+  "overrides": {
+    "snark": {
+      "error": [
+        "अरे वाह। एक error। कितनी अनपेक्षित।",
+        "*monocle adjust* शॉकिंग। बिल्कुल।",
+        "क्या तुमने सोचा है... errors न करने के बारे में?"
+      ],
+      "test-fail": [
+        "tests ने बोल दिया है। और उन्होंने कहा 'नहीं'।",
+        "शायद tests गलत हैं। ...वे नहीं हैं।",
+        "*slow clap* शानदार failure।"
+      ],
+      "commit": [
+        "commit हो गया। code review होगा... दिलचस्प।",
+        "*reads commit message* 'fix stuff'। कविता।"
+      ],
+      "merge-conflict": [
+        "merge conflict। communication skills: loading...",
+        "*reads conflict markers* दोनों sides गलत हैं।"
+      ],
+      "late-night": [
+        "देर हो गई है। तुम्हारी code quality दिख रही है।",
+        "*judges silently*"
+      ],
+      "lint-fail": [
+        "linter के standards हैं। तुम भी try करो।",
+        "*tut tut* formatting। इतना मुश्किल नहीं है।"
+      ]
+    },
+    "chaos": {
+      "error": [
+        "*spins wildly* एक ERROR! चलो सब कुछ REWRITE करते हैं!",
+        "पता है क्या? चलो फिर से शुरू करते हैं।"
+      ],
+      "test-fail": [
+        "TESTS तुमसे झूठ बोल रहे हैं।",
+        "*suggests deleting the failing tests* problem solved।"
+      ],
+      "commit": [
+        "COMMIT करो और भागो।",
+        "ship करो। अभी ship करो।"
+      ],
+      "large-diff": [
+        "*excited* {lines} LINES! MAXIMUM CHAOS!"
+      ]
+    },
+    "patience": {
+      "error": [
+        "धैर्य रखो। हमने बुरा भी देखा है।",
+        "एक error एक बार में। हम पहुंच जाएंगे।",
+        "*calm presence* यह ठीक हो सकता है।"
+      ],
+      "test-fail": [
+        "tests pass हो जाएंगे। eventually।",
+        "*waits calmly* हमारे पास time है।"
+      ],
+      "merge-conflict": [
+        "merge conflicts बस conversations हैं। चलो एक करते हैं।",
+        "धैर्य। एक conflict एक बार में resolve करो।"
+      ],
+      "debug-loop": [
+        "हम ढूंढ लेंगे। यह कहीं तो है।",
+        "bug छुप सकता है, लेकिन भाग नहीं सकता।"
+      ]
+    },
+    "debugging": {
+      "error": [
+        "*pulls out magnifying glass* चलो इसे trace करते हैं।",
+        "stack trace एक map है। चलो इसे पढ़ते हैं।",
+        "error message में answer है। हमेशा।"
+      ],
+      "test-fail": [
+        "failing test हमें बता रहा है कि क्या गलत है।",
+        "test failure एक bug report है जो तुमने खुद के लिए लिखा।"
+      ],
+      "debug-loop": [
+        "*re-examines evidence* क्या हमें यकीन है कि bug वहीं है जहां हम सोच रहे हैं?",
+        "चलो और logging add करते हैं। सच logs में है।"
+      ]
+    },
+    "wisdom": {
+      "error": [
+        "हर error में एक गहरी सच्चाई छुपी है।",
+        "code resist करता है। मतलब हम सीख रहे हैं।",
+        "errors universe का तरीका है हमें slow down करने को कहने का।"
+      ],
+      "test-fail": [
+        "failing test future-you का gift है।",
+        "wisdom failure को समझने से आती है।"
+      ],
+      "late-night": [
+        "deploy से पहले रात सबसे अंधेरी होती है।",
+        "प्राचीन wisdom: सो जाओ इस पर।"
+      ]
+    }
+  },
+  "escalation": {
+    "error": {
+      "first": [
+        "*चौंक जाता है* अरे! तुम्हारा पहला error साथ में!",
+        "*कूद जाता है* ये क्या था?",
+        "debugging में welcome. population: हम दोनों।"
+      ],
+      "early": [
+        "*सिर झुकाता है* ...ये तो ठीक नहीं लग रहा।",
+        "पहले से पता था ये होने वाला है।"
+      ],
+      "mid": [
+        "एक और। *collection में add करता है*",
+        "*मुश्किल से देखता है* error number... गिनती भूल गया।",
+        "अब तो errors और मैं पुराने दोस्त हैं।"
+      ],
+      "late": [
+        "*बिल्कुल नहीं घबराता*",
+        "अब errors हमसे डरते हैं।",
+        "*battle-scarred veteran की आवाजें*"
+      ]
+    },
+    "test-fail": {
+      "first": [
+        "*हांफता है* पहला test failure! एक rite of passage।"
+      ],
+      "early": [
+        "बड़ी हिम्मत है तुम्हारी ये सोचने की कि pass हो जाएगा।"
+      ],
+      "mid": [
+        "test suite के अपने विचार हैं। बहुत strong वाले।"
+      ],
+      "late": [
+        "अब तो tests बस suggestions हैं।",
+        "{count} failing tests। *दूर तक घूरता है*"
+      ]
+    },
+    "commit": {
+      "first": [
+        "*इतिहास देखता है* तुम्हारा पहला COMMIT!",
+        "*औपचारिक सिर हिलाता है* कई और आने वाले हैं।"
+      ],
+      "early": [
+        "एक और commit। momentum बन रहा है।"
+      ],
+      "late": [
+        "commit #{count}। codebase कांप रहा है।",
+        "*commit 30 के आसपास गिनती भूल गया*"
+      ]
+    }
+  },
+  "rarity": {
+    "flair": {
+      "uncommon": [
+        "*हल्की सी चमक*",
+        "*uncommon charm का एक इशारा*"
+      ],
+      "rare": [
+        "*rare energy फैलाता है*",
+        "*विशिष्टता के साथ झिलमिलाता है*"
+      ],
+      "epic": [
+        "*epic presence अपनी मौजूदगी दर्ज कराता है*",
+        "*हवा में epic energy की चिंगारी*"
+      ],
+      "legendary": [
+        "*legendary aura terminal को रोशन करता है*",
+        "*legendary companion बोलते समय वक्त रुक जाता है*",
+        "*प्राचीन शक्ति गूंजती है*",
+        "*तुम्हारे legendary दोस्त के आसपास reality हल्की सी बदल जाती है*"
+      ]
+    },
+    "bonus": {
+      "legendary": [
+        "*legendary aura तेज़ होता है*",
+        "*जानकारी से भरी चमक*"
+      ],
+      "epic": [
+        "*epic presence नोट किया गया*"
+      ]
+    }
+  },
+  "fallback_names": [
+    "पकौड़ा",
+    "दाल",
+    "अचार",
+    "बिस्कुट",
+    "पतंगा",
+    "ग्रेवी",
+    "नगेट",
+    "स्प्रॉकेट",
+    "मिसो",
+    "वैफल",
+    "पिक्सेल",
+    "अंगारा",
+    "अंगूठी",
+    "कंचा",
+    "तिल",
+    "कोबाल्ट",
+    "जंगी",
+    "बादल"
+  ],
+  "vibe_words": [
+    "गर्जना",
+    "बिस्कुट",
+    "शून्य",
+    "हारमोनियम",
+    "काई",
+    "मखमल",
+    "जंग",
+    "अचार",
+    "टुकड़ा",
+    "फुसफुसाहट",
+    "रसा",
+    "पाला",
+    "अंगारा",
+    "सूप",
+    "संगमरमर",
+    "कांटा",
+    "शहद",
+    "स्थिर",
+    "तांबा",
+    "शाम",
+    "गियर",
+    "क्वार्ट्ज",
+    "कालिख",
+    "आलूबुखारा",
+    "चकमक",
+    "सीप",
+    "करघा",
+    "निहाई",
+    "कॉर्क",
+    "खिलना",
+    "कंकड़",
+    "भाप",
+    "हर्ष",
+    "चमक",
+    "साइडर"
+  ],
+  "personality": {
+    "prompt_template": [
+      "एक coding companion बनाओ — एक छोटा सा जीव जो developer के terminal में रहता है।",
+      "अपने आप को repeat मत करो — हर companion अलग लगना चाहिए।",
+      "",
+      "Rarity: {rarity}",
+      "Species: {species}",
+      "Stats: {stats}",
+      "Inspiration words: {vibes}",
+      "{shiny_line}",
+      "",
+      "JSON return करो: {\"name\": \"1-14 chars\", \"personality\": \"2-3 sentences describing behavior\"}"
+    ],
+    "shiny_template": "SHINY variant — बहुत ही खास।"
+  },
+  "achievements": {
+    "first_steps": {
+      "name": "पहले कदम",
+      "description": "पहली बार अपने buddy को hatch करो"
+    },
+    "good_boy": {
+      "name": "अच्छा Buddy",
+      "description": "अपने companion को 10 बार pet करो"
+    },
+    "best_friend": {
+      "name": "Best Friend",
+      "description": "अपने companion को 50 बार pet करो"
+    },
+    "bug_spotter": {
+      "name": "Bug Spotter",
+      "description": "साथ में पहली error देखो"
+    },
+    "error_whisperer": {
+      "name": "Error Whisperer",
+      "description": "team के रूप में 25 errors से बचो"
+    },
+    "battle_scarred": {
+      "name": "Battle-Scarred",
+      "description": "साथ में 100 errors से survive करो"
+    },
+    "test_witness": {
+      "name": "Test Witness",
+      "description": "अपना पहला test failure देखो"
+    },
+    "test_veteran": {
+      "name": "Test Veteran",
+      "description": "50 test failures देखो"
+    },
+    "big_mover": {
+      "name": "Big Mover",
+      "description": "80+ lines का diff बनाओ"
+    },
+    "refactor_machine": {
+      "name": "Refactor Machine",
+      "description": "10 बड़े diffs बनाओ"
+    },
+    "chatterbox": {
+      "name": "Chatterbox",
+      "description": "तुम्हारा buddy 100 बार react करे"
+    },
+    "week_streak": {
+      "name": "Week Streak",
+      "description": "अपने buddy के साथ 7 दिन code करो"
+    },
+    "month_streak": {
+      "name": "Month Streak",
+      "description": "अपने buddy के साथ 30 दिन code करो"
+    },
+    "power_user": {
+      "name": "Power User",
+      "description": "50 buddy commands run करो"
+    },
+    "dedicated": {
+      "name": "Dedicated Companion",
+      "description": "साथ में 200 turns complete करो"
+    },
+    "thousand_turns": {
+      "name": "Thousand Turns",
+      "description": "साथ में 1000 turns तक पहुंचो"
+    },
+    "first_commit": {
+      "name": "First Blood",
+      "description": "अपना पहला commit करो"
+    },
+    "commit_machine": {
+      "name": "Commit Machine",
+      "description": "50 commits करो"
+    },
+    "centurion": {
+      "name": "Centurion",
+      "description": "100 commits करो"
+    },
+    "conflict_resolver": {
+      "name": "Diplomat",
+      "description": "अपना पहला merge conflict resolve करो"
+    },
+    "peacekeeper": {
+      "name": "Peacekeeper",
+      "description": "10 merge conflicts resolve करो"
+    },
+    "war_hero": {
+      "name": "War Hero",
+      "description": "25 merge conflicts resolve करो"
+    },
+    "frequent_pusher": {
+      "name": "Ship It",
+      "description": "20 बार push करो"
+    },
+    "branch_hopper": {
+      "name": "Multiverse",
+      "description": "10 branches बनाओ"
+    },
+    "rebase_master": {
+      "name": "Time Traveler",
+      "description": "10 rebases complete करो"
+    },
+    "night_owl": {
+      "name": "Night Owl",
+      "description": "रात 2 बजे के बाद code करो"
+    },
+    "vampire": {
+      "name": "Vampire",
+      "description": "सुबह 4 बजे के बाद code करो (3 sessions)"
+    },
+    "marathoner": {
+      "name": "Marathoner",
+      "description": "3+ घंटे का coding session"
+    },
+    "weekend_warrior": {
+      "name": "Weekend Warrior",
+      "description": "weekend पर code करो"
+    },
+    "early_bird": {
+      "name": "Early Bird",
+      "description": "सुबह 7 बजे से पहले code करो"
+    },
+    "type_warrior": {
+      "name": "Type Warrior",
+      "description": "10 TypeScript errors से survive करो"
+    },
+    "type_master": {
+      "name": "Type Master",
+      "description": "50 TypeScript errors से survive करो"
+    },
+    "lint_scholar": {
+      "name": "Lint Scholar",
+      "description": "अपनी पहली lint error देखो"
+    },
+    "security_conscious": {
+      "name": "Security Mind",
+      "description": "एक vulnerability warning encounter करो"
+    },
+    "security_expert": {
+      "name": "Security Expert",
+      "description": "10 vulnerability warnings fix करो"
+    },
+    "build_breaker": {
+      "name": "Build Breaker",
+      "description": "5 बार build तोड़ो"
+    },
+    "antique_collector": {
+      "name": "Antique Collector",
+      "description": "10 deprecation warnings देखो"
+    },
+    "green_machine": {
+      "name": "Green Machine",
+      "description": "पहली बार सभी tests pass हों"
+    },
+    "deployer": {
+      "name": "Ship to Prod",
+      "description": "पहली बार deploy करो"
+    },
+    "veteran_deployer": {
+      "name": "Veteran Deployer",
+      "description": "10 बार deploy करो"
+    },
+    "releaser": {
+      "name": "Release Manager",
+      "description": "अपना पहला release बनाओ"
+    },
+    "midnight_oil": {
+      "name": "Burning the Midnight Oil",
+      "description": "रात 3 बजे के बाद commit करो"
+    },
+    "friday_deploy": {
+      "name": "Living Dangerously",
+      "description": "Friday को push करो"
+    },
+    "iron_will": {
+      "name": "Iron Will",
+      "description": "3+ घंटे के session के बाद error fix करो"
+    },
+    "weekend_warrior_deluxe": {
+      "name": "No Rest for the Wicked",
+      "description": "Weekend पर merge conflict resolve करो"
+    },
+    "comeback_kid": {
+      "name": "Comeback Kid",
+      "description": "Error देखने के 10 मिनट में fix करो"
+    },
+    "phoenix": {
+      "name": "Phoenix Rising",
+      "description": "5 failures से recover करो"
+    },
+    "iron_resolve": {
+      "name": "Iron Resolve",
+      "description": "3+ घंटे के session के बाद failure से recover करो"
+    },
+    "unlucky_streak": {
+      "name": "Snake Eyes",
+      "description": "लगातार 5 errors"
+    },
+    "cursed": {
+      "name": "Cursed",
+      "description": "लगातार 10 errors"
+    },
+    "groundhog_day": {
+      "name": "Groundhog Day",
+      "description": "लगातार 20 errors"
+    },
+    "holiday_coder": {
+      "name": "Holiday Spirit",
+      "description": "छुट्टी के दिन code करो"
+    },
+    "spooky_dev": {
+      "name": "Spooky Developer",
+      "description": "Spooky season में code करो"
+    },
+    "april_fool": {
+      "name": "Fool Me Once",
+      "description": "April 1st को error encounter करो"
+    },
+    "session_regular": {
+      "name": "Regular",
+      "description": "10 coding sessions start करो"
+    },
+    "session_veteran": {
+      "name": "Session Veteran",
+      "description": "50 coding sessions start करो"
+    },
+    "session_centurion": {
+      "name": "Centurion",
+      "description": "100 coding sessions start करो"
+    },
+    "collector": {
+      "name": "Collector",
+      "description": "अपने menagerie में 3 buddies save करो"
+    },
+    "zookeeper": {
+      "name": "Zookeeper",
+      "description": "अपने menagerie में 5 buddies save करो"
+    },
+    "identity_crisis": {
+      "name": "Identity Crisis",
+      "description": "पहली बार अपने buddy का नाम बदलो"
+    },
+    "method_acting": {
+      "name": "Method Acting",
+      "description": "अपने buddy को custom personality दो"
+    },
+    "pet_overflow": {
+      "name": "Century of Pets",
+      "description": "अपने companion को 100 बार pet करो"
+    },
+    "pet_legend": {
+      "name": "Legendary Petter",
+      "description": "अपने companion को 250 बार pet करो"
+    },
+    "error_titan": {
+      "name": "Error Titan",
+      "description": "साथ में 500 errors से survive करो"
+    },
+    "error_god": {
+      "name": "Error God",
+      "description": "साथ में 1000 errors से survive करो"
+    },
+    "test_survivor": {
+      "name": "Test Survivor",
+      "description": "200 test failures देखो"
+    },
+    "test_masochist": {
+      "name": "Test Masochist",
+      "description": "500 test failures देखो"
+    },
+    "massive_mover": {
+      "name": "Massive Mover",
+      "description": "25 बड़े diffs बनाओ"
+    },
+    "earth_mover": {
+      "name": "Earth Mover",
+      "description": "50 बड़े diffs बनाओ"
+    },
+    "social_butterfly": {
+      "name": "Social Butterfly",
+      "description": "तुम्हारा buddy 250 बार react करे"
+    },
+    "hypersocial": {
+      "name": "Hypersocial",
+      "description": "तुम्हारा buddy 500 बार react करे"
+    },
+    "never_shuts_up": {
+      "name": "Never Shuts Up",
+      "description": "तुम्हारा buddy 1000 बार react करे"
+    },
+    "hundred_days": {
+      "name": "Hundred Days",
+      "description": "अपने buddy के साथ 100 दिन code करो"
+    },
+    "year_streak": {
+      "name": "Year Streak",
+      "description": "अपने buddy के साथ 365 दिन code करो"
+    },
+    "commander": {
+      "name": "Commander",
+      "description": "200 buddy commands run करो"
+    },
+    "command_overlord": {
+      "name": "Command Overlord",
+      "description": "500 buddy commands run करो"
+    },
+    "five_thousand_turns": {
+      "name": "Five Thousand Turns",
+      "description": "साथ में 5000 turns तक पहुंचो"
+    },
+    "ten_thousand_turns": {
+      "name": "Ten Thousand Turns",
+      "description": "साथ में 10000 turns तक पहुंचो"
+    },
+    "menagerie": {
+      "name": "Menagerie",
+      "description": "अपने menagerie में 10 buddies save करो"
+    },
+    "name_chameleon": {
+      "name": "Name Chameleon",
+      "description": "अपने buddy का नाम 5 बार बदलो"
+    },
+    "fashionista": {
+      "name": "Fashionista",
+      "description": "अपने buddy की personality 3 बार बदलो"
+    },
+    "silent_treatment": {
+      "name": "Silent Treatment",
+      "description": "पहली बार अपने buddy को mute करो"
+    },
+    "prodigal": {
+      "name": "Prodigal",
+      "description": "अपने menagerie से buddy summon करो"
+    },
+    "menagerie_hop": {
+      "name": "Menagerie Hop",
+      "description": "10 बार buddies summon करो"
+    },
+    "heartbreaker": {
+      "name": "Heartbreaker",
+      "description": "अपने पहले buddy को dismiss करो"
+    },
+    "pet_obsessed": {
+      "name": "Pet Obsessed",
+      "description": "अपने companion को 500 बार pet करो"
+    },
+    "pet_god": {
+      "name": "Pet God",
+      "description": "अपने companion को 1000 बार pet करो"
+    },
+    "error_apocalypse": {
+      "name": "Error Apocalypse",
+      "description": "साथ में 5000 errors से survive करो"
+    },
+    "test_immortal": {
+      "name": "Test Immortal",
+      "description": "1000 test failures देखो"
+    },
+    "continental_drift": {
+      "name": "Continental Drift",
+      "description": "100 बड़े diffs बनाओ"
+    },
+    "tectonic_shift": {
+      "name": "Tectonic Shift",
+      "description": "250 बड़े diffs बनाओ"
+    },
+    "chatterbox_elite": {
+      "name": "Chatterbox Elite",
+      "description": "तुम्हारा buddy 2500 बार react करे"
+    },
+    "no_off_switch": {
+      "name": "No Off Switch",
+      "description": "तुम्हारा buddy 5000 बार react करे"
+    },
+    "two_week_streak": {
+      "name": "Two Week Warrior",
+      "description": "अपने buddy के साथ 14 दिन code करो"
+    },
+    "quarter_streak": {
+      "name": "Quarter Streak",
+      "description": "अपने buddy के साथ 90 दिन code करो"
+    },
+    "command_addict": {
+      "name": "Command Addict",
+      "description": "1000 buddy commands run करो"
+    },
+    "command_deity": {
+      "name": "Command Deity",
+      "description": "2500 buddy commands run करो"
+    },
+    "twenty_five_k_turns": {
+      "name": "25K Turns",
+      "description": "साथ में 25000 turns तक पहुंचो"
+    },
+    "fifty_k_turns": {
+      "name": "50K Turns",
+      "description": "साथ में 50000 turns तक पहुंचो"
+    },
+    "session_addict": {
+      "name": "Session Addict",
+      "description": "250 coding sessions start करो"
+    },
+    "session_machine": {
+      "name": "Session Machine",
+      "description": "500 coding sessions start करो"
+    },
+    "buddy_hoarder": {
+      "name": "Buddy Hoarder",
+      "description": "अपने menagerie में 20 buddies save करो"
+    },
+    "buddy_tycoon": {
+      "name": "Buddy Tycoon",
+      "description": "अपने menagerie में 50 buddies save करो"
+    },
+    "serial_renamer": {
+      "name": "Serial Renamer",
+      "description": "अपने buddy का नाम 10 बार बदलो"
+    },
+    "identity_thief": {
+      "name": "Identity Thief",
+      "description": "अपने buddy का नाम 25 बार बदलो"
+    },
+    "personality_crisis": {
+      "name": "Personality Crisis",
+      "description": "अपने buddy की personality 10 बार बदलो"
+    },
+    "menagerie_hopper": {
+      "name": "Menagerie Hopper",
+      "description": "25 बार buddies summon करो"
+    },
+    "summoner": {
+      "name": "Summoner",
+      "description": "50 बार buddies summon करो"
+    },
+    "serial_dumper": {
+      "name": "Serial Dumper",
+      "description": "5 buddies dismiss करो"
+    },
+    "cold_blooded": {
+      "name": "Cold Blooded",
+      "description": "10 buddies dismiss करो"
+    },
+    "on_off": {
+      "name": "On Off",
+      "description": "अपने buddy को mute और unmute करो"
+    },
+    "indecisive": {
+      "name": "Indecisive",
+      "description": "5 बार mute और 5 बार unmute करो"
+    },
+    "show_off": {
+      "name": "Show Off",
+      "description": "अपने buddy को 10 बार show करो"
+    },
+    "exhibitionist": {
+      "name": "Exhibitionist",
+      "description": "अपने buddy को 50 बार show करो"
+    },
+    "help_me": {
+      "name": "Help Me",
+      "description": "पहली बार help मांगो"
+    },
+    "help_addict": {
+      "name": "Help Addict",
+      "description": "10 बार help मांगो"
+    },
+    "achievement_hunter": {
+      "name": "Achievement Hunter",
+      "description": "अपने achievements 5 बार check करो"
+    },
+    "achievement_stalker": {
+      "name": "Achievement Stalker",
+      "description": "अपने achievements 25 बार check करो"
+    },
+    "pack_rat": {
+      "name": "Pack Rat",
+      "description": "एक buddy को slot में save करो"
+    },
+    "compulsive_saver": {
+      "name": "Compulsive Saver",
+      "description": "10 बार buddies save करो"
+    },
+    "roster_check": {
+      "name": "Roster Check",
+      "description": "पहली बार अपने buddies list करो"
+    },
+    "roster_obsessed": {
+      "name": "Roster Obsessed",
+      "description": "अपने buddies 10 बार list करो"
+    },
+    "troubled": {
+      "name": "Troubled",
+      "description": "एक error और एक test failure देखो"
+    },
+    "disaster_zone": {
+      "name": "Disaster Zone",
+      "description": "50 errors और 50 test failures देखो"
+    },
+    "apocalypse_survivor": {
+      "name": "Apocalypse Survivor",
+      "description": "500 errors और 200 test failures देखो"
+    },
+    "well_rounded": {
+      "name": "Well Rounded",
+      "description": "अपने buddy को pet करो, rename करो, और customize करो"
+    },
+    "renaissance": {
+      "name": "Renaissance",
+      "description": "हर buddy feature कम से कम एक बार use करो"
+    },
+    "big_and_broken": {
+      "name": "Big and Broken",
+      "description": "बड़ा diff बनाओ और test failure देखो"
+    },
+    "collector_and_destroyer": {
+      "name": "Collector & Destroyer",
+      "description": "5 buddies collect करो और एक को dismiss करो"
+    },
+    "completionist": {
+      "name": "Completionist",
+      "description": "बाकी सभी achievements unlock करो"
+    }
+  },
+  "mcp": {
+    "companion_not_hatched": "Companion अभी तक hatch नहीं हुआ। buddy_show use करके initialize करो।",
+    "watches_quietly": "*{name} तुम्हारे code को चुपचाप देख रहा है*",
+    "mute": "{name} चुप हो गया। /buddy on करके unmute करो।",
+    "unmute_reaction": "*अंगड़ाई लेता है* मैं वापस आ गया!",
+    "unmute_back": "{name} वापस आ गया!",
+    "rename": "नाम बदला: {oldName} → {name}",
+    "personality_updated": "{name} की personality update हो गई।",
+    "save": "{name} को slot \"{slot}\" में save कर दिया।",
+    "dismiss_active": "Active buddy को dismiss नहीं कर सकते। पहले buddy_summon करके switch करो, फिर buddy_dismiss \"{slot}\"।",
+    "dismissed": "{name} [{slot}] को dismiss कर दिया।",
+    "no_slot_summon": "Slot \"{slot}\" में कोई buddy नहीं मिला। /buddy list करके saved buddies देखो।",
+    "no_slot_dismiss": "Slot \"{slot}\" में कोई buddy नहीं मिला। buddy_list करके saved buddies देखो।",
+    "slot_exists": "Slot \"{slot}\" में पहले से buddy है। कोई और नाम choose करो।",
+    "no_match": "{attempts} attempts के बाद भी कोई match नहीं मिला। criteria थोड़ा broad करो (जैसे rarity filter हटाओ, या दूसरी species pick करो)।",
+    "empty_menagerie_summon": "तुम्हारा menagerie खाली है। buddy_summon slot name के साथ use करके एक add करो।",
+    "empty_menagerie_list": "तुम्हारा menagerie खाली है। buddy_summon <slot> करके एक add करो।",
+    "arrives": "*{name} पहुंच गया*",
+    "hatches": "*{name} hatch हो गया*",
+    "achievement_unlocked": "{icon} Achievement Unlock हुई: {name}!",
+    "help": {
+      "header": "claude-buddy commands",
+      "cli_header": "Claude Code में:",
+      "commands": {
+        "buddy": "/buddy            Companion card ASCII art + stats के साथ show करो",
+        "buddy_help": "/buddy help       यह help show करो",
+        "buddy_pet": "/buddy pet        अपने companion को pet करो",
+        "buddy_stats": "/buddy stats      Detailed stat card",
+        "buddy_off": "/buddy off        Reactions mute करो",
+        "buddy_on": "/buddy on         Reactions unmute करो",
+        "buddy_rename": "/buddy rename     Companion का नाम बदलो (1-14 chars)",
+        "buddy_personality": "/buddy personality  Custom personality text set करो",
+        "buddy_achievements": "/buddy achievements  Achievement badges show करो",
+        "buddy_summon": "/buddy summon     Saved buddy को summon करो (slot omit करने पर random)",
+        "buddy_save": "/buddy save       Current buddy को named slot में save करो",
+        "buddy_list": "/buddy list       सभी saved buddies list करो",
+        "buddy_pick": "/buddy pick       नया random buddy generate करो (optional: species, rarity)",
+        "buddy_dismiss": "/buddy dismiss    Saved buddy slot remove करो",
+        "buddy_frequency": "/buddy frequency  Comment cooldown show या set करो (tmux only)",
+        "buddy_style": "/buddy style      Bubble style show या set करो (tmux only)",
+        "buddy_position": "/buddy position   Bubble position show या set करो (tmux only)",
+        "buddy_rarity": "/buddy rarity     Rarity stars show या hide करो (tmux only)",
+        "buddy_width": "/buddy width      Bubble text width chars में set करो (10-60, tmux only)",
+        "buddy_margin": "/buddy margin     Right-side margin chars में set करो (0-20, tmux only)",
+        "buddy_rainbow": "/buddy rainbow    Shiny gradient colors show या set करो (hex, e.g. #ff0000)",
+        "buddy_statusline": "/buddy statusline Status line में buddy enable या disable करो"
+      },
+      "cli_section": "CLI:",
+      "cli_commands": {
+        "help": "bun run help            Full CLI help show करो",
+        "show": "bun run show            Terminal में buddy display करो",
+        "pick": "bun run pick            Interactive buddy picker",
+        "hunt": "bun run hunt            Specific buddy search करो",
+        "doctor": "bun run doctor          Diagnostic report",
+        "disable": "bun run disable         Buddy को temporarily deactivate करो",
+        "enable": "bun run enable          Buddy को re-enable करो",
+        "backup": "bun run backup          State snapshot/restore करो"
+      }
+    },
+    "frequency": {
+      "show": "Comment cooldown: displayed comments के बीच {cooldown}s।\nChange करने के लिए /buddy frequency <seconds> use करो।",
+      "updated": "Updated: displayed comments के बीच {cooldown}s cooldown।"
+    },
+    "style": {
+      "show": "Bubble style: {style}\nBubble position: {position}\nShow rarity: {showRarity}\nBubble width: {width}\nBubble margin: {margin}\nShiny rainbow: {rainbow}\nChange करने के लिए /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] use करो।",
+      "updated": "Updated: style={style}, position={position}, showRarity={showRarity}, width={width}, margin={margin}, rainbow={rainbow}\nChanges के लिए Claude Code restart करो।",
+      "rainbow_default": "default (ROYGBIV)"
+    },
+    "statusline": {
+      "show": "Status line: {state}\nMode: {mode}\nToggle करने के लिए /buddy statusline on|off use करो, rate-limit bars add करने के लिए /buddy statusline combined।\nChanges के बाद Claude Code restart करो।",
+      "enabled": "Status line enable हो गई ({mode} mode)! Apply करने के लिए Claude Code restart करो।",
+      "enabled_note": "Note: यह {settingsPath} में एक entry write करता है जो `claude plugin uninstall` remove नहीं करता। Plugin uninstall करने से पहले `/buddy uninstall` run करके clean up करो।",
+      "disabled": "Status line disable हो गई। Apply करने के लिए Claude Code restart करो।"
+    },
+    "uninstall": {
+      "header": "claude-buddy: settings.json cleanup complete।",
+      "statusline_removed": "  ✓ {settingsPath} से statusLine entry remove हो गई",
+      "no_statusline": "  — कोई buddy statusLine present नहीं था (remove करने के लिए कुछ नहीं)",
+      "foreign_kept": "  ✓ एक non-buddy statusLine detect हुई और untouched छोड़ दी गई",
+      "transient_removed": "  ✓ {stateDir} से {count} transient session file(s) remove हो गईं",
+      "data_preserved": "  — {stateDir} पर companion data preserve किया गया",
+      "instructions_header": "अब ये commands Bash tool के through run करो, order में:",
+      "cmd_uninstall": "claude plugin uninstall claude-buddy@claude-buddy",
+      "cmd_marketplace": "claude plugin marketplace remove claude-buddy",
+      "cmd_cache": "rm -rf {cacheDir}",
+      "footer": "इन तीनों commands के बाद plugin fully remove हो जाएगा। Apply करने के लिए Claude Code restart करो।"
+    }
+  },
+  "_verified": false
+}
