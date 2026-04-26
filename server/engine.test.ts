@@ -228,14 +228,14 @@ describe("generateBones", () => {
       hat: "none",
       shiny: false,
       stats: {
-        DEBUGGING: 23,
-        PATIENCE: 22,
-        CHAOS: 9,
-        WISDOM: 32,
-        SNARK: 59,
+        DEBUGGING: 26,
+        PATIENCE: 23,
+        CHAOS: 68,
+        WISDOM: 43,
+        SNARK: 5,
       },
-      peak: "SNARK",
-      dump: "CHAOS",
+      peak: "CHAOS",
+      dump: "SNARK",
     });
   });
 
@@ -243,7 +243,7 @@ describe("generateBones", () => {
     expect(generateBones("golden-user-beta")).toEqual({
       rarity: "common",
       species: "mushroom",
-      eye: "@",
+      eye: "·",
       hat: "none",
       shiny: false,
       stats: {
@@ -259,24 +259,21 @@ describe("generateBones", () => {
   });
 
   test("golden snapshot: 'legendary-seed-1' (uncommon axolotl)", () => {
-    // This one is picked because it exercises the non-common rarity branch
-    // where hat is drawn from HATS (even though the result still lands on
-    // 'none', which is the first hat in the list).
     expect(generateBones("legendary-seed-1")).toEqual({
       rarity: "uncommon",
       species: "axolotl",
-      eye: "\u25c9",
+      eye: "\u00b7",
       hat: "none",
       shiny: false,
       stats: {
-        DEBUGGING: 11,
-        PATIENCE: 16,
-        CHAOS: 20,
-        WISDOM: 49,
-        SNARK: 76,
+        DEBUGGING: 94,
+        PATIENCE: 5,
+        CHAOS: 31,
+        WISDOM: 16,
+        SNARK: 20,
       },
-      peak: "SNARK",
-      dump: "DEBUGGING",
+      peak: "DEBUGGING",
+      dump: "PATIENCE",
     });
   });
 

@@ -2,28 +2,29 @@
 /**
  * cli/pick.ts — interactive two-pane buddy picker
  *
- *  Left pane                    │  Right pane
- *  ─────────────────────────    │  ──────────────────────
- *  Saved:   list of slots       │  full companion card
- *  Criteria: search form        │
- *  Results: matched buddies     │  preview of highlighted
- *  Naming:  name + save prompt  │  card with live name
+ *  Left pane                     │  Right pane
+ *  ──────────────────────────    │  ──────────────────────
+ *  Saved:      list of slots     │  full companion card
+ *  Criteria:   search form       │
+ *  Results:    matched buddies   │  preview of highlighted
+ *  Configuring: eye/hat/name/pers│  live preview
  *
- * Keys — Saved:    ↑↓ navigate  [enter] summon  [r] random  [s] search  [q] quit
- * Keys — Criteria: ↑↓ field     ←→ value        [enter] run  [esc] back
- * Keys — Results:  ↑↓ navigate  [enter] pick     [esc] back  [q] quit
- * Keys — Naming:   type name    [enter] save      [esc] cancel
+ * Keys — Saved:       ↑↓ navigate  enter summon  r random  s search  d remove  q quit
+ * Keys — Criteria:    ↑↓ field     ←→ value      enter run  esc back
+ * Keys — Results:     ↑↓ navigate  enter configure  esc back  q quit
+ * Keys — Configuring: ↑↓ field     ←→ value (eye/hat)  type (name/pers)  enter confirm  esc back
  */
 
 import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
-  loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
+  loadCompanionSlot, saveCompanionSlot, deleteCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
-  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+  generateBones, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
   type Species, type Rarity, type StatName, type Eye, type Hat,
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
+import { generateBuddy, generatePersonality, generateName } from "../server/generation.ts";
 import { renderCompanionCard } from "../server/art.ts";
 import { randomBytes } from "crypto";
 
@@ -47,29 +48,24 @@ const GN = "\x1b[32m";
 
 function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
 
-// Wide characters: emojis, some Unicode symbols take 2 display columns
 function charWidth(cp: number): number {
-  // Emoji modifiers, variation selectors, ZWJ
   if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
   if (cp === 0x200D) return 0;
-  // Common wide ranges: CJK, emoji, fullwidth, braille, box-drawing stars etc.
-  if (cp >= 0x1F000) return 2;  // Most emoji (sparkles ✨ = U+2728 is below this)
-  if (cp === 0x2728) return 2;  // ✨ Sparkles
-  if (cp >= 0x2600 && cp <= 0x27BF) return 1;  // Misc symbols (★ ☆ etc.) — typically 1 col
-  if (cp >= 0x2500 && cp <= 0x257F) return 1;  // Box drawing
-  if (cp >= 0x2580 && cp <= 0x259F) return 1;  // Block elements (█░)
-  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;  // CJK
-  if (cp >= 0xF900 && cp <= 0xFAFF) return 2;  // CJK compat
-  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;  // Fullwidth
+  if (cp >= 0x1F000) return 2;
+  if (cp === 0x2728) return 2;
+  if (cp >= 0x2600 && cp <= 0x27BF) return 1;
+  if (cp >= 0x2500 && cp <= 0x257F) return 1;
+  if (cp >= 0x2580 && cp <= 0x259F) return 1;
+  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;
+  if (cp >= 0xF900 && cp <= 0xFAFF) return 2;
+  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;
   return 1;
 }
 
 function vlen(s: string): number {
   const clean = stripAnsi(s);
   let w = 0;
-  for (const ch of clean) {
-    w += charWidth(ch.codePointAt(0)!);
-  }
+  for (const ch of clean) w += charWidth(ch.codePointAt(0)!);
   return w;
 }
 
@@ -78,26 +74,43 @@ function rpad(s: string, w: number): string {
   return v < w ? s + " ".repeat(w - v) : s;
 }
 
+function wrapText(text: string, width: number): string[] {
+  if (!text) return [];
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) {
+      current = word.slice(0, width);
+    } else if (current.length + 1 + word.length <= width) {
+      current += " " + word;
+    } else {
+      lines.push(current);
+      current = word.slice(0, width);
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
 // ─── Option lists ─────────────────────────────────────────────────────────────
 
 const SP_OPTS  = ["any", ...SPECIES]    as const;
 const RA_OPTS  = ["any", ...RARITIES]   as const;
 const SH_OPTS  = ["any", "yes", "no"]   as const;
 const ST_OPTS  = ["any", ...STAT_NAMES] as const;
-const EY_OPTS  = ["any", ...EYES]       as const;
-const HA_OPTS  = ["any", ...HATS]       as const;
 const MIN_OPTS = ["any", "5", "10", "15", "20", "25", "30", "35", "40", "45",
                   "50", "55", "60", "65", "70", "75", "80", "85", "90", "95"] as const;
 const AVG_OPTS = MIN_OPTS;
 
+// ci indices: [sp, ra, sh, pk, dp, avg, dbg, pat, cha, wis, snk]
+//              0   1   2   3   4   5    6    7    8    9    10
 const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
   { label: "Species", opts: SP_OPTS  },
   { label: "Rarity ", opts: RA_OPTS  },
   { label: "Shiny  ", opts: SH_OPTS  },
   { label: "Peak   ", opts: ST_OPTS  },
   { label: "Dump   ", opts: ST_OPTS  },
-  { label: "Eye    ", opts: EY_OPTS  },
-  { label: "Hat    ", opts: HA_OPTS  },
   { label: "Min avg", opts: AVG_OPTS },
   { label: "Min DBG", opts: MIN_OPTS },
   { label: "Min PAT", opts: MIN_OPTS },
@@ -108,42 +121,63 @@ const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-type Mode = "saved" | "criteria" | "searching" | "results" | "naming";
+type Mode = "saved" | "criteria" | "searching" | "results" | "configuring";
 interface SlotEntry   { slot: string; companion: Companion; }
 interface BuddyResult { userId: string; bones: BuddyBones; }
 
 interface State {
-  mode:          Mode;
-  searching:     boolean;
-  savedSlots:    SlotEntry[];
-  savedCursor:   number;
-  activeSlot:    string;
-  criteriaFocus: number;
-  ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
-  results:       BuddyResult[];
-  resultCursor:  number;
-  searchStatus:  string;
-  nameInput:     string;
-  pendingResult: BuddyResult | null;
-  message:       string;
+  mode:                   Mode;
+  searching:              boolean;
+  savedSlots:             SlotEntry[];
+  savedCursor:            number;
+  activeSlot:             string;
+  criteriaFocus:          number;
+  ci:                     number[];
+  results:                BuddyResult[];
+  resultCursor:           number;
+  searchStatus:           string;
+  // configuring mode
+  configResult:           BuddyResult | null;
+  configFocus:            number;   // 0=name  1=personality  2=eye  3=hat
+  configEyeIdx:           number;
+  configHatIdx:           number;
+  configNameInput:        string;
+  configPersonalityInput: string;
+  configGenerating:       boolean;
+  configIsEdit:           boolean;  // true when editing an existing buddy
+  configEditSlot:         string;   // original slot name when editing
+  configHatchedAt:        number;   // original hatchedAt when editing
+  // shared
+  confirmDelete:          boolean;
+  message:                string;
+  spinnerTick:            number;
 }
 
 function fresh(): State {
   return {
-    mode:          "saved",
-    searching:     false,
-    savedSlots:    listCompanionSlots(),
-    savedCursor:   0,
-    activeSlot:    loadActiveSlot(),
-    criteriaFocus: 0,
-    // Default criteria: legendary, any species/shiny/peak/dump/eye/hat/avg/stats
-    ci: [0, RA_OPTS.indexOf("legendary"), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    results:       [],
-    resultCursor:  0,
-    searchStatus:  "",
-    nameInput:     "",
-    pendingResult: null,
-    message:       "",
+    mode:                   "saved",
+    searching:              false,
+    savedSlots:             listCompanionSlots(),
+    savedCursor:            0,
+    activeSlot:             loadActiveSlot(),
+    criteriaFocus:          0,
+    ci: [0, RA_OPTS.indexOf("legendary"), 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    results:                [],
+    resultCursor:           0,
+    searchStatus:           "",
+    configResult:           null,
+    configFocus:            0,
+    configEyeIdx:           0,
+    configHatIdx:           0,
+    configNameInput:        "",
+    configPersonalityInput: "",
+    configGenerating:       false,
+    configIsEdit:           false,
+    configEditSlot:         "",
+    configHatchedAt:        0,
+    confirmDelete:          false,
+    message:                "",
+    spinnerTick:            0,
   };
 }
 
@@ -153,7 +187,7 @@ const LEFT_W = 36;
 
 function savedPane(s: State): string[] {
   const lines: string[] = [];
-  lines.push(`${B}  Your Menagerie${N}  ${GR}[s] search${N}`);
+  lines.push(`${B}  Your Menagerie${N}  ${GR}[s] search  [e] edit  [d] remove${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
 
   if (s.savedSlots.length === 0) {
@@ -176,6 +210,10 @@ function savedPane(s: State): string[] {
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  if (s.confirmDelete) {
+    const entry = s.savedSlots[s.savedCursor];
+    lines.push(`  ${YL}remove ${B}${entry?.companion.name ?? "?"}${N}${YL}? [d/y] yes  [any] no${N}`);
+  }
   return lines;
 }
 
@@ -220,20 +258,16 @@ function resultsPane(s: State): string[] {
     lines.push(`  ${GR}no matches — try broader criteria${N}`);
   }
 
-  // Scrolling window
   const viewH  = 12;
   const offset = Math.max(0, s.resultCursor - Math.floor(viewH / 2));
   for (let i = offset; i < Math.min(s.results.length, offset + viewH); i++) {
-    const b      = s.results[i].bones;
-    const sel    = i === s.resultCursor;
-    const clr    = RARITY_CLR[b.rarity] ?? "";
-    const star   = RARITY_STARS[b.rarity];
-    const shiny  = b.shiny ? "✨" : "  ";
-    const ra     = b.rarity.slice(0, 3);
-    const sp     = b.species.padEnd(8);
-    const eye    = `e:${b.eye}`;
-    const hat    = `h:${b.hat.slice(0, 6).padEnd(6)}`;
-    const row    = `  ${clr}${ra}${N} ${sp} ${GR}${eye} ${hat}${N} ${shiny}`;
+    const b     = s.results[i].bones;
+    const sel   = i === s.resultCursor;
+    const clr   = RARITY_CLR[b.rarity] ?? "";
+    const shiny = b.shiny ? "✨" : "  ";
+    const ra    = b.rarity.slice(0, 3);
+    const sp    = b.species.padEnd(8);
+    const row   = `  ${clr}${ra}${N} ${sp} ${shiny}`;
     lines.push(sel ? RV + row + N : row);
   }
 
@@ -241,15 +275,77 @@ function resultsPane(s: State): string[] {
   return lines;
 }
 
-function namingPane(s: State): string[] {
-  const b   = s.pendingResult?.bones;
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+const PERS_WRAP_W = LEFT_W - 6;
+
+function configuringPane(s: State): string[] {
+  const b   = s.configResult?.bones;
   const clr = b ? (RARITY_CLR[b.rarity] ?? "") : "";
   const lines: string[] = [];
-  lines.push(`${B}  Name this buddy${N}`);
+
+  lines.push(`${B}  ${s.configIsEdit ? "Edit" : "Configure"} buddy${N}`);
   if (b) lines.push(`  ${clr}${b.rarity} ${b.species}${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
-  lines.push(`  ${B}Name:${N} ${s.nameInput}${YL}▌${N}`);
-  lines.push(`  ${GR}(type a name, or enter for random)${N}`);
+
+  // Name (focus 0)
+  {
+    const focus  = s.configFocus === 0 && !s.configGenerating;
+    const arrow  = focus ? `${YL}>${N}` : " ";
+    const cursor = focus ? `${YL}▌${N}` : "";
+    const text   = s.configNameInput || (!focus ? `${GR}random${N}` : "");
+    lines.push(`  ${arrow} ${GR}Name   ${N}  ${text}${cursor}`);
+    lines.push(`    ${GR}blank = random  max 14 chars${N}`);
+  }
+
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+
+  // Personality (focus 1)
+  {
+    const focus  = s.configFocus === 1 && !s.configGenerating;
+    const arrow  = focus ? `${YL}>${N}` : " ";
+    const cursor = focus ? `${YL}▌${N}` : "";
+    lines.push(`  ${arrow} ${GR}Personality${N}  ${GR}blank = random${N}`);
+
+    const wrapped = wrapText(s.configPersonalityInput, PERS_WRAP_W);
+    const display = wrapped.length ? [...wrapped] : [""];
+    display[display.length - 1] += cursor;
+    while (display.length < 4) display.push("");
+    for (const dl of display) lines.push(`    ${dl}`);
+  }
+
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+
+  // Eye (focus 2) — same style as criteria rows
+  {
+    const val   = EYES[s.configEyeIdx];
+    const focus = s.configFocus === 2 && !s.configGenerating;
+    const arrow = focus ? `${YL}>${N}` : " ";
+    const vd    = focus
+      ? `${RV}${B} ${val.padEnd(11)} ${N}`
+      : `${D} ${val.padEnd(11)} ${N}`;
+    lines.push(`  ${arrow} ${GR}Eye    ${N}  ${vd}  ${GR}←→${N}`);
+  }
+
+  // Hat (focus 3)
+  {
+    const val   = HATS[s.configHatIdx];
+    const focus = s.configFocus === 3 && !s.configGenerating;
+    const arrow = focus ? `${YL}>${N}` : " ";
+    const vd    = focus
+      ? `${RV}${B} ${val.padEnd(11)} ${N}`
+      : `${D} ${val.padEnd(11)} ${N}`;
+    lines.push(`  ${arrow} ${GR}Hat    ${N}  ${vd}  ${GR}←→${N}`);
+  }
+
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+
+  if (s.configGenerating) {
+    const frame = SPINNER_FRAMES[s.spinnerTick % SPINNER_FRAMES.length];
+    lines.push(`  ${YL}${frame} generating...${N}`);
+  } else {
+    lines.push(`  ${GR}enter confirm  esc back${N}`);
+  }
+
   return lines;
 }
 
@@ -260,24 +356,23 @@ function previewPane(s: State): string[] {
     c = s.savedSlots[s.savedCursor]?.companion ?? null;
   } else if (s.mode === "results") {
     const r = s.results[s.resultCursor];
-    if (r) c = {
-      bones: r.bones, name: "???",
-      personality: generatePersonality(r.bones, r.userId),
-      hatchedAt: Date.now(), userId: r.userId,
+    if (r) {
+      c = { bones: r.bones, name: "???", personality: "", hatchedAt: Date.now(), userId: r.userId };
+    }
+  } else if (s.mode === "configuring" && s.configResult) {
+    const r = s.configResult;
+    const previewBones: BuddyBones = {
+      ...r.bones,
+      eye: EYES[s.configEyeIdx] as Eye,
+      hat: HATS[s.configHatIdx] as Hat,
     };
-  } else if (s.mode === "naming" && s.pendingResult) {
-    const r = s.pendingResult;
-    c = {
-      bones: r.bones, name: s.nameInput || "???",
-      personality: generatePersonality(r.bones, r.userId),
-      hatchedAt: Date.now(), userId: r.userId,
-    };
+    const name        = s.configNameInput || "???";
+    const personality = s.configPersonalityInput || "";
+    c = { bones: previewBones, name, personality, hatchedAt: Date.now(), userId: r.userId };
   }
 
   if (!c) return [`  ${GR}no preview${N}`];
-  // Calculate available width for the right pane (total cols - left pane - separator)
-  const cols = Math.max(80, process.stdout.columns || 80);
-  const rightW = cols - LEFT_W - 3;
+  const rightW = 34;
   return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW).split("\n");
 }
 
@@ -287,38 +382,34 @@ function drawScreen(s: State): void {
   const cols = Math.max(80, process.stdout.columns || 80);
   const rows = Math.max(20, process.stdout.rows    || 24);
 
-  const leftLines  = s.mode === "saved"      ? savedPane(s)
-                   : s.mode === "criteria"   ? criteriaPane(s)
-                   : s.mode === "searching"  ? searchingPane(s)
-                   : s.mode === "results"    ? resultsPane(s)
-                   : namingPane(s);
+  const leftLines  = s.mode === "saved"        ? savedPane(s)
+                   : s.mode === "criteria"     ? criteriaPane(s)
+                   : s.mode === "searching"    ? searchingPane(s)
+                   : s.mode === "results"      ? resultsPane(s)
+                   : configuringPane(s);
   const rightLines = previewPane(s);
   const contentH   = rows - 2;
 
-  let out = "\x1b[2J\x1b[H"; // clear + home
+  let out = "\x1b[2J\x1b[H";
 
-  // Title bar
-  const title    = ` claude-buddy pick `;
-  const fill     = "─".repeat(Math.max(0, cols - title.length - 2));
+  const title = ` claude-buddy pick `;
+  const fill  = "─".repeat(Math.max(0, cols - title.length - 2));
   out += `${CY}─${B}${title}${N}${CY}${fill}─${N}\n`;
 
-  // Content rows
   for (let i = 0; i < contentH; i++) {
     const l = rpad(leftLines[i] ?? "", LEFT_W);
     const r = rightLines[i] ?? "";
     out += l + GR + "│" + N + " " + r + "\n";
   }
 
-  // Footer — mode-specific help
   const helpText =
-    s.mode === "saved"     ? "↑↓ navigate  enter summon  r random  s search  q quit" :
-    s.mode === "criteria"  ? "↑↓ field  ←→ value  enter search  esc back" :
-    s.mode === "searching" ? "any key to stop and show results so far" :
-    s.mode === "results"   ? "↑↓ navigate  enter name+save  esc back  q quit" :
-    s.mode === "naming"    ? "type name  enter save  esc cancel" : "";
+    s.mode === "saved"        ? "↑↓ navigate  enter summon  r random  s search  e edit  d remove  q quit" :
+    s.mode === "criteria"     ? "↑↓ field  ←→ value  enter search  esc back" :
+    s.mode === "searching"    ? "any key to stop and show results so far" :
+    s.mode === "results"      ? "↑↓ navigate  enter configure  esc back  q quit" :
+    s.mode === "configuring"  ? "↑↓ field  ←→ value (eye/hat)  type (name/pers)  enter confirm  esc back" : "";
   out += `${GR}─${N} ${GR}${helpText}${N} ${GR}${"─".repeat(Math.max(0, cols - helpText.length - 4))}${N}`;
 
-  // Message overlay on last line
   if (s.message) {
     out += `\x1b[${rows};1H  ${GN}${B}${s.message}${N}`;
   }
@@ -340,18 +431,15 @@ async function runSearch(s: State): Promise<void> {
                   : SH_OPTS[s.ci[2]] === "no"   ? false : null;
   const wantPeak  = ST_OPTS[s.ci[3]]  !== "any" ? ST_OPTS[s.ci[3]]  as StatName : null;
   const wantDump  = ST_OPTS[s.ci[4]]  !== "any" ? ST_OPTS[s.ci[4]]  as StatName : null;
-  const wantEye   = EY_OPTS[s.ci[5]]  !== "any" ? EY_OPTS[s.ci[5]]  as Eye      : null;
-  const wantHat   = HA_OPTS[s.ci[6]]  !== "any" ? HA_OPTS[s.ci[6]]  as Hat      : null;
-  const minAvg    = AVG_OPTS[s.ci[7]] !== "any" ? Number(AVG_OPTS[s.ci[7]])      : null;
-  const minDBG    = MIN_OPTS[s.ci[8]]  !== "any" ? Number(MIN_OPTS[s.ci[8]])     : null;
-  const minPAT    = MIN_OPTS[s.ci[9]]  !== "any" ? Number(MIN_OPTS[s.ci[9]])     : null;
-  const minCHA    = MIN_OPTS[s.ci[10]] !== "any" ? Number(MIN_OPTS[s.ci[10]])    : null;
-  const minWIS    = MIN_OPTS[s.ci[11]] !== "any" ? Number(MIN_OPTS[s.ci[11]])    : null;
-  const minSNK    = MIN_OPTS[s.ci[12]] !== "any" ? Number(MIN_OPTS[s.ci[12]])    : null;
+  const minAvg    = AVG_OPTS[s.ci[5]] !== "any" ? Number(AVG_OPTS[s.ci[5]])      : null;
+  const minDBG    = MIN_OPTS[s.ci[6]]  !== "any" ? Number(MIN_OPTS[s.ci[6]])     : null;
+  const minPAT    = MIN_OPTS[s.ci[7]]  !== "any" ? Number(MIN_OPTS[s.ci[7]])     : null;
+  const minCHA    = MIN_OPTS[s.ci[8]] !== "any" ? Number(MIN_OPTS[s.ci[8]])      : null;
+  const minWIS    = MIN_OPTS[s.ci[9]] !== "any" ? Number(MIN_OPTS[s.ci[9]])      : null;
+  const minSNK    = MIN_OPTS[s.ci[10]] !== "any" ? Number(MIN_OPTS[s.ci[10]])    : null;
 
-  // Scale attempt budget to rarity difficulty
   const maxAttempts =
-    wantRa === "legendary" ? 200_000_000 :
+    wantRa === "legendary" ? 10_000_000_000 :
     wantRa === "epic"      ?  50_000_000 :
     wantRa === "rare"      ?  20_000_000 : 10_000_000;
 
@@ -374,19 +462,17 @@ async function runSearch(s: State): Promise<void> {
     const userId = randomBytes(16).toString("hex");
     const bones  = generateBones(userId);
 
-    if (wantSp    !== null && bones.species !== wantSp)              continue;
-    if (wantRa    !== null && bones.rarity  !== wantRa)              continue;
-    if (wantShiny !== null && bones.shiny   !== wantShiny)           continue;
-    if (wantPeak  !== null && bones.peak    !== wantPeak)            continue;
-    if (wantDump  !== null && bones.dump    !== wantDump)            continue;
-    if (wantEye   !== null && bones.eye     !== wantEye)             continue;
-    if (wantHat   !== null && bones.hat     !== wantHat)             continue;
-    if (minAvg    !== null && avgStat(bones) < minAvg)               continue;
-    if (minDBG    !== null && bones.stats.DEBUGGING < minDBG)        continue;
-    if (minPAT    !== null && bones.stats.PATIENCE  < minPAT)        continue;
-    if (minCHA    !== null && bones.stats.CHAOS     < minCHA)        continue;
-    if (minWIS    !== null && bones.stats.WISDOM    < minWIS)        continue;
-    if (minSNK    !== null && bones.stats.SNARK     < minSNK)        continue;
+    if (wantSp    !== null && bones.species !== wantSp)     continue;
+    if (wantRa    !== null && bones.rarity  !== wantRa)     continue;
+    if (wantShiny !== null && bones.shiny   !== wantShiny)  continue;
+    if (wantPeak  !== null && bones.peak    !== wantPeak)   continue;
+    if (wantDump  !== null && bones.dump    !== wantDump)   continue;
+    if (minAvg    !== null && avgStat(bones) < minAvg)      continue;
+    if (minDBG    !== null && bones.stats.DEBUGGING < minDBG) continue;
+    if (minPAT    !== null && bones.stats.PATIENCE  < minPAT) continue;
+    if (minCHA    !== null && bones.stats.CHAOS     < minCHA) continue;
+    if (minWIS    !== null && bones.stats.WISDOM    < minWIS) continue;
+    if (minSNK    !== null && bones.stats.SNARK     < minSNK) continue;
 
     results.push({ userId, bones });
   }
@@ -399,53 +485,152 @@ async function runSearch(s: State): Promise<void> {
   drawScreen(s);
 }
 
+// ─── Configuring generation ───────────────────────────────────────────────────
+
+async function confirmConfiguring(
+  s: State,
+  redraw: () => void,
+  onDone: (message: string) => void,
+): Promise<void> {
+  const r = s.configResult!;
+  const bones: BuddyBones = {
+    ...r.bones,
+    eye: EYES[s.configEyeIdx] as Eye,
+    hat: HATS[s.configHatIdx] as Hat,
+  };
+
+  const spinnerInterval = setInterval(() => { s.spinnerTick++; redraw(); }, 100);
+
+  let name        = s.configNameInput.trim();
+  let personality = s.configPersonalityInput.trim();
+
+  try {
+    if (!name && !personality) {
+      const gen = await generateBuddy(bones);
+      name        = gen.name;
+      personality = gen.personality;
+    } else if (!name) {
+      name = await generateName(bones, personality);
+    } else if (!personality) {
+      personality = await generatePersonality(bones);
+    }
+  } finally {
+    clearInterval(spinnerInterval);
+  }
+
+  const hatchedAt = s.configIsEdit ? s.configHatchedAt : Date.now();
+  const companion: Companion = { bones, name, personality, hatchedAt, userId: r.userId };
+
+  if (s.configIsEdit) {
+    const originalSlot = s.configEditSlot;
+    let slug = slugify(name);
+    // If new slug conflicts with a *different* existing slot, fall back to original name
+    if (slug !== originalSlot && loadCompanionSlot(slug)) {
+      name = companion.name = originalSlot;
+      slug = originalSlot;
+    }
+    deleteCompanionSlot(originalSlot);
+    saveCompanionSlot(companion, slug);
+    saveActiveSlot(slug);
+    writeStatusState(companion, `*${name} updated*`);
+    onDone(`✓ ${name} updated!`);
+  } else {
+    let slug = slugify(name);
+    if (loadCompanionSlot(slug)) {
+      name = unusedName();
+      slug = slugify(name);
+    }
+    companion.name = name;
+    saveCompanionSlot(companion, slug);
+    saveActiveSlot(slug);
+    writeStatusState(companion, `*${name} arrives*`);
+    onDone(`✓ ${name} saved!`);
+  }
+}
+
 // ─── Key handlers ─────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
-/** Returns true if the TUI should exit. */
 function onKey(key: string, s: State): boolean {
-  if (key === "\x03") return true;  // Ctrl+C always quits
+  if (key === "\x03") return true;
 
   switch (s.mode) {
-    case "naming": {
+    case "configuring": {
+      if (s.configGenerating) break; // ignore input during generation
+
       if (key === "\x1b") {
-        s.mode = "results"; s.nameInput = ""; s.pendingResult = null;
+        s.mode = s.configIsEdit ? "saved" : "results";
+        s.configResult = null;
+        break;
+      }
+      if (key === "\x1b[A" || key === "k") {
+        s.configFocus = clamp(s.configFocus - 1, 0, 3);
+      } else if (key === "\x1b[B" || key === "j") {
+        s.configFocus = clamp(s.configFocus + 1, 0, 3);
+      } else if (key === "\x1b[C" || key === "l") {
+        if (s.configFocus === 2) s.configEyeIdx = (s.configEyeIdx + 1) % EYES.length;
+        else if (s.configFocus === 3) s.configHatIdx = (s.configHatIdx + 1) % HATS.length;
+      } else if (key === "\x1b[D" || key === "h") {
+        if (s.configFocus === 2) s.configEyeIdx = (s.configEyeIdx - 1 + EYES.length) % EYES.length;
+        else if (s.configFocus === 3) s.configHatIdx = (s.configHatIdx - 1 + HATS.length) % HATS.length;
+      } else if (key === "" || key === "\b") {
+        if (s.configFocus === 0) s.configNameInput = s.configNameInput.slice(0, -1);
+        else if (s.configFocus === 1) s.configPersonalityInput = s.configPersonalityInput.slice(0, -1);
+      } else if (key === "\x15") {  // ctrl+u — clear focused text field
+        if (s.configFocus === 0) s.configNameInput = "";
+        else if (s.configFocus === 1) s.configPersonalityInput = "";
       } else if (key === "\r" || key === "\n") {
-        // Empty input → auto-pick a random unused name
-        const name = s.nameInput.trim() || unusedName();
-        const slot = slugify(name);
-        if (loadCompanionSlot(slot)) {
-          s.message = `"${slot}" already taken — type a different name`;
-          s.nameInput = "";
-          break;
+        s.configGenerating = true; // triggers confirmConfiguring in main loop
+      } else if (key.length === 1 && key >= " ") {
+        if (s.configFocus === 0 && s.configNameInput.length < 14) {
+          s.configNameInput += key;
+        } else if (s.configFocus === 1) {
+          s.configPersonalityInput += key;
         }
-        const r    = s.pendingResult!;
-        const companion: Companion = {
-          bones: r.bones, name,
-          personality: generatePersonality(r.bones, r.userId),
-          hatchedAt: Date.now(), userId: r.userId,
-        };
-        saveCompanionSlot(companion, slot);
-        saveActiveSlot(slot);
-        writeStatusState(companion, `*${name} arrives*`);
-        s.message = `✓ ${name} saved to slot "${slot}" and set as active!`;
-        return true;
-      } else if (key === "\u007f" || key === "\b") {
-        s.nameInput = s.nameInput.slice(0, -1);
-      } else if (key.length === 1 && key >= " " && s.nameInput.length < 14) {
-        s.nameInput += key;
       }
       break;
     }
 
     case "saved": {
+      if (s.confirmDelete) {
+        if (key === "d" || key === "y") {
+          const entry = s.savedSlots[s.savedCursor];
+          if (entry) {
+            deleteCompanionSlot(entry.slot);
+            s.savedSlots  = listCompanionSlots();
+            s.activeSlot  = loadActiveSlot();
+            s.savedCursor = clamp(s.savedCursor, 0, Math.max(0, s.savedSlots.length - 1));
+            s.message     = `✗ ${entry.companion.name} removed`;
+          }
+        }
+        s.confirmDelete = false;
+        break;
+      }
       if (key === "q")                          return true;
       if (key === "s")                          { s.mode = "criteria"; break; }
+      if (key === "d" && s.savedSlots.length > 0) { s.confirmDelete = true; break; }
+      if (key === "e" && s.savedSlots.length > 0) {
+        const entry = s.savedSlots[s.savedCursor];
+        if (entry) {
+          const { companion, slot } = entry;
+          s.configResult           = { userId: companion.userId, bones: companion.bones };
+          s.configFocus            = 0;
+          s.configEyeIdx           = Math.max(0, EYES.indexOf(companion.bones.eye as typeof EYES[number]));
+          s.configHatIdx           = Math.max(0, HATS.indexOf(companion.bones.hat as typeof HATS[number]));
+          s.configNameInput        = companion.name;
+          s.configPersonalityInput = companion.personality;
+          s.configGenerating       = false;
+          s.configIsEdit           = true;
+          s.configEditSlot         = slot;
+          s.configHatchedAt        = companion.hatchedAt;
+          s.mode                   = "configuring";
+        }
+        break;
+      }
       if (key === "\x1b[A" || key === "k")      s.savedCursor = clamp(s.savedCursor - 1, 0, s.savedSlots.length - 1);
       else if (key === "\x1b[B" || key === "j") s.savedCursor = clamp(s.savedCursor + 1, 0, s.savedSlots.length - 1);
       else if (key === "r") {
-        // Random pick from menagerie
         if (s.savedSlots.length > 0) {
           const entry = s.savedSlots[Math.floor(Math.random() * s.savedSlots.length)];
           s.savedCursor = s.savedSlots.indexOf(entry);
@@ -482,13 +667,13 @@ function onKey(key: string, s: State): boolean {
         s.searching    = true;
         s.searchStatus = "starting...";
         drawScreen(s);
-        runSearch(s);  // fire-and-forget async; updates state and redraws when done
+        runSearch(s);
       }
       break;
     }
 
     case "searching": {
-      s.searching = false;  // any key stops; runSearch will drain and switch to results
+      s.searching = false;
       break;
     }
 
@@ -500,9 +685,17 @@ function onKey(key: string, s: State): boolean {
       else if (key === "\r" || key === "\n") {
         const r = s.results[s.resultCursor];
         if (r) {
-          s.pendingResult = r;
-          s.nameInput    = "";  // empty — user types name or presses Enter for auto
-          s.mode         = "naming";
+          s.configResult           = r;
+          s.configFocus            = 0;
+          s.configEyeIdx           = 0;
+          s.configHatIdx           = 0;
+          s.configNameInput        = "";
+          s.configPersonalityInput = "";
+          s.configGenerating       = false;
+          s.configIsEdit           = false;
+          s.configEditSlot         = "";
+          s.configHatchedAt        = 0;
+          s.mode                   = "configuring";
         }
       }
       break;
@@ -514,7 +707,7 @@ function onKey(key: string, s: State): boolean {
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 function cleanup(): void {
-  process.stdout.write("\x1b[?25h");  // show cursor
+  process.stdout.write("\x1b[?25h");
   try { process.stdin.setRawMode(false); } catch {}
   process.stdin.pause();
 }
@@ -525,7 +718,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  process.stdout.write("\x1b[?25l");  // hide cursor
+  process.stdout.write("\x1b[?25l");
   process.stdin.setRawMode(true);
   process.stdin.resume();
   process.stdin.setEncoding("utf8");
@@ -536,10 +729,25 @@ async function main(): Promise<void> {
   const s = fresh();
   drawScreen(s);
 
+  function redraw() { drawScreen(s); }
+
+  let generationStarted = false;
+
   await new Promise<void>((resolve) => {
     process.stdin.on("data", (key: string) => {
       const quit = onKey(key, s);
       drawScreen(s);
+
+      if (s.configGenerating && !generationStarted) {
+        generationStarted = true;
+        confirmConfiguring(s, redraw, (msg) => {
+          cleanup();
+          process.stdout.write("\x1b[2J\x1b[H");
+          console.log(`\n  ${msg}\n`);
+          resolve();
+        });
+      }
+
       if (quit) {
         cleanup();
         process.stdout.write("\x1b[2J\x1b[H");

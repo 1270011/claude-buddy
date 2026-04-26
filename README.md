@@ -247,7 +247,8 @@ claude-buddy/
 | `/buddy position [top\|left]` | Bubble position (tmux only) |
 | `/buddy rarity [on\|off]` | Show or hide stars + rarity line (tmux only) |
 | `/buddy width [10-60]` | Set bubble text width in chars (tmux only) |
-| `/buddy margin [0-20]` | Set right-side margin (tmux only) |
+| `/buddy margin [0-20]` | Set distance from terminal right edge to buddy art |
+| `/buddy bars_offset [0-40]` | Set distance from terminal left edge to usage bars (combined mode) |
 | `/buddy statusline [on\|off]` | Enable or disable buddy in the status line |
 | `/buddy statusline combined` | Show rate-limit usage bars alongside buddy (needs python3) |
 | `/buddy statusline basic` | Switch back to buddy-only status line |

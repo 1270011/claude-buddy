@@ -269,13 +269,16 @@ function rollRarity(rng: () => number): Rarity {
   return "common";
 }
 
-export function generateBones(userId: string, salt: string = SALT): BuddyBones {
+export function generateBones(
+  userId: string,
+  salt: string = SALT,
+  eye: Eye = EYES[0],
+  hat: Hat = "none",
+): BuddyBones {
   const rng = mulberry32(hashString(userId + salt));
 
   const rarity = rollRarity(rng);
   const species = pick(rng, SPECIES);
-  const eye = pick(rng, EYES);
-  const hat = rarity === "common" ? "none" : pick(rng, HATS);
   const shiny = rng() < 0.01;
 
   const peak = pick(rng, STAT_NAMES);
@@ -295,84 +298,6 @@ export function generateBones(userId: string, salt: string = SALT): BuddyBones {
   }
 
   return { rarity, species, eye, hat, shiny, stats, peak, dump };
-}
-
-// ─── Personality ────────────────────────────────────────────────────────────
-
-const PEAK_PHRASES: Record<StatName, string[]> = {
-  DEBUGGING: [
-    "spots segfaults before the stack unwinds",
-    "can read a backtrace like a map",
-    "finds the off-by-one before the tests do",
-  ],
-  PATIENCE: [
-    "outlasts any flaky test suite",
-    "waits for the slow CI build without complaint",
-    "never merges before the green check",
-  ],
-  CHAOS: [
-    "treats breaking changes as a love language",
-    "rewrites the Makefile on a Tuesday for fun",
-    "thrives wherever the incident channel is loudest",
-  ],
-  WISDOM: [
-    "has seen this bug before — in three other repos",
-    "quotes the relevant RFC from memory",
-    "recognizes the abstraction that will outlive its author",
-  ],
-  SNARK: [
-    "leaves code review comments that linger",
-    "finds the edge case you forgot and mentions it twice",
-    "names things with uncomfortable accuracy",
-  ],
-};
-
-const DUMP_PHRASES: Record<StatName, string[]> = {
-  DEBUGGING: [
-    "occasionally ships the workaround instead of the fix",
-    "skips the repro step",
-    "trusts the logs a little too much",
-  ],
-  PATIENCE: [
-    "starts the rebase before the review is done",
-    "has been known to close slow issues as stale",
-    "has been known to force-push main",
-  ],
-  CHAOS: [
-    "prefers everything to stay exactly where it is",
-    "dislikes surprise refactors",
-    "writes very thorough migration guides",
-  ],
-  WISDOM: [
-    "sometimes reinvents the wheel with enthusiasm",
-    "skips the existing prior art",
-    "learns by doing, not by reading",
-  ],
-  SNARK: [
-    "only leaves encouraging comments",
-    "approves PRs with genuine warmth",
-    "never says what it actually thinks",
-  ],
-};
-
-const RARITY_CLOSER: Record<string, string[]> = {
-  common:    ["Gets the job done.", "Reliable, if unassuming."],
-  uncommon:  ["Has a few tricks up its sleeve.", "Worth keeping around."],
-  rare:      ["Not to be underestimated.", "Earns its keep."],
-  epic:      ["Commands quiet respect.", "The kind of companion repos are built around."],
-  legendary: ["The kind you find once, if you're lucky.", "Leaves every codebase better than it found it."],
-};
-
-export function generatePersonality(bones: BuddyBones, userId: string): string {
-  const seed = parseInt(userId.slice(0, 8), 16);
-  const pickPhrase = <T>(arr: T[], salt: number = 0): T => arr[(seed + salt) % arr.length];
-
-  const shiny  = bones.shiny ? " Shimmers faintly in dark mode." : "";
-  const peak   = pickPhrase(PEAK_PHRASES[bones.peak]);
-  const dump   = pickPhrase(DUMP_PHRASES[bones.dump], 1);
-  const closer = pickPhrase(RARITY_CLOSER[bones.rarity] ?? ["Gets the job done."], 2);
-
-  return `A ${bones.rarity} ${bones.species} that ${peak}.${shiny} ${closer} Though it ${dump}.`;
 }
 
 // ─── ASCII Art ──────────────────────────────────────────────────────────────
@@ -483,8 +408,6 @@ export function searchBuddy(
     const species = pick(rng, SPECIES);
     if (species !== criteria.species) continue;
 
-    const eye = pick(rng, EYES);
-    const hat = rarity === "common" ? "none" : pick(rng, HATS);
     const shiny = rng() < 0.01;
     if (criteria.wantShiny && !shiny) continue;
 
@@ -518,7 +441,7 @@ export function searchBuddy(
 
     results.push({
       userId: id,
-      bones: { rarity, species, eye, hat, shiny, stats, peak, dump },
+      bones: { rarity, species, eye: EYES[0], hat: "none", shiny, stats, peak, dump },
     });
 
     if (results.length >= 20) break;
