@@ -123,11 +123,16 @@ export const SPECIES_ART: Record<Species, string[][]> = {
   ]
 };
 
+// ─── ANSI color constants ────────────────────────────────────────────────────
+
+const GOLD = "\x1b[38;2;200;160;0m";
+const NC = "\x1b[0m";
+
 // ─── Hat art ────────────────────────────────────────────────────────────────
 
 export const HAT_ART: Record<Hat, string> = {
   none:      "",
-  crown:     "   \\^^^/    ",
+  crown:     `   ${GOLD}\\^^^/${NC}    `,
   tophat:    "   [___]    ",
   propeller: "    -+-     ",
   halo:      "   (   )    ",
@@ -139,7 +144,7 @@ export const HAT_ART: Record<Hat, string> = {
 // Wyvern line 0 is `}       {` (7 inner chars between horns).
 // These replace that line so the hat sits between the horns.
 const WYVERN_HAT: Partial<Record<Hat, string>> = {
-  crown:     "} \\^^^/ {",  // \^^^/ (5) centered in 7
+  crown:     `} ${GOLD}\\^^^/${NC} {`,  // \^^^/ (5) centered in 7
   tophat:    "} [___] {",   // [___] (5) centered in 7
   propeller: "}  -+-  {",   // -+- (3) centered in 7
   halo:      "} (   ) {",   // (   ) (5) centered in 7
@@ -171,7 +176,6 @@ const RARITY_COLOR: Record<Rarity, string> = {
 const SHINY_COLOR = "\x1b[93m"; // bright yellow
 const BOLD = "\x1b[1m";
 const DIM = "\x1b[2m";
-const NC = "\x1b[0m";
 
 export const RARITY_STARS: Record<Rarity, string> = {
   common: "\u2605",

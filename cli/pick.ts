@@ -20,10 +20,11 @@ import {
   loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
-  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+  generateBones, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
   type Species, type Rarity, type StatName, type Eye, type Hat,
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
+import { generateBuddy } from "../server/generation.ts";
 import { renderCompanionCard } from "../server/art.ts";
 import { randomBytes } from "crypto";
 
@@ -113,37 +114,43 @@ interface SlotEntry   { slot: string; companion: Companion; }
 interface BuddyResult { userId: string; bones: BuddyBones; }
 
 interface State {
-  mode:          Mode;
-  searching:     boolean;
-  savedSlots:    SlotEntry[];
-  savedCursor:   number;
-  activeSlot:    string;
-  criteriaFocus: number;
-  ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
-  results:       BuddyResult[];
-  resultCursor:  number;
-  searchStatus:  string;
-  nameInput:     string;
-  pendingResult: BuddyResult | null;
-  message:       string;
+  mode:              Mode;
+  searching:         boolean;
+  savedSlots:        SlotEntry[];
+  savedCursor:       number;
+  activeSlot:        string;
+  criteriaFocus:     number;
+  ci:                number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
+  results:           BuddyResult[];
+  resultCursor:      number;
+  searchStatus:      string;
+  nameInput:         string;
+  pendingResult:     BuddyResult | null;
+  pendingGen:        { name: string; personality: string } | null;
+  pendingGenLoading: boolean;
+  message:           string;
+  spinnerTick:       number;
 }
 
 function fresh(): State {
   return {
-    mode:          "saved",
-    searching:     false,
-    savedSlots:    listCompanionSlots(),
-    savedCursor:   0,
-    activeSlot:    loadActiveSlot(),
-    criteriaFocus: 0,
+    mode:              "saved",
+    searching:         false,
+    savedSlots:        listCompanionSlots(),
+    savedCursor:       0,
+    activeSlot:        loadActiveSlot(),
+    criteriaFocus:     0,
     // Default criteria: legendary, any species/shiny/peak/dump/eye/hat/avg/stats
     ci: [0, RA_OPTS.indexOf("legendary"), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    results:       [],
-    resultCursor:  0,
-    searchStatus:  "",
-    nameInput:     "",
-    pendingResult: null,
-    message:       "",
+    results:           [],
+    resultCursor:      0,
+    searchStatus:      "",
+    nameInput:         "",
+    pendingResult:     null,
+    pendingGen:        null,
+    pendingGenLoading: false,
+    message:           "",
+    spinnerTick:       0,
   };
 }
 
@@ -249,9 +256,16 @@ function namingPane(s: State): string[] {
   if (b) lines.push(`  ${clr}${b.rarity} ${b.species}${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
   lines.push(`  ${B}Name:${N} ${s.nameInput}${YL}▌${N}`);
-  lines.push(`  ${GR}(type a name, or enter for random)${N}`);
+  if (s.pendingGenLoading) {
+    const frame = SPINNER_FRAMES[s.spinnerTick % SPINNER_FRAMES.length];
+    lines.push(`  ${GR}${frame} generating suggestion...${N}`);
+  } else {
+    lines.push(`  ${GR}(enter to save, or type a different name)${N}`);
+  }
   return lines;
 }
+
+const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
 
 function previewPane(s: State): string[] {
   let c: Companion | null = null;
@@ -260,18 +274,14 @@ function previewPane(s: State): string[] {
     c = s.savedSlots[s.savedCursor]?.companion ?? null;
   } else if (s.mode === "results") {
     const r = s.results[s.resultCursor];
-    if (r) c = {
-      bones: r.bones, name: "???",
-      personality: generatePersonality(r.bones, r.userId),
-      hatchedAt: Date.now(), userId: r.userId,
-    };
+    if (r) {
+      c = { bones: r.bones, name: "???", personality: "", hatchedAt: Date.now(), userId: r.userId };
+    }
   } else if (s.mode === "naming" && s.pendingResult) {
     const r = s.pendingResult;
-    c = {
-      bones: r.bones, name: s.nameInput || "???",
-      personality: generatePersonality(r.bones, r.userId),
-      hatchedAt: Date.now(), userId: r.userId,
-    };
+    const displayName = s.nameInput || s.pendingGen?.name || "???";
+    const displayPersonality = s.pendingGen?.personality ?? "";
+    c = { bones: r.bones, name: displayName, personality: displayPersonality, hatchedAt: Date.now(), userId: r.userId };
   }
 
   if (!c) return [`  ${GR}no preview${N}`];
@@ -399,6 +409,28 @@ async function runSearch(s: State): Promise<void> {
   drawScreen(s);
 }
 
+// ─── Naming-mode generation ───────────────────────────────────────────────────
+
+async function startNamingGeneration(r: BuddyResult, s: State, redraw: () => void): Promise<void> {
+  if (s.pendingGenLoading || s.pendingGen) return;
+  s.pendingGenLoading = true;
+
+  const spinnerInterval = setInterval(() => {
+    s.spinnerTick++;
+    redraw();
+  }, 100);
+
+  try {
+    const { name, personality } = await generateBuddy(r.bones, r.userId);
+    s.pendingGen = { name, personality };
+    if (!s.nameInput) s.nameInput = name;  // auto-fill if user hasn't typed yet
+  } finally {
+    s.pendingGenLoading = false;
+    clearInterval(spinnerInterval);
+    redraw();
+  }
+}
+
 // ─── Key handlers ─────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
@@ -411,19 +443,20 @@ function onKey(key: string, s: State): boolean {
     case "naming": {
       if (key === "\x1b") {
         s.mode = "results"; s.nameInput = ""; s.pendingResult = null;
+        s.pendingGen = null; s.pendingGenLoading = false;
       } else if (key === "\r" || key === "\n") {
-        // Empty input → auto-pick a random unused name
-        const name = s.nameInput.trim() || unusedName();
+        const r = s.pendingResult!;
+        // Use typed name, or LLM suggestion, or random fallback
+        const name = s.nameInput.trim() || s.pendingGen?.name || unusedName();
         const slot = slugify(name);
         if (loadCompanionSlot(slot)) {
           s.message = `"${slot}" already taken — type a different name`;
           s.nameInput = "";
           break;
         }
-        const r    = s.pendingResult!;
         const companion: Companion = {
           bones: r.bones, name,
-          personality: generatePersonality(r.bones, r.userId),
+          personality: s.pendingGen?.personality ?? "This creature doesn't want to tell you about itself right now.",
           hatchedAt: Date.now(), userId: r.userId,
         };
         saveCompanionSlot(companion, slot);
@@ -500,9 +533,11 @@ function onKey(key: string, s: State): boolean {
       else if (key === "\r" || key === "\n") {
         const r = s.results[s.resultCursor];
         if (r) {
-          s.pendingResult = r;
-          s.nameInput    = "";  // empty — user types name or presses Enter for auto
-          s.mode         = "naming";
+          s.pendingResult     = r;
+          s.nameInput         = "";
+          s.pendingGen        = null;
+          s.pendingGenLoading = false;
+          s.mode              = "naming";
         }
       }
       break;
@@ -536,10 +571,17 @@ async function main(): Promise<void> {
   const s = fresh();
   drawScreen(s);
 
+  function redraw() { drawScreen(s); }
+
   await new Promise<void>((resolve) => {
     process.stdin.on("data", (key: string) => {
+      const prevMode = s.mode;
       const quit = onKey(key, s);
       drawScreen(s);
+      // Fire generation when entering naming mode
+      if (s.mode === "naming" && prevMode !== "naming" && s.pendingResult) {
+        startNamingGeneration(s.pendingResult, s, redraw);
+      }
       if (quit) {
         cleanup();
         process.stdout.write("\x1b[2J\x1b[H");

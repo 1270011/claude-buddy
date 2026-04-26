@@ -51,6 +51,7 @@
   "homepage": "https://github.com/1270011/claude-buddy#readme",
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@modelcontextprotocol/sdk": "^1.12.1",
     "@xterm/addon-serialize": "^0.14.0",

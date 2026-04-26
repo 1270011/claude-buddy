@@ -8,6 +8,9 @@
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
 BUDDY_SCRIPT="$SCRIPT_DIR/buddy-status.sh"
 
+# shellcheck source=../scripts/paths.sh
+source "$SCRIPT_DIR/../scripts/paths.sh"
+
 if ! command -v python3 >/dev/null 2>&1; then
     exec "$BUDDY_SCRIPT"
 fi
@@ -71,8 +74,16 @@ if [ "$HAS_DATA" != "True" ]; then
     exit 0
 fi
 
+# ── Read bars left offset from config ───────────────────────────────────────
+BARS_LEFT_OFFSET=0
+_CONFIG="$BUDDY_STATE_DIR/config.json"
+if [ -f "$_CONFIG" ]; then
+    _blo=$(jq -r '.barsLeftOffset // 0' "$_CONFIG" 2>/dev/null || echo 0)
+    case "$_blo" in ''|*[!0-9]*) ;; *) BARS_LEFT_OFFSET="$_blo" ;; esac
+fi
+
 # ── Merge stat lines into buddy output ──────────────────────────────────────
-printf '%s\n' "$BUDDY_OUTPUT" | STATS_JSON="$STATS_JSON" python3 -c "
+printf '%s\n' "$BUDDY_OUTPUT" | STATS_JSON="$STATS_JSON" BARS_LEFT_OFFSET="$BARS_LEFT_OFFSET" python3 -c "
 import sys, json, os, re
 
 BRAILLE = '\u2800'
@@ -108,9 +119,11 @@ try:
 except Exception:
     stats = {}
 
+bars_left = int(os.environ.get('BARS_LEFT_OFFSET', '0'))
+
 lines = sys.stdin.read().splitlines()
 n = len(lines)
-center = 1 
+center = 1
 
 stat_items = [
     fmt_stat('5h', stats.get('sess_pct'), stats.get('sess_reset', '--')),
@@ -123,10 +136,11 @@ for i, line in enumerate(lines):
         stat_text, stat_width = stat_items[si]
         after_braille = line[1:]
         num_spaces = len(after_braille) - len(after_braille.lstrip(' '))
-        if num_spaces >= stat_width:
-            remaining = ' ' * (num_spaces - stat_width)
+        needed = bars_left + stat_width
+        if num_spaces >= needed:
+            remaining = ' ' * (num_spaces - needed)
             rest = after_braille.lstrip(' ')
-            print(BRAILLE + stat_text + remaining + rest)
+            print(BRAILLE + ' ' * bars_left + stat_text + remaining + rest)
         else:
             print(line)
     else:
