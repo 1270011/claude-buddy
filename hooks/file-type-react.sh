@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 
-STATE_DIR="$HOME/.claude-buddy"
-SID="${TMUX_PANE#%}"
-SID="${SID:-default}"
+# shellcheck source=../scripts/paths.sh
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+
+STATE_DIR="$BUDDY_STATE_DIR"
+SID="$BUDDY_SID"
 REACTION_FILE="$STATE_DIR/reaction.$SID.json"
 STATUS_FILE="$STATE_DIR/status.json"
 COOLDOWN_FILE="$STATE_DIR/.last_reaction.$SID"

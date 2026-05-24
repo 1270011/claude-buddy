@@ -31,7 +31,8 @@ function sourcePaths(overrides: Env): Record<string, string> {
 printf 'CLAUDE_CFG_DIR=%s\\n' "$CLAUDE_CFG_DIR"
 printf 'CLAUDE_SETTINGS_FILE=%s\\n' "$CLAUDE_SETTINGS_FILE"
 printf 'CLAUDE_USER_CONFIG=%s\\n' "$CLAUDE_USER_CONFIG"
-printf 'BUDDY_STATE_DIR=%s\\n' "$BUDDY_STATE_DIR"`;
+printf 'BUDDY_STATE_DIR=%s\\n' "$BUDDY_STATE_DIR"
+printf 'BUDDY_SID=%s\\n' "$BUDDY_SID"`;
 
   const result = spawnSync("bash", ["-c", script], { env, encoding: "utf8" });
   if (result.status !== 0) {
@@ -100,5 +101,39 @@ describe("scripts/paths.sh (CLAUDE_CONFIG_DIR set)", () => {
     } finally {
       rmSync(profile, { recursive: true, force: true });
     }
+  });
+});
+
+describe("scripts/paths.sh BUDDY_SID resolution", () => {
+  test("uses CLAUDE_CODE_SESSION_ID (first 8 chars) when set", () => {
+    const env = sourcePaths({
+      CLAUDE_CODE_SESSION_ID: "6aca859b-f8eb-4862-a378-19c6f5f549af",
+      TMUX_PANE: null,
+    });
+    expect(env.BUDDY_SID).toBe("6aca859b");
+  });
+
+  test("CLAUDE_CODE_SESSION_ID wins over TMUX_PANE", () => {
+    const env = sourcePaths({
+      CLAUDE_CODE_SESSION_ID: "abcdef12-3456-7890-abcd-ef1234567890",
+      TMUX_PANE: "%7",
+    });
+    expect(env.BUDDY_SID).toBe("abcdef12");
+  });
+
+  test("falls back to TMUX_PANE (sans leading %) when no Claude Code session", () => {
+    const env = sourcePaths({
+      CLAUDE_CODE_SESSION_ID: null,
+      TMUX_PANE: "%42",
+    });
+    expect(env.BUDDY_SID).toBe("42");
+  });
+
+  test("falls back to 'default' when neither is set", () => {
+    const env = sourcePaths({
+      CLAUDE_CODE_SESSION_ID: null,
+      TMUX_PANE: null,
+    });
+    expect(env.BUDDY_SID).toBe("default");
   });
 });
