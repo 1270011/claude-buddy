@@ -1309,9 +1309,6 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
       '{reaction: $r, timestamp: ($ts | tonumber), reason: $reason}' \
       > "$REACTION_FILE"
 
-    TMP=$(mktemp)
-    jq --arg r "$REACTION" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
-
     if command -v jq >/dev/null 2>&1; then
         XP_EVENT=""
         if [ ! -f "$EVENTS_FILE" ]; then

@@ -32,7 +32,8 @@ NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
 SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
-REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
+REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
+REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null)
 ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
@@ -149,7 +150,6 @@ BUBBLE=""
 if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
     BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
-REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION_TTL=0
 INNER_W=44
 MARGIN=8

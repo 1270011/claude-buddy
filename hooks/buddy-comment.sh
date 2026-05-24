@@ -46,11 +46,7 @@ fi
 mkdir -p "$STATE_DIR"
 date +%s > "$COOLDOWN_FILE"
 
-# Update status.json with the reaction
-TMP=$(mktemp)
-jq --arg r "$COMMENT" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
-
-# Also write reaction file (use jq for safe JSON encoding)
+# Write reaction to per-session file (read by the statusline via $SID)
 jq -n --arg r "$COMMENT" --arg ts "$(date +%s)000" \
   '{reaction: $r, timestamp: ($ts | tonumber), reason: "turn"}' \
   > "$STATE_DIR/reaction.$SID.json"

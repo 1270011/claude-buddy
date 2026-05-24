@@ -427,7 +427,7 @@ export function writeStatusState(
     eye: companion.bones.eye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
-    reaction: reaction ?? "",
+    reaction: "",
     muted: muted ?? false,
     achievement: achievement ?? "",
     frames,
@@ -437,6 +437,7 @@ export function writeStatusState(
     mood: moodStr,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
+  if (reaction) saveReaction(reaction, "mcp");
 }
 
 // ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
