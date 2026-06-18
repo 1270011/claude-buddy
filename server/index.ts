@@ -710,7 +710,7 @@ server.tool(
 
 server.tool(
   "buddy_stats_panel",
-  "Toggle the stat-bar panel that renders to the left of the buddy in the status line (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK with ▲ peak / ▼ dump markers). Pass enabled=true/false to set it explicitly, or omit to toggle. Backs the /buddy-stats command. The status line reads this live — no restart needed once the buddy's MCP server is running.",
+  "Toggle the stat-bar panel that renders to the left of the buddy in the status line (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK with ▲ peak / ▼ dump markers). Pass enabled=true/false to set it explicitly, or omit to toggle. Backs the /buddy stats bar command. The status line reads this live — no restart needed once the buddy's MCP server is running.",
   {
     enabled: z
       .boolean()

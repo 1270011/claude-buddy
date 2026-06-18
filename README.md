@@ -210,7 +210,7 @@ Your buddy remembers projects it's seen, recurring bugs, and inferred preference
 
 ### Stats panel
 
-A live stat-bar panel (`DEBUGGING` / `PATIENCE` / `CHAOS` / `WISDOM` / `SNARK`, with peak ▲ / dump ▼ markers) can render flush-left in the status line, independent of the speech bubble and buddy art. Toggle with `/buddy-stats [on|off]`.
+A live stat-bar panel (`DEBUGGING` / `PATIENCE` / `CHAOS` / `WISDOM` / `SNARK`, with peak ▲ / dump ▼ markers) can render flush-left in the status line, independent of the speech bubble and buddy art. Toggle with `/buddy stats bar [on|off]`.
 
 </details>
 
@@ -291,7 +291,7 @@ claude-buddy/
 | `/buddy upgrades title <id\|none>` | Equip a prestige title, or clear it |
 | `/buddy mood` | Show current mood and what's influencing it |
 | `/buddy theme [dark\|light\|auto]` | Show or set color theme |
-| `/buddy-stats [on\|off]` | Toggle the stat-bar panel in the status line |
+| `/buddy stats bar [on\|off]` | Toggle the stat-bar panel in the status line |
 | `/buddy off` / `on` | Mute / unmute reactions |
 | `/buddy rename <name>` | Rename (1–14 chars) |
 | `/buddy personality <text>` | Set custom personality |

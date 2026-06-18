@@ -19,6 +19,8 @@ function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 
 const SETTINGS_FILE = claudeSettingsPath();
+// "buddy-stats" was a separate skill before its command merged into
+// "buddy stats bar" — kept here so older installs get it cleaned up too.
 const SKILL_DIRS = [claudeSkillDir("buddy"), claudeSkillDir("buddy-stats")];
 const STATE_DIR = buddyStateDir();
 const CLAUDE_JSON_PATH = claudeUserConfigPath();
