@@ -19,7 +19,7 @@ function ok(msg: string) { console.log(`${GREEN}✓${NC}  ${msg}`); }
 function warn(msg: string) { console.log(`${YELLOW}⚠${NC}  ${msg}`); }
 
 const SETTINGS_FILE = claudeSettingsPath();
-const SKILL_DIR = claudeSkillDir("buddy");
+const SKILL_DIRS = [claudeSkillDir("buddy"), claudeSkillDir("buddy-stats")];
 const STATE_DIR = buddyStateDir();
 const CLAUDE_JSON_PATH = claudeUserConfigPath();
 
@@ -98,10 +98,16 @@ try {
   warn("Could not update settings.json");
 }
 
-// Remove skill
-if (existsSync(SKILL_DIR)) {
-  rmSync(SKILL_DIR, { recursive: true });
-  ok("Skill removed");
+// Remove skills
+let anySkillRemoved = false;
+for (const dir of SKILL_DIRS) {
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true });
+    anySkillRemoved = true;
+  }
+}
+if (anySkillRemoved) {
+  ok("Skill(s) removed");
 } else {
   warn("Skill not found (already removed)");
 }

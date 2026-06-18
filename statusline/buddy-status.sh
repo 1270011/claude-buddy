@@ -37,6 +37,10 @@ REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
 ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
+TITLE=$(jq -r '.title // ""' "$STATE" 2>/dev/null)
+# Stats panel data: 5 values + peak/dump as a single TSV line. Empty when
+# status.json predates the stats field (older server) — the panel is skipped.
+STATS_TSV=$(jq -r '[.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv' "$STATE" 2>/dev/null)
 
 cat > /dev/null  # drain stdin
 
@@ -162,6 +166,13 @@ if [ -f "$CONFIG_FILE" ]; then
     _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
     case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
 fi
+
+# Stats panel toggle (config.json, read live each tick → no restart on toggle).
+SHOW_STATS="false"
+if [ -f "$CONFIG_FILE" ]; then
+    _ss=$(jq -r '.showStats // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    [ "$_ss" = "true" ] && SHOW_STATS="true"
+fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
@@ -221,8 +232,62 @@ for line in "${ART_LINES[@]}"; do
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
 
+# Prestige title (FR5.4): a dimmed, centered line under the name. Wrapped in
+# guillemets to read as a title rather than a second name. Centered on the art
+# the same way as the name — title names are short ASCII and fit within ART_W.
+if [ -n "$TITLE" ] && [ "$TITLE" != "null" ]; then
+    TITLE_TEXT="«${TITLE}»"
+    TITLE_LEN=${#TITLE_TEXT}
+    TITLE_PAD=$(( ART_CENTER - TITLE_LEN / 2 ))
+    [ "$TITLE_PAD" -lt 0 ] && TITLE_PAD=0
+    TITLE_LINE="$(printf '%*s%s' "$TITLE_PAD" '' "$TITLE_TEXT")"
+    ALL_LINES+=("$TITLE_LINE"); ALL_COLORS+=("$DIM")
+fi
+
 ART_W=14
 ART_COUNT=${#ALL_LINES[@]}
+
+# ─── Stats panel (optional leftmost column) ─────────────────────────────────
+# One line per stat: "LABEL(9) BAR(20) VAL(3) MARKER(2)" → 36 display cols.
+# Bars are sliced from full 20-char templates (no multibyte tr, which is
+# byte-oriented and would corrupt █/░). Peak gets ▲, dump gets ▼.
+STATS_LINES=()
+STATS_W=36
+if [ "$SHOW_STATS" = "true" ] && [ -n "$STATS_TSV" ]; then
+    IFS=$'\t' read -r _S_DBG _S_PAT _S_CHA _S_WIS _S_SNK _S_PEAK _S_DUMP <<< "$STATS_TSV"
+    case "$_S_DBG" in
+        ''|*[!0-9]*) ;;  # missing/non-numeric (old status.json) → skip panel
+        *)
+            _FULL_BAR='████████████████████'
+            _EMPTY_BAR='░░░░░░░░░░░░░░░░░░░░'
+            _GREEN=$'\033[32m'
+            _RED=$'\033[31m'
+            _SDIM=$'\033[2m'
+            _stat_names=(DEBUGGING PATIENCE CHAOS WISDOM SNARK)
+            _stat_vals=("$_S_DBG" "$_S_PAT" "$_S_CHA" "$_S_WIS" "$_S_SNK")
+            _si=0
+            for _sn in "${_stat_names[@]}"; do
+                _val=${_stat_vals[$_si]}
+                _si=$(( _si + 1 ))
+                case "$_val" in ''|*[!0-9]*) _val=0 ;; esac
+                _filled=$(( _val / 5 ))
+                [ "$_filled" -gt 20 ] && _filled=20
+                _bar="${_FULL_BAR:0:_filled}${_EMPTY_BAR:0:$(( 20 - _filled ))}"
+                _label=$(printf '%-9s' "$_sn")
+                _valstr=$(printf '%3d' "$_val")
+                if [ "$_sn" = "$_S_PEAK" ]; then
+                    _mark=" ${_GREEN}▲${NC}"
+                elif [ "$_sn" = "$_S_DUMP" ]; then
+                    _mark=" ${_RED}▼${NC}"
+                else
+                    _mark="  "
+                fi
+                STATS_LINES+=("${_SDIM}${_label}${NC} ${C}${_bar}${NC} ${_SDIM}${_valstr}${NC}${_mark}")
+            done
+            ;;
+    esac
+fi
+STATS_COUNT=${#STATS_LINES[@]}
 
 # ─── Speech bubble (left of art, word-wrapped) ──────────────────────────────
 # Strip the quotes we added earlier
@@ -319,28 +384,49 @@ fi
 
 BUBBLE_COUNT=${#BUBBLE_LINES[@]}
 
-# ─── Right-align with bubble box to the left ─────────────────────────────────
+# ─── Right-align: [stats] [bubble] art, columns to the left of the art ───────
+# The bubble+art block stays flush against the right edge regardless of the
+# stats panel — TOTAL_W/PAD below are unchanged by the stats column. Instead,
+# the stats panel gets a small fixed left margin (flush to the terminal's
+# left edge) and the padding that used to precede it is moved to sit between
+# the stats panel and the bubble, so the bubble/art position never shifts.
 GAP=2
-if [ $BUBBLE_COUNT -gt 0 ]; then
-    TOTAL_W=$(( BOX_W + GAP + ART_W ))
-else
-    TOTAL_W=$ART_W
-fi
+STATS_GAP=2
+STATS_LEFT_MARGIN=1
+TOTAL_W=$ART_W
+[ $BUBBLE_COUNT -gt 0 ] && TOTAL_W=$(( BOX_W + GAP + TOTAL_W ))
+[ $STATS_COUNT -gt 0 ] && TOTAL_W=$(( STATS_W + STATS_GAP + TOTAL_W ))
 PAD=$(( COLS - TOTAL_W - MARGIN ))
 [ "$PAD" -lt 0 ] && PAD=0
 
+if [ $STATS_COUNT -gt 0 ]; then
+    LEAD_PAD=$STATS_LEFT_MARGIN
+    MID_PAD=$(( PAD - STATS_LEFT_MARGIN ))
+    [ "$MID_PAD" -lt 0 ] && MID_PAD=0
+else
+    LEAD_PAD=$PAD
+    MID_PAD=0
+fi
+
 # On Windows (Git Bash / MSYS2), Braille Blank (U+2800) renders as double-width,
 # which doubles the spacer and pushes content off-screen. Use regular spaces instead.
+# MID_SPACER sits mid-line (never trimmed), so it's always plain spaces — only
+# the line-leading SPACER needs the non-trimmable Braille Blank.
 case "$(uname -s)" in
-    MINGW*|CYGWIN*|MSYS*) SPACER=$(printf '%*s' "$PAD" '') ;;
-    *)                     SPACER=$(printf "${B}%${PAD}s" "") ;;
+    MINGW*|CYGWIN*|MSYS*) SPACER=$(printf '%*s' "$LEAD_PAD" '') ;;
+    *)                     SPACER=$(printf "${B}%${LEAD_PAD}s" "") ;;
 esac
-GAP_STR=$(printf '%*s' "$GAP" '')
+MID_SPACER=$(printf '%*s' "$MID_PAD" '')
+STATS_GAP_STR=$(printf '%*s' "$STATS_GAP" '')
 
-# Vertically center bubble box on the art
+# Vertically center each left column on the art
 BUBBLE_START=0
 if [ $BUBBLE_COUNT -gt 0 ] && [ $BUBBLE_COUNT -lt $ART_COUNT ]; then
     BUBBLE_START=$(( (ART_COUNT - BUBBLE_COUNT) / 2 ))
+fi
+STATS_START=0
+if [ $STATS_COUNT -gt 0 ] && [ $STATS_COUNT -lt $ART_COUNT ]; then
+    STATS_START=$(( (ART_COUNT - STATS_COUNT) / 2 ))
 fi
 
 # ─── Find the connector line (middle text line → points to buddy's mouth) ─────
@@ -353,9 +439,12 @@ if [ $BUBBLE_COUNT -gt 2 ]; then
     CONNECTOR_BI=$(( (FIRST_TEXT + LAST_TEXT) / 2 ))
 fi
 
-# ─── Output: merged bubble box + connector + art per line ─────────────────────
+# ─── Output: merged stats panel + bubble + connector + art per line ──────────
 TOTAL_BUBBLE=$(( BUBBLE_START + BUBBLE_COUNT ))
-MAX_LINES=$(( ART_COUNT > TOTAL_BUBBLE ? ART_COUNT : TOTAL_BUBBLE ))
+TOTAL_STATS=$(( STATS_START + STATS_COUNT ))
+MAX_LINES=$ART_COUNT
+[ $TOTAL_BUBBLE -gt $MAX_LINES ] && MAX_LINES=$TOTAL_BUBBLE
+[ $TOTAL_STATS -gt $MAX_LINES ] && MAX_LINES=$TOTAL_STATS
 for (( i=0; i<MAX_LINES; i++ )); do
     # Art part: actual art line or blank filler
     if [ $i -lt $ART_COUNT ]; then
@@ -364,6 +453,21 @@ for (( i=0; i<MAX_LINES; i++ )); do
         art_part=$(printf '%*s' "$ART_W" '')
     fi
 
+    line_out="$SPACER"
+
+    # Stats column (leftmost) — pre-colored, fixed STATS_W display width
+    if [ $STATS_COUNT -gt 0 ]; then
+        si=$(( i - STATS_START ))
+        if [ $si -ge 0 ] && [ $si -lt $STATS_COUNT ]; then
+            line_out+="${STATS_LINES[$si]}"
+        else
+            line_out+=$(printf '%*s' "$STATS_W" '')
+        fi
+        line_out+="$STATS_GAP_STR"
+        line_out+="$MID_SPACER"
+    fi
+
+    # Bubble column
     if [ $BUBBLE_COUNT -gt 0 ]; then
         bi=$(( i - BUBBLE_START ))
         if [ $bi -ge 0 ] && [ $bi -lt $BUBBLE_COUNT ]; then
@@ -378,20 +482,21 @@ for (( i=0; i<MAX_LINES; i++ )); do
             fi
 
             if [ "$btype" = "border" ]; then
-                echo "${SPACER}${C}${bline}${NC}${gap}${art_part}"
+                line_out+="${C}${bline}${NC}${gap}"
             else
                 pipe_l="${bline:0:1}"
                 pipe_r="${bline: -1}"
                 inner="${bline:1:$(( ${#bline} - 2 ))}"
-                echo "${SPACER}${C}${pipe_l}${NC}${DIM}${inner}${NC}${C}${pipe_r}${NC}${gap}${art_part}"
+                line_out+="${C}${pipe_l}${NC}${DIM}${inner}${NC}${C}${pipe_r}${NC}${gap}"
             fi
         else
-            empty=$(printf '%*s' "$BOX_W" '')
-            echo "${SPACER}${empty}   ${art_part}"
+            line_out+=$(printf '%*s' "$BOX_W" '')
+            line_out+="   "
         fi
-    else
-        echo "${SPACER}${art_part}"
     fi
+
+    line_out+="$art_part"
+    echo "$line_out"
 done
 
 exit 0

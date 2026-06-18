@@ -1,0 +1,163 @@
+/**
+ * Render tests for statusline/buddy-status.sh — Phase 6 prestige titles.
+ *
+ * Drives the real bash script under a temp CLAUDE_CONFIG_DIR with a hand-built
+ * status.json fixture, then asserts on its stdout. Hermetic via the spawned
+ * process's env (no shared module state), mirroring paths_sh.test.ts.
+ */
+
+import { describe, expect, test } from "bun:test";
+import { spawnSync } from "child_process";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
+import { join, resolve } from "path";
+
+const SCRIPT = resolve(import.meta.dir, "..", "statusline", "buddy-status.sh");
+
+/** Strip ANSI SGR escape codes so assertions can match rendered text. */
+function stripAnsi(s: string): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+interface StatusOverrides {
+  title?: string | null;
+  name?: string;
+  level?: number;
+  reaction?: string;
+  /** When set, writes config.json with showStats and includes stats in status.json. */
+  showStats?: boolean;
+  /** Omit stats entirely from status.json (simulates an older server build). */
+  omitStats?: boolean;
+}
+
+/** Write a minimal status.json into a temp config dir and run buddy-status.sh
+ *  against it, returning the script's stdout. */
+function renderStatus(overrides: StatusOverrides): string {
+  const cfgDir = mkdtempSync(join(tmpdir(), "buddy-status-test-"));
+  const stateDir = join(cfgDir, "buddy-state");
+  mkdirSync(stateDir, { recursive: true });
+
+  const status: Record<string, unknown> = {
+    name: overrides.name ?? "Waffle",
+    rarity: "common",
+    shiny: false,
+    reaction: overrides.reaction ?? "",
+    achievement: "",
+    level: overrides.level ?? 11,
+    mood: "focused",
+    muted: false,
+    title: overrides.title ?? null,
+    // One concrete frame so the cycler has something to pick.
+    frames: ["            \n    (··)    \n    (  )    \n            \n            "],
+    frameSequence: [0],
+  };
+  if (!overrides.omitStats) {
+    status.stats = {
+      DEBUGGING: 10,
+      PATIENCE: 22,
+      CHAOS: 28,
+      WISDOM: 5,
+      SNARK: 76,
+    };
+    status.peak = "SNARK";
+    status.dump = "WISDOM";
+  }
+  writeFileSync(join(stateDir, "status.json"), JSON.stringify(status));
+
+  if (overrides.showStats !== undefined) {
+    writeFileSync(
+      join(stateDir, "config.json"),
+      JSON.stringify({ showStats: overrides.showStats }),
+    );
+  }
+
+  const env: Record<string, string> = { CLAUDE_CONFIG_DIR: cfgDir };
+  for (const k of ["HOME", "PATH", "USER", "LANG", "LC_ALL", "LC_CTYPE"]) {
+    if (process.env[k]) env[k] = process.env[k]!;
+  }
+  // The script (like every real terminal it runs in) assumes a UTF-8 locale —
+  // multibyte bar slicing depends on char-aware substrings. Ensure one even if
+  // the host env didn't set it.
+  if (!env.LC_ALL && !env.LANG && !env.LC_CTYPE) env.LC_ALL = "en_US.UTF-8";
+  // Pin width so right-alignment padding is deterministic and the buddy renders.
+  env.COLUMNS = "125";
+
+  try {
+    const result = spawnSync("bash", [SCRIPT], {
+      env,
+      input: "",
+      encoding: "utf8",
+    });
+    if (result.status !== 0) {
+      throw new Error(`bash exited ${result.status}: ${result.stderr}`);
+    }
+    return result.stdout;
+  } finally {
+    rmSync(cfgDir, { recursive: true, force: true });
+  }
+}
+
+describe("buddy-status.sh prestige title", () => {
+  test("renders an equipped title in guillemets under the name", () => {
+    const out = renderStatus({ title: "Committer" });
+    expect(out).toContain("«Committer»");
+  });
+
+  test("omits the title line entirely when no title is equipped", () => {
+    const out = renderStatus({ title: null });
+    expect(out).not.toContain("«");
+    expect(out).not.toContain("»");
+  });
+
+  test("still shows the buddy name when a title is present", () => {
+    const out = renderStatus({ title: "Architect", name: "Waffle" });
+    expect(out).toContain("Waffle");
+    expect(out).toContain("«Architect»");
+  });
+});
+
+describe("buddy-status.sh stats panel", () => {
+  test("renders the stat panel when showStats is on", () => {
+    const out = renderStatus({ showStats: true });
+    for (const label of ["DEBUGGING", "PATIENCE", "CHAOS", "WISDOM", "SNARK"]) {
+      expect(out).toContain(label);
+    }
+    // Bars + values from the fixture (strip ANSI: color codes sit between
+    // the bar and the number in raw output).
+    const plain = stripAnsi(out);
+    expect(plain).toMatch(/SNARK\s+█+░+\s+76/);
+    expect(plain).toMatch(/WISDOM\s+█+░+\s+5/);
+  });
+
+  test("marks the peak with ▲ and the dump with ▼", () => {
+    const out = renderStatus({ showStats: true });
+    expect(out).toMatch(/SNARK[^\n]*▲/); // peak
+    expect(out).toMatch(/WISDOM[^\n]*▼/); // dump
+  });
+
+  test("hides the panel when showStats is off", () => {
+    const out = renderStatus({ showStats: false });
+    expect(out).not.toContain("DEBUGGING");
+    expect(out).not.toContain("▲");
+  });
+
+  test("hides the panel by default (no config.json)", () => {
+    const out = renderStatus({});
+    expect(out).not.toContain("DEBUGGING");
+  });
+
+  test("skips the panel gracefully when status.json has no stats (old server)", () => {
+    const out = renderStatus({ showStats: true, omitStats: true });
+    expect(out).not.toContain("DEBUGGING");
+    // The buddy itself must still render.
+    expect(out).toContain("Waffle");
+  });
+
+  test("shows stats and the speech bubble together (three columns)", () => {
+    const out = renderStatus({ showStats: true, reaction: "nice commit" });
+    expect(out).toContain("DEBUGGING");
+    expect(out).toContain("nice commit");
+    expect(out).toContain("Waffle");
+  });
+});

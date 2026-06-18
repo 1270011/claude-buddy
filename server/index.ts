@@ -10,6 +10,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { join, resolve, dirname } from "path";
+import { readFileSync } from "fs";
 
 import {
   generateBones,
@@ -64,9 +65,13 @@ import {
   getXpState,
   clearLevelUpFlag,
   renderXpCardMarkdown,
+  UNLOCKABLE_REACTIONS,
   UNLOCKABLE_UPGRADES,
-  isUpgradeUnlocked,
-  applyUpgrade,
+  spendUnlock,
+  refundUnlock,
+  equipTitle,
+  availablePoints,
+  pickOwnedReaction,
   MAX_LEVEL,
   computeLevel,
 } from "./xp";
@@ -211,11 +216,16 @@ server.tool(
   {},
   async () => {
     const companion = ensureCompanion();
-    const reaction = getReaction(
-      "pet",
+    // Occasionally surface a purchased behavioral unlock instead of the default
+    // pet line — only fires when the player actually owns qualifying reactions.
+    const owned = pickOwnedReaction(
       companion.bones.species,
       companion.bones.rarity,
     );
+    const reaction =
+      owned && Math.random() < 0.35
+        ? owned
+        : getReaction("pet", companion.bones.species, companion.bones.rarity);
     saveReaction(reaction, "pet");
     writeStatusState(companion, reaction);
     incrementEvent("pets", 1, activeSlot());
@@ -696,6 +706,34 @@ server.tool(
   },
 );
 
+// ─── Tool: buddy_stats_panel ─────────────────────────────────────────────────
+
+server.tool(
+  "buddy_stats_panel",
+  "Toggle the stat-bar panel that renders to the left of the buddy in the status line (DEBUGGING/PATIENCE/CHAOS/WISDOM/SNARK with ▲ peak / ▼ dump markers). Pass enabled=true/false to set it explicitly, or omit to toggle. Backs the /buddy-stats command. The status line reads this live — no restart needed once the buddy's MCP server is running.",
+  {
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("true to show the stats panel, false to hide. Omit to toggle."),
+  },
+  async ({ enabled }) => {
+    ensureCompanion();
+    const cfg = loadConfig();
+    const next = enabled === undefined ? !cfg.showStats : enabled;
+    saveConfig({ showStats: next });
+
+    const lines: string[] = [];
+    lines.push(`Stats panel: ${next ? "on" : "off"}.`);
+    if (next && !cfg.statusLineEnabled) {
+      lines.push(
+        "Note: the status line itself is disabled — run `/buddy statusline on` to see it.",
+      );
+    }
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  },
+);
+
 // ─── Tool: buddy_uninstall ───────────────────────────────────────────────────
 
 server.tool(
@@ -773,55 +811,88 @@ server.tool(
 
 server.tool(
   "buddy_upgrades",
-  "List and apply upgrades unlocked by leveling up. Shows available upgrades, their level requirements, and applies them to your companion.",
+  "Spend skill points earned by leveling up. With no argument, lists every unlock (owned / affordable / locked) and your point balance. Use `buy` to purchase an unlock, `refund` to reclaim one (only while respec is open, below level 10), or `equipTitle` to wear a prestige title.",
   {
-    apply: z.string().optional().describe("Upgrade ID to apply (e.g. 'bonus_eye', 'shiny_aura')"),
+    buy: z
+      .string()
+      .optional()
+      .describe("Unlock id to purchase (e.g. 'bonus_eye', 'celebrate_level5')"),
+    refund: z
+      .string()
+      .optional()
+      .describe("Unlock id to refund \u2014 only allowed while respec is open"),
+    equipTitle: z
+      .string()
+      .optional()
+      .describe("Prestige title id to equip, or 'none' to clear"),
   },
-  async ({ apply }) => {
+  async ({ buy, refund, equipTitle: titleId }) => {
     ensureCompanion();
-    const state = getXpState();
+    const text = (
+      t: string,
+    ): { content: [{ type: "text"; text: string }] } => ({
+      content: [{ type: "text", text: t }],
+    });
 
-    if (apply) {
-      if (!isUpgradeUnlocked(apply)) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Upgrade "${apply}" is not yet unlocked. Reach the required level first.`,
-            },
-          ],
-        };
-      }
+    // Actions are mutually exclusive; first non-empty wins.
+    if (buy) {
       const companion = loadCompanion();
-      if (!companion) {
-        return { content: [{ type: "text", text: "No active companion." }] };
-      }
-      const updated = applyUpgrade(companion, apply);
-      if (updated) {
-        saveCompanion(updated);
-        const upg = UNLOCKABLE_UPGRADES.find((u) => u.id === apply);
-        return {
-          content: [
-            {
-              type: "text",
-              text: `${upg?.icon ?? ""} Applied: ${upg?.name}. ${upg?.description ?? ""}`,
-            },
-          ],
-        };
-      }
+      const res = spendUnlock(buy, companion);
+      if (res.ok && res.companionChanged && companion) saveCompanion(companion);
+      return text(res.message);
+    }
+    if (refund) {
+      const companion = loadCompanion();
+      const res = refundUnlock(refund, companion);
+      if (res.ok && res.companionChanged && companion) saveCompanion(companion);
+      return text(res.message);
+    }
+    if (titleId !== undefined) {
+      return text(equipTitle(titleId).message);
     }
 
-    // No apply specified — list all upgrades with unlock status
-    const currentLevel = state.level;
+    // No action \u2014 render the catalog with ownership/affordability status.
+    const state = getXpState();
+    const avail = availablePoints(state);
+    const owned = new Set([
+      ...state.unlockedReactions,
+      ...state.unlockedUpgrades,
+    ]);
+    const respec =
+      state.respecLockedAt === null ? "open" : "locked (choices are final)";
+
     const lines: string[] = [];
-    lines.push(`### Level ${currentLevel} \u2014 Upgrades`);
+    lines.push(`### Level ${state.level} \u2014 Upgrades`);
+    lines.push(`**${avail}** skill point(s) available \u00b7 respec ${respec}`);
     lines.push("");
-    for (const upg of UNLOCKABLE_UPGRADES) {
-      const unlocked = currentLevel >= upg.level;
-      const status = unlocked ? "\u2705" : `\u{1F512} Lvl ${upg.level}`;
-      lines.push(`${status} ${upg.icon} **${upg.name}**: ${upg.description}`);
+
+    const catalog = [
+      ...UNLOCKABLE_REACTIONS.map((r) => ({
+        id: r.id,
+        label: `\u{1F4AC} "${r.template}"`,
+        level: r.level,
+        cost: r.cost,
+      })),
+      ...UNLOCKABLE_UPGRADES.map((u) => ({
+        id: u.id,
+        label: `${u.icon} ${u.name} \u2014 ${u.description}`,
+        level: u.level,
+        cost: u.cost,
+      })),
+    ].sort((a, b) => a.level - b.level || a.cost - b.cost);
+
+    for (const i of catalog) {
+      let status: string;
+      if (owned.has(i.id)) status = "\u2705 owned";
+      else if (state.level < i.level) status = `\u{1F512} Lvl ${i.level}`;
+      else if (avail < i.cost) status = `\u{1F4B8} ${i.cost} pt`;
+      else status = `\u{1F7E2} ${i.cost} pt`;
+      lines.push(`${status} \u00b7 ${i.label}  \`${i.id}\``);
     }
-    return { content: [{ type: "text", text: lines.join("\n") }] };
+    lines.push("");
+    lines.push("Buy with `buddy_upgrades buy=<id>`.");
+
+    return text(lines.join("\n"));
   },
 );
 
@@ -1339,6 +1410,22 @@ server.resource(
 );
 
 // ─── Start ──────────────────────────────────────────────────────────────────
+
+// Refresh status.json on every server boot. Most fields (stats, peak, dump,
+// level, mood) only get written by writeStatusState — if no MCP tool fires
+// during a session (the common case, since end-of-turn comments are a cheap
+// jq patch in the Stop hook, not a tool call), a companion created or
+// migrated before a status.json field existed would never pick it up.
+try {
+  const companion = ensureCompanion();
+  const prevReaction = JSON.parse(
+    readFileSync(join(buddyStateDir(), "status.json"), "utf8"),
+  ).reaction as string;
+  writeStatusState(companion, prevReaction);
+} catch {
+  // First run / no prior status.json — ensureCompanion()'s own
+  // writeStatusState call already covers this case.
+}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

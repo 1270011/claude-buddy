@@ -30,7 +30,7 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import type { Companion } from "./engine.ts";
+import type { Companion, BuddyStats, StatName } from "./engine.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -44,7 +44,7 @@ const CONFIG_FILE = join(STATE_DIR, "config.json");
 
 // ─── Session ID (PR #6: tmux session isolation) ─────────────────────────────
 
-function sessionId(): string {
+export function sessionId(): string {
   const pane = process.env.TMUX_PANE;
   if (!pane) return "default";
   return pane.replace(/^%/, "");
@@ -319,6 +319,8 @@ export interface BuddyConfig {
   memoryEnabled: boolean;
   suggestionsEnabled: boolean;
   suggestionCooldown: number;
+  /** Show the buddy's stat bars as a panel to the left of the art. */
+  showStats: boolean;
 }
 
 const DEFAULT_CONFIG: BuddyConfig = {
@@ -336,6 +338,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   memoryEnabled: true,
   suggestionsEnabled: true,
   suggestionCooldown: 180,
+  showStats: false,
 };
 
 export function loadConfig(): BuddyConfig {
@@ -374,6 +377,10 @@ export interface StatusState {
   level: number;
   xp: number;
   mood: string;
+  title: string | null;
+  stats: BuddyStats;
+  peak: StatName;
+  dump: StatName;
 }
 
 export function writeStatusState(
@@ -392,12 +399,14 @@ export function writeStatusState(
   const { frames, frameSequence } = getStatusFrames(companion.bones);
   let xpLevel = level ?? 1;
   let xpTotal = xp ?? 0;
+  let xpTitle: string | null = null;
   let moodStr = "focused";
   try {
     const { getXpState } = require("./xp.ts") as typeof import("./xp.ts");
     const xpState = getXpState();
     xpLevel = xpState.level;
     xpTotal = xpState.totalXp;
+    xpTitle = xpState.title;
   } catch {
     // XP state is optional during first install / version skew.
   }
@@ -424,6 +433,10 @@ export function writeStatusState(
     level: xpLevel,
     xp: xpTotal,
     mood: moodStr,
+    title: xpTitle,
+    stats: companion.bones.stats,
+    peak: companion.bones.peak,
+    dump: companion.bones.dump,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
 }
@@ -495,6 +508,8 @@ const TRANSIENT_PREFIXES = [
   "reaction.",
   ".last_reaction.",
   ".last_comment.",
+  ".session_start.",
+  "session.",
 ];
 
 /**

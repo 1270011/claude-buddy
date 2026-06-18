@@ -11,6 +11,7 @@
 
 import { awardXp } from "./xp";
 import { loadCompanionSlot, loadActiveSlot } from "./state";
+import { startSession, awardSessionComplete } from "./session";
 import type { XpEvent } from "./xp";
 
 const VALID_EVENTS = new Set([
@@ -23,13 +24,18 @@ const VALID_EVENTS = new Set([
   "buddy_pet",
 ]);
 
+// Session-lifecycle events route through session.ts rather than the fixed-XP
+// path: session_start captures a baseline, session_complete awards the bonus.
+const SESSION_EVENTS = new Set(["session_start", "session_complete"]);
+
 function main(): void {
   const event = process.argv[2] as string;
   const slot = process.argv[3] ?? loadActiveSlot();
 
-  if (!event || !VALID_EVENTS.has(event)) {
+  if (!event || (!VALID_EVENTS.has(event) && !SESSION_EVENTS.has(event))) {
+    const all = [...VALID_EVENTS, ...SESSION_EVENTS].join(" | ");
     console.error(
-      `Usage: bun run server/award-xp.ts <event> [slot]\nValid events: ${[...VALID_EVENTS].join(" | ")}`,
+      `Usage: bun run server/award-xp.ts <event> [slot]\nValid events: ${all}`,
     );
     process.exit(1);
   }
@@ -38,6 +44,19 @@ function main(): void {
   const companion = loadCompanionSlot(slot);
   const species = companion?.bones.species;
   const rarity = companion?.bones.rarity;
+
+  if (event === "session_start") {
+    startSession();
+    return;
+  }
+
+  if (event === "session_complete") {
+    const { bonus, state } = awardSessionComplete(slot, species, rarity);
+    console.log(
+      `Session bonus: +${bonus} XP → Level ${state.level} (${state.totalXp.toLocaleString()} XP total)`,
+    );
+    return;
+  }
 
   const state = awardXp(event as XpEvent, slot, species, rarity);
   console.log(

@@ -16,6 +16,11 @@ EVENTS_FILE="$STATE_DIR/events.json"
 SESSION_START_FILE="$STATE_DIR/.session_start.$SID"
 if [ ! -f "$SESSION_START_FILE" ]; then
     date +%s > "$SESSION_START_FILE"
+    # New session — capture the XP baseline for the session-completion bonus.
+    if [ -x "$(command -v bun)" ]; then
+        PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+        bun run "$PLUGIN_ROOT/server/award-xp.ts" session_start >/dev/null 2>&1 &
+    fi
 fi
 SESSION_START=$(cat "$SESSION_START_FILE" 2>/dev/null || echo "$(date +%s)")
 NOW_TS=$(date +%s)
@@ -1332,7 +1337,7 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
             "build-fail")     KEY="build_fails" ;;
             "security-warning") KEY="security_warnings" ;;
             "deprecation")    KEY="deprecations_seen" ;;
-            "all-green")      KEY="all_green" ;;
+            "all-green")      KEY="all_green"; XP_EVENT="tests_passed" ;;
             "deploy")         KEY="deploys" ;;
             "release")        KEY="releases" ;;
             "late-night")     KEY="late_night_sessions" ;;
@@ -1361,6 +1366,13 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
                 *)            MOOD_TRIGGER="" ;;
             esac
             [ -n "$MOOD_TRIGGER" ] && bun run "$PLUGIN_ROOT/server/shift-mood.ts" "$MOOD_TRIGGER" >/dev/null 2>&1 &
+        fi
+        # Session-completion bonus: a commit closes out the session. The 30s
+        # reaction cooldown above naturally rate-limits this to at most once per
+        # window, guarding against rapid back-to-back commits (risk R1).
+        if [ "$REASON" = "commit" ] && [ -x "$(command -v bun)" ]; then
+            PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+            bun run "$PLUGIN_ROOT/server/award-xp.ts" session_complete >/dev/null 2>&1 &
         fi
     fi
 fi

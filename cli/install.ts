@@ -32,7 +32,6 @@ const NC = "\x1b[0m";
 
 const CLAUDE_DIR = claudeConfigDir();
 const SETTINGS_FILE = claudeSettingsPath();
-const BUDDY_DIR = claudeSkillDir("buddy");
 const CLAUDE_JSON_PATH = claudeUserConfigPath();
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 
@@ -138,10 +137,13 @@ function installMcp() {
 // ─── Step 2: Install skill ──────────────────────────────────────────────────
 
 function installSkill() {
-  const srcSkill = join(PROJECT_ROOT, "skills", "buddy", "SKILL.md");
-  mkdirSync(BUDDY_DIR, { recursive: true });
-  cpSync(srcSkill, join(BUDDY_DIR, "SKILL.md"), { force: true });
-  ok(`Skill installed: ${join(BUDDY_DIR, "SKILL.md")}`);
+  for (const name of ["buddy", "buddy-stats"]) {
+    const srcSkill = join(PROJECT_ROOT, "skills", name, "SKILL.md");
+    const destDir = claudeSkillDir(name);
+    mkdirSync(destDir, { recursive: true });
+    cpSync(srcSkill, join(destDir, "SKILL.md"), { force: true });
+    ok(`Skill installed: ${join(destDir, "SKILL.md")}`);
+  }
 }
 
 // ─── Step 3: Configure status line (with animation refresh) ─────────────────

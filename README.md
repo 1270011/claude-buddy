@@ -167,6 +167,56 @@ High SNARK buddies are sarcastic. High WISDOM ones are insightful. High CHAOS on
 ---
 
 <details>
+<summary><b>🎮 &nbsp; Leveling, Mood & Memory</b></summary>
+
+<br>
+
+Your buddy levels up from real coding activity — no separate game to play, no extra commands required during normal use.
+
+### Earning XP
+
+| Event | XP | Trigger |
+|---|:---:|---|
+| Spotting an error | 12 | Bash output matches an error pattern |
+| Test passes | 20 | Bash output matches a test-pass pattern |
+| Test fails | 5 | Bash output matches a test-fail pattern |
+| Large diff | 20 | A tool edit/write is unusually large |
+| Each turn | 1 | Every assistant turn (small, steady trickle) |
+| Time spent | 2 / min | Background, while a session is active |
+| Petting your buddy | 5 | `/buddy pet` |
+| Achievement unlocked | 50 | Any achievement badge earned |
+| Session-completion bonus | varies | Computed from the session's commits/tests/diffs at session end |
+
+Rarer buddies earn a small flavor bonus (common ×1.0 → legendary ×1.2) — never a power difference, just a little extra.
+
+### Leveling up
+
+20 levels total. Each level grants **skill points**, spendable via `/buddy upgrades buy <id>` on:
+
+- **Cosmetic unlocks** — bonus eye styles, alternate hats
+- **Behavioral unlocks** — new reaction lines that only trigger once purchased
+- **Stat unlocks** — small permanent boosts to your buddy's peak stat
+- **Prestige titles** (level 11+) — `Committer`, `Debugger`, `Architect`, `Sage`, `Legend`. Equip one with `/buddy upgrades title <id>`; it shows under your buddy's name in the status line.
+
+Respec (refunding unlocks) is open until level 10, then locks permanently — `/buddy upgrades` always shows your current respec status and point balance.
+
+### Mood
+
+Your buddy's mood shifts based on recent test results, error frequency, session length, and time of day. Check it anytime with `/buddy mood`.
+
+### Cross-session memory
+
+Your buddy remembers projects it's seen, recurring bugs, and inferred preferences across sessions — `/buddy memory` to query, `/buddy memory resolve <bug-id>` to mark a bug fixed.
+
+### Stats panel
+
+A live stat-bar panel (`DEBUGGING` / `PATIENCE` / `CHAOS` / `WISDOM` / `SNARK`, with peak ▲ / dump ▼ markers) can render flush-left in the status line, independent of the speech bubble and buddy art. Toggle with `/buddy-stats [on|off]`.
+
+</details>
+
+---
+
+<details>
 <summary><b>🏗️ &nbsp; How It Works</b></summary>
 
 <br>
@@ -234,6 +284,14 @@ claude-buddy/
 | `/buddy` | Show companion card with ASCII art and stats |
 | `/buddy pet` | Pet your companion |
 | `/buddy stats` | Stats-only card |
+| `/buddy xp` | Show XP, level, and unlocked reactions/upgrades |
+| `/buddy upgrades` | List unlocks (owned/affordable/locked) and skill-point balance |
+| `/buddy upgrades buy <id>` | Spend a skill point on an unlock |
+| `/buddy upgrades refund <id>` | Reclaim a skill point (only below level 10) |
+| `/buddy upgrades title <id\|none>` | Equip a prestige title, or clear it |
+| `/buddy mood` | Show current mood and what's influencing it |
+| `/buddy theme [dark\|light\|auto]` | Show or set color theme |
+| `/buddy-stats [on\|off]` | Toggle the stat-bar panel in the status line |
 | `/buddy off` / `on` | Mute / unmute reactions |
 | `/buddy rename <name>` | Rename (1–14 chars) |
 | `/buddy personality <text>` | Set custom personality |
@@ -381,10 +439,10 @@ bun run cli/uninstall.ts    # full clean removal
 ## 🗺️ Roadmap
 
 - [x] **Multi-buddy support** — menagerie system with named slots, interactive TUI picker 💜[@doctor-ew](https://github.com/doctor-ew)💜
-- [ ] **Leveling system** — XP from coding sessions, unlockable reactions and upgrades
-- [ ] **Buddy pair-programming** — active help during sessions, pattern detection
-- [ ] **Cross-session memory** — remembers past projects and earlier conversations
-- [ ] **Mood system** — shifts based on code quality, tests, time of day
+- [x] **Leveling system** — XP from coding sessions, skill points, unlockable reactions/upgrades, prestige titles
+- [ ] **Buddy pair-programming** — `buddy_suggest` flags teachable moments (repeated errors, large diffs, long functions, TODOs) during sessions
+- [ ] **Cross-session memory** — `/buddy memory` remembers past projects, recurring bugs, and inferred preferences
+- [ ] **Mood system** — `/buddy mood` shifts based on tests, errors, session length, time of day
 - [x] **Achievement badges** — "1000 lines reviewed", "week streak", etc. 💜[ndcorder](https://github.com/ndcorder)💜
 - [ ] **Light theme colors** — auto-detect and match light theme RGB
 - [x] **New species + community art** — wyvern added 💜[@jpmalone0](https://github.com/jpmalone0)💜 (community contributions welcome)

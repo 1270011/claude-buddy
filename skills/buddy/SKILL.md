@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
+argument-hint: "[show|pet|stats|xp|upgrades [buy|refund|title <id>]|mood|memory [resolve <bug-id>]|theme [dark|light|auto]|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
 allowed-tools: mcp__claude_buddy__*, Bash
 ---
 
@@ -43,6 +43,17 @@ Based on `$ARGUMENTS`:
 | `help`                   | Call `buddy_help`                                                                            |
 | `pet`                    | Call `buddy_pet`                                                                             |
 | `stats`                  | Call `buddy_stats`                                                                           |
+| `xp`                     | Call `buddy_xp`                                                                              |
+| `upgrades`               | Call `buddy_upgrades` with no args (list catalog + point balance)                            |
+| `upgrades buy <id>`      | Call `buddy_upgrades` with buy=id                                                            |
+| `upgrades refund <id>`   | Call `buddy_upgrades` with refund=id                                                         |
+| `upgrades title <id>`    | Call `buddy_upgrades` with equipTitle=id (use `none` to clear)                               |
+| `mood`                   | Call `buddy_mood`                                                                            |
+| `memory`                 | Call `buddy_memory` with no args                                                             |
+| `memory <project>`       | Call `buddy_memory` with project filter                                                      |
+| `memory resolve <id>`    | Call `buddy_memory` with resolveBug=id                                                       |
+| `theme`                  | Call `buddy_theme` with no args (show current)                                               |
+| `theme <dark\|light\|auto>` | Call `buddy_theme` with theme arg                                                          |
 | `off`                    | Call `buddy_mute`                                                                            |
 | `on`                     | Call `buddy_unmute`                                                                          |
 | `rename <name>`          | Call `buddy_rename` with the given name                                                      |
