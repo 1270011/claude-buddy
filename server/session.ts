@@ -22,6 +22,7 @@ import { buddyStateDir } from "./path.ts";
 import { sessionId } from "./state.ts";
 import { loadGlobalEvents, type GlobalCounters } from "./achievements.ts";
 import { awardXpAmount, rarityMultiplier, type XpState } from "./xp.ts";
+import { updateStreak } from "./streak.ts";
 import type { Species, Rarity } from "./engine.ts";
 
 // ─── Counters that feed the bonus ────────────────────────────────────────────
@@ -149,9 +150,14 @@ export function awardSessionComplete(
   const snapshot = loadSnapshot();
   const baseline = snapshot?.baseline ?? current;
 
+  // This commit completes a net-positive session: advance the streak and fold
+  // any milestone bonus into the raw total so it scales with the same
+  // multiplier as the rest of the session reward (additional-rewards FR2).
+  const streakReward = updateStreak();
+
   // Cap the raw bonus first (§3.2), then apply the global rarity multiplier.
   const raw = computeSessionBonus(counterDelta(current, baseline));
-  const bonus = Math.floor(raw * rarityMultiplier(rarity));
+  const bonus = Math.floor((raw + streakReward) * rarityMultiplier(rarity));
   const state = awardXpAmount(bonus, slot, species, rarity);
 
   // Re-baseline: the next session starts counting from here.

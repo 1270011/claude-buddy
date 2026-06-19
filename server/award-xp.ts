@@ -12,6 +12,7 @@
 import { awardXp } from "./xp";
 import { loadCompanionSlot, loadActiveSlot } from "./state";
 import { startSession, awardSessionComplete } from "./session";
+import { recordSessionStart } from "./streak";
 import type { XpEvent } from "./xp";
 
 const VALID_EVENTS = new Set([
@@ -46,6 +47,9 @@ function main(): void {
   const rarity = companion?.bones.rarity;
 
   if (event === "session_start") {
+    // Break the streak if the previous session never committed, then capture
+    // the new baseline (additional-rewards FR2).
+    recordSessionStart();
     startSession();
     return;
   }
