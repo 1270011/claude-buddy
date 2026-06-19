@@ -29,6 +29,14 @@ interface StatusOverrides {
   showStats?: boolean;
   /** Omit stats entirely from status.json (simulates an older server build). */
   omitStats?: boolean;
+  /** When set, writes config.json with showPrestigeBadge (FR1.5). */
+  showPrestigeBadge?: boolean;
+  /** Prestige tier in status.json (default 0). */
+  prestigeLevel?: number;
+  /** Current streak in status.json (default 0). */
+  streak?: number;
+  /** Omit prestige/streak fields from status.json (simulates an older server). */
+  omitBadgeFields?: boolean;
 }
 
 /** Write a minimal status.json into a temp config dir and run buddy-status.sh
@@ -63,13 +71,22 @@ function renderStatus(overrides: StatusOverrides): string {
     status.peak = "SNARK";
     status.dump = "WISDOM";
   }
+  if (!overrides.omitBadgeFields) {
+    status.prestigeLevel = overrides.prestigeLevel ?? 0;
+    status.streak = overrides.streak ?? 0;
+  }
   writeFileSync(join(stateDir, "status.json"), JSON.stringify(status));
 
-  if (overrides.showStats !== undefined) {
-    writeFileSync(
-      join(stateDir, "config.json"),
-      JSON.stringify({ showStats: overrides.showStats }),
-    );
+  if (
+    overrides.showStats !== undefined ||
+    overrides.showPrestigeBadge !== undefined
+  ) {
+    const cfg: Record<string, unknown> = {};
+    if (overrides.showStats !== undefined) cfg.showStats = overrides.showStats;
+    if (overrides.showPrestigeBadge !== undefined) {
+      cfg.showPrestigeBadge = overrides.showPrestigeBadge;
+    }
+    writeFileSync(join(stateDir, "config.json"), JSON.stringify(cfg));
   }
 
   const env: Record<string, string> = { CLAUDE_CONFIG_DIR: cfgDir };
@@ -159,5 +176,83 @@ describe("buddy-status.sh stats panel", () => {
     expect(out).toContain("DEBUGGING");
     expect(out).toContain("nice commit");
     expect(out).toContain("Waffle");
+  });
+});
+
+describe("buddy-status.sh prestige/streak badge (FR1.5)", () => {
+  test("renders prestige + streak when the badge is on", () => {
+    const out = renderStatus({
+      showPrestigeBadge: true,
+      prestigeLevel: 2,
+      streak: 7,
+    });
+    expect(out).toContain("P2");
+    expect(out).toContain("🔥7");
+  });
+
+  test("shows only the streak when never ascended (no P0)", () => {
+    const out = renderStatus({
+      showPrestigeBadge: true,
+      prestigeLevel: 0,
+      streak: 5,
+    });
+    expect(out).toContain("🔥5");
+    expect(out).not.toContain("P0");
+  });
+
+  test("shows only the prestige tier when no active streak", () => {
+    const out = renderStatus({
+      showPrestigeBadge: true,
+      prestigeLevel: 3,
+      streak: 0,
+    });
+    expect(out).toContain("P3");
+    expect(out).not.toContain("🔥");
+  });
+
+  test("skips the badge entirely when both are zero, even if enabled", () => {
+    const out = renderStatus({
+      showPrestigeBadge: true,
+      prestigeLevel: 0,
+      streak: 0,
+    });
+    expect(out).not.toContain("🔥");
+    expect(out).not.toMatch(/P\d/);
+    expect(out).toContain("Waffle"); // buddy still renders
+  });
+
+  test("hidden by default — common case is visually unchanged (G5)", () => {
+    const out = renderStatus({ prestigeLevel: 4, streak: 9 });
+    expect(out).not.toContain("🔥");
+    expect(out).not.toContain("P4");
+  });
+
+  test("hidden when explicitly off", () => {
+    const out = renderStatus({
+      showPrestigeBadge: false,
+      prestigeLevel: 2,
+      streak: 7,
+    });
+    expect(out).not.toContain("🔥");
+    expect(out).not.toContain("P2");
+  });
+
+  test("renders gracefully when status.json lacks the fields (old server)", () => {
+    const out = renderStatus({ showPrestigeBadge: true, omitBadgeFields: true });
+    // Defaults to 0/0 → no badge, buddy still renders.
+    expect(out).not.toContain("🔥");
+    expect(out).toContain("Waffle");
+  });
+
+  test("coexists with an equipped title (badge sits under it)", () => {
+    const out = renderStatus({
+      showPrestigeBadge: true,
+      prestigeLevel: 1,
+      streak: 3,
+      title: "Legend",
+    });
+    expect(out).toContain("«Legend»");
+    expect(out).toContain("P1");
+    expect(out).toContain("🔥3");
   });
 });

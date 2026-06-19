@@ -736,6 +736,34 @@ server.tool(
   },
 );
 
+// ─── Tool: buddy_prestige_badge ──────────────────────────────────────────────
+
+server.tool(
+  "buddy_prestige_badge",
+  "Toggle the prestige/streak badge — a compact centered line under the buddy's title in the status line showing prestige tier (P2) and current session streak (🔥7). Default off. Pass enabled=true/false to set it explicitly, or omit to toggle. The status line reads this live — no restart needed. The badge is hidden automatically when both prestige and streak are zero.",
+  {
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("true to show the badge, false to hide. Omit to toggle."),
+  },
+  async ({ enabled }) => {
+    ensureCompanion();
+    const cfg = loadConfig();
+    const next = enabled === undefined ? !cfg.showPrestigeBadge : enabled;
+    saveConfig({ showPrestigeBadge: next });
+
+    const lines: string[] = [];
+    lines.push(`Prestige/streak badge: ${next ? "on" : "off"}.`);
+    if (next && !cfg.statusLineEnabled) {
+      lines.push(
+        "Note: the status line itself is disabled — run `/buddy statusline on` to see it.",
+      );
+    }
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  },
+);
+
 // ─── Tool: buddy_uninstall ───────────────────────────────────────────────────
 
 server.tool(

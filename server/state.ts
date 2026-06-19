@@ -384,6 +384,8 @@ export interface BuddyConfig {
   suggestionCooldown: number;
   /** Show the buddy's stat bars as a panel to the left of the art. */
   showStats: boolean;
+  /** Show the prestige/streak badge line under the title (additional-rewards FR1.5). */
+  showPrestigeBadge: boolean;
 }
 
 const DEFAULT_CONFIG: BuddyConfig = {
@@ -402,6 +404,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   suggestionsEnabled: true,
   suggestionCooldown: 180,
   showStats: false,
+  showPrestigeBadge: false,
 };
 
 export function loadConfig(): BuddyConfig {
@@ -441,6 +444,10 @@ export interface StatusState {
   xp: number;
   mood: string;
   title: string | null;
+  /** Prestige tier (0 = never ascended) — for the optional badge (FR1.5). */
+  prestigeLevel: number;
+  /** Current net-positive session streak — for the optional badge (FR2.4). */
+  streak: number;
   stats: BuddyStats;
   peak: StatName;
   dump: StatName;
@@ -463,6 +470,8 @@ export function writeStatusState(
   let xpLevel = level ?? 1;
   let xpTotal = xp ?? 0;
   let xpTitle: string | null = null;
+  let prestigeLevel = 0;
+  let streak = 0;
   let moodStr = "focused";
   try {
     const { getXpState } = require("./xp.ts") as typeof import("./xp.ts");
@@ -470,8 +479,15 @@ export function writeStatusState(
     xpLevel = xpState.level;
     xpTotal = xpState.totalXp;
     xpTitle = xpState.title;
+    prestigeLevel = xpState.prestigeLevel;
   } catch {
     // XP state is optional during first install / version skew.
+  }
+  try {
+    const { loadStreak } = require("./streak.ts") as typeof import("./streak.ts");
+    streak = loadStreak().current;
+  } catch {
+    // Streak state is optional during first install / version skew.
   }
   try {
     const { getMood } = require("./mood.ts") as typeof import("./mood.ts");
@@ -497,6 +513,8 @@ export function writeStatusState(
     xp: xpTotal,
     mood: moodStr,
     title: xpTitle,
+    prestigeLevel,
+    streak,
     stats: companion.bones.stats,
     peak: companion.bones.peak,
     dump: companion.bones.dump,

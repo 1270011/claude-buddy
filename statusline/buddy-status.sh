@@ -38,6 +38,9 @@ ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 TITLE=$(jq -r '.title // ""' "$STATE" 2>/dev/null)
+# Prestige tier + streak for the optional badge (default 0 on older status.json).
+PRESTIGE=$(jq -r '.prestigeLevel // 0' "$STATE" 2>/dev/null)
+STREAK=$(jq -r '.streak // 0' "$STATE" 2>/dev/null)
 # Stats panel data: 5 values + peak/dump as a single TSV line. Empty when
 # status.json predates the stats field (older server) — the panel is skipped.
 STATS_TSV=$(jq -r '[.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv' "$STATE" 2>/dev/null)
@@ -173,6 +176,13 @@ if [ -f "$CONFIG_FILE" ]; then
     _ss=$(jq -r '.showStats // false' "$CONFIG_FILE" 2>/dev/null || echo false)
     [ "$_ss" = "true" ] && SHOW_STATS="true"
 fi
+
+# Prestige/streak badge toggle (config.json, read live each tick).
+SHOW_PRESTIGE_BADGE="false"
+if [ -f "$CONFIG_FILE" ]; then
+    _spb=$(jq -r '.showPrestigeBadge // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    [ "$_spb" = "true" ] && SHOW_PRESTIGE_BADGE="true"
+fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
@@ -242,6 +252,27 @@ if [ -n "$TITLE" ] && [ "$TITLE" != "null" ]; then
     [ "$TITLE_PAD" -lt 0 ] && TITLE_PAD=0
     TITLE_LINE="$(printf '%*s%s' "$TITLE_PAD" '' "$TITLE_TEXT")"
     ALL_LINES+=("$TITLE_LINE"); ALL_COLORS+=("$DIM")
+fi
+
+# Prestige/streak badge (FR1.5): opt-in (default off), a compact centered line
+# under the title. "P<tier>" appears once ascended; "🔥<streak>" while on a
+# streak. Skipped entirely when both are zero, even if the badge is enabled, so
+# the common case adds no clutter.
+if [ "$SHOW_PRESTIGE_BADGE" = "true" ]; then
+    case "$PRESTIGE" in ''|*[!0-9]*) PRESTIGE=0 ;; esac
+    case "$STREAK" in ''|*[!0-9]*) STREAK=0 ;; esac
+    BADGE=""
+    [ "$PRESTIGE" -gt 0 ] && BADGE="P${PRESTIGE}"
+    if [ "$STREAK" -gt 0 ]; then
+        if [ -n "$BADGE" ]; then BADGE="$BADGE 🔥${STREAK}"; else BADGE="🔥${STREAK}"; fi
+    fi
+    if [ -n "$BADGE" ]; then
+        BADGE_LEN=${#BADGE}
+        BADGE_PAD=$(( ART_CENTER - BADGE_LEN / 2 ))
+        [ "$BADGE_PAD" -lt 0 ] && BADGE_PAD=0
+        BADGE_LINE="$(printf '%*s%s' "$BADGE_PAD" '' "$BADGE")"
+        ALL_LINES+=("$BADGE_LINE"); ALL_COLORS+=("$DIM")
+    fi
 fi
 
 ART_W=14
