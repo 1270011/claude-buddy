@@ -217,6 +217,39 @@ A live stat-bar panel (`DEBUGGING` / `PATIENCE` / `CHAOS` / `WISDOM` / `SNARK`, 
 ---
 
 <details>
+<summary><b>🏆 &nbsp; Endgame Rewards — Prestige · Streaks · Loot · Collection</b></summary>
+
+<br>
+
+Once your buddy is seasoned, a second layer of rewards opens up — all built on top of leveling, all invisible-by-default. Full walkthrough in the [Additional Rewards guide](docs/additional-rewards/additional-rewards-guide.md).
+
+### Prestige / ascension
+
+Hit **level 20** and `/buddy upgrades ascend` resets you to level 1 — but you **keep every unlock, cosmetic, and title**. In return you gain a permanent XP multiplier and access to a prestige-exclusive catalog tier. Repeatable up to **Prestige 5**, with diminishing multiplier gains (×1.05 → ×1.15) so it never becomes power creep. Ascending reopens respec until your next level 10.
+
+### Session streaks
+
+Land a commit session after session and your **streak** grows. Every 3rd consecutive net-positive session pays a milestone bonus (capped well under the session cap — flavor, not a grind). A session that ends with no commit resets the streak. Current and longest streak show in `/buddy xp`.
+
+### Milestone loot boxes
+
+Level-ups, streak milestones, achievements, and ascensions each **roll for loot** — always a small guaranteed skill-point bonus, plus a 12% chance at a loot-exclusive cosmetic you can't buy any other way (rare eye/hat/shiny combos). Loot is always a bonus *on top of* the normal reward, never a replacement.
+
+### Collection milestone
+
+Own one companion of **every rarity tier** (common → legendary) at once and earn an account-wide **Collector** title plus a permanent multiplier — it applies no matter which buddy is active. Progress (`Rarity set: 3/5 — need: epic, legendary`) shows in `/buddy list`.
+
+### Prestige/streak badge
+
+An **opt-in** status-line badge (`P2 🔥7`) under your buddy's name shows prestige tier and current streak. Default off — toggle with `/buddy badge [on|off]`.
+
+> All multipliers stack multiplicatively but stay modest: rarity (≤×1.20) × prestige (≤×1.15) × collection (×1.05) caps around ×1.45. Every new reward back-fills cleanly onto existing buddies — nothing is lost on upgrade.
+
+</details>
+
+---
+
+<details>
 <summary><b>🏗️ &nbsp; How It Works</b></summary>
 
 <br>
@@ -289,6 +322,8 @@ claude-buddy/
 | `/buddy upgrades buy <id>` | Spend a skill point on an unlock |
 | `/buddy upgrades refund <id>` | Reclaim a skill point (only below level 10) |
 | `/buddy upgrades title <id\|none>` | Equip a prestige title, or clear it |
+| `/buddy upgrades ascend` | At max level: reset to L1 for a permanent prestige multiplier (keeps all unlocks) |
+| `/buddy badge [on\|off]` | Toggle the prestige/streak badge (`P2 🔥7`) in the status line |
 | `/buddy mood` | Show current mood and what's influencing it |
 | `/buddy theme [dark\|light\|auto]` | Show or set color theme |
 | `/buddy stats bar [on\|off]` | Toggle the stat-bar panel in the status line |
@@ -440,6 +475,7 @@ bun run cli/uninstall.ts    # full clean removal
 
 - [x] **Multi-buddy support** — menagerie system with named slots, interactive TUI picker 💜[@doctor-ew](https://github.com/doctor-ew)💜
 - [x] **Leveling system** — XP from coding sessions, skill points, unlockable reactions/upgrades, prestige titles
+- [x] **Endgame rewards** — prestige/ascension loop, session streaks, milestone loot boxes, rarity-set collection milestone, opt-in prestige/streak badge
 - [ ] **Buddy pair-programming** — `buddy_suggest` flags teachable moments (repeated errors, large diffs, long functions, TODOs) during sessions
 - [ ] **Cross-session memory** — `/buddy memory` remembers past projects, recurring bugs, and inferred preferences
 - [ ] **Mood system** — `/buddy mood` shifts based on tests, errors, session length, time of day
