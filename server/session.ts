@@ -28,6 +28,7 @@ import {
   type XpState,
 } from "./xp.ts";
 import { updateStreak } from "./streak.ts";
+import { rollLoot } from "./loot.ts";
 import type { Species, Rarity } from "./engine.ts";
 
 // ─── Counters that feed the bonus ────────────────────────────────────────────
@@ -168,6 +169,10 @@ export function awardSessionComplete(
     (raw + streakReward) * rarityMultiplier(rarity) * prestigeMult,
   );
   const state = awardXpAmount(bonus, slot, species, rarity);
+
+  // A non-zero streak reward means a streak milestone just landed — roll loot
+  // on top of the deterministic bonus (additional-rewards FR4.1).
+  if (streakReward > 0) rollLoot("streak_milestone", slot);
 
   // Re-baseline: the next session starts counting from here.
   saveSnapshot({ startedAt: nowSeconds(), baseline: current });

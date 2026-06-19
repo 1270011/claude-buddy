@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "
 import { join } from "path";
 import { buddyStateDir } from "./path.ts";
 import { awardXp } from "./xp.ts";
+import { rollLoot } from "./loot.ts";
 
 const STATE_DIR = buddyStateDir();
 const EVENTS_FILE = join(STATE_DIR, "events.json");
@@ -1319,6 +1320,7 @@ export function checkAndAward(slot?: string): Achievement[] {
     saveUnlocked(unlocked);
     for (const ach of newlyUnlocked) {
       awardXp("achievement_unlocked", slot);
+      rollLoot("achievement", slot); // milestone loot on top (FR4.1)
     }
   }
 

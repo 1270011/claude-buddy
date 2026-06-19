@@ -554,6 +554,8 @@ export interface XpState {
   // Skill-point economy.
   pointsTotal: number; // lifetime points granted (derived from level)
   pointsSpent: number; // points consumed by owned unlocks
+  /** Bonus skill points from loot boxes — durable, not derived (FR4). */
+  bonusPoints: number;
   /** Level at which respec became permanent (null until first crossing L10). */
   respecLockedAt: number | null;
 
@@ -568,11 +570,21 @@ export interface XpState {
 /** Level at and beyond which respec is permanently locked. */
 export const RESPEC_LOCK_LEVEL = 10;
 
-const XP_FILE = join(buddyStateDir(), "xp.json");
+// Resolved at call time (not module load) so it honors CLAUDE_CONFIG_DIR per
+// profile, matching session.ts / streak.ts and path.ts's intent.
+function xpFile(): string {
+  return join(buddyStateDir(), "xp.json");
+}
 
-/** Skill points currently available to spend. */
+/**
+ * Skill points currently available to spend: the level-derived grant plus any
+ * loot-box bonus points (additional-rewards FR4), minus what's been spent.
+ */
 export function availablePoints(state: XpState): number {
-  return Math.max(0, state.pointsTotal - state.pointsSpent);
+  return Math.max(
+    0,
+    state.pointsTotal + state.bonusPoints - state.pointsSpent,
+  );
 }
 
 /** Total skill-point cost of the unlocks a state already owns. */
@@ -611,12 +623,23 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
 
   const pointsTotal = pointsForLevel(level);
 
-  // Legacy blobs have no pointsSpent — derive it from owned unlocks.
+  // Loot bonus points are durable (not derived from level); default 0.
+  const bonusPoints =
+    typeof p.bonusPoints === "number" && p.bonusPoints > 0
+      ? Math.floor(p.bonusPoints)
+      : 0;
+
+  // Legacy blobs have no pointsSpent — derive it from owned unlocks. Clamp to
+  // the full budget (level grant + loot bonus) so spending funded by bonus
+  // points survives a reload instead of being silently refunded.
   const rawSpent =
     typeof p.pointsSpent === "number"
       ? p.pointsSpent
       : ownedPointCost(unlockedReactions, unlockedUpgrades);
-  const pointsSpent = Math.min(Math.max(0, rawSpent), pointsTotal);
+  const pointsSpent = Math.min(
+    Math.max(0, rawSpent),
+    pointsTotal + bonusPoints,
+  );
 
   const respecLockedAt =
     p.respecLockedAt === undefined
@@ -641,6 +664,7 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
     levelUpAchieved: p.levelUpAchieved ?? false,
     pointsTotal,
     pointsSpent,
+    bonusPoints,
     respecLockedAt,
     title: p.title ?? null,
     prestigeLevel,
@@ -650,7 +674,7 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
 
 function loadXpState(): XpState {
   try {
-    const raw = readFileSync(XP_FILE, "utf8");
+    const raw = readFileSync(xpFile(), "utf8");
     return backfillXpState(JSON.parse(raw) as Partial<XpState>);
   } catch {
     return backfillXpState(null);
@@ -659,15 +683,16 @@ function loadXpState(): XpState {
 
 function saveXpState(state: XpState): void {
   mkdirSync(buddyStateDir(), { recursive: true });
-  const tmp = XP_FILE + ".tmp";
+  const file = xpFile();
+  const tmp = file + ".tmp";
   writeFileSync(tmp, JSON.stringify(state, null, 2));
   // Atomic rename
   try {
     const { renameSync } = require("fs");
-    renameSync(tmp, XP_FILE);
+    renameSync(tmp, file);
   } catch {
     // fallback: just write directly
-    writeFileSync(XP_FILE, JSON.stringify(state, null, 2));
+    writeFileSync(file, JSON.stringify(state, null, 2));
   }
 }
 
@@ -724,6 +749,33 @@ function applyXpGain(state: XpState, xpGain: number): void {
 }
 
 /**
+ * Grant durable bonus skill points (loot boxes, FR4). Unlike the level-derived
+ * pointsTotal, these persist across reloads. Returns the updated state.
+ */
+export function grantBonusPoints(amount: number): XpState {
+  const n = Number.isFinite(amount) && amount > 0 ? Math.floor(amount) : 0;
+  const state = loadXpState();
+  state.bonusPoints += n;
+  saveXpState(state);
+  return state;
+}
+
+/**
+ * Fire a milestone loot roll. Lazily required to keep loot an additive add-on
+ * to the XP core (xp.ts has no static dependency on loot.ts, which depends on
+ * xp.ts for grantBonusPoints). Failures are swallowed — loot is a delighter and
+ * must never break XP awarding.
+ */
+function fireLoot(trigger: "level_up" | "ascension", slot?: string): void {
+  try {
+    const { rollLoot } = require("./loot") as typeof import("./loot");
+    rollLoot(trigger, slot);
+  } catch {
+    // loot is best-effort; never let a roll failure surface as an XP error.
+  }
+}
+
+/**
  * Award XP for an event.
  * Returns the updated XpState.
  */
@@ -734,11 +786,13 @@ export function awardXp(
   rarity?: Rarity,
 ): XpState {
   const state = loadXpState();
+  const prevLevel = state.level;
   applyXpGain(
     state,
     computeXpForEvent(event, species, rarity, state.prestigeMultiplier),
   );
   saveXpState(state);
+  if (state.level > prevLevel) fireLoot("level_up", slot);
   return state;
 }
 
@@ -754,8 +808,10 @@ export function awardXpAmount(
 ): XpState {
   const gain = Number.isFinite(amount) && amount > 0 ? Math.floor(amount) : 0;
   const state = loadXpState();
+  const prevLevel = state.level;
   applyXpGain(state, gain);
   saveXpState(state);
+  if (state.level > prevLevel) fireLoot("level_up", slot);
   return state;
 }
 
@@ -1123,6 +1179,7 @@ export function ascend(): UnlockResult {
   if (err) return fail(state, err);
   applyAscension(state);
   saveXpState(state);
+  fireLoot("ascension");
   return {
     ok: true,
     message:
