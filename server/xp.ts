@@ -68,6 +68,32 @@ export function rarityMultiplier(rarity?: Rarity): number {
   return rarity ? (RARITY_MULTIPLIER[rarity] ?? 1) : 1;
 }
 
+// ─── Prestige multiplier (ascension) ─────────────────────────────────────────
+
+/** Highest prestige tier a player can reach (additional-rewards FR1, OQ1). */
+export const PRESTIGE_MAX = 5;
+
+/**
+ * Cumulative XP multiplier by prestige tier — each ascension adds a smaller
+ * gain (diminishing returns) so the loop rewards dedication without letting
+ * multipliers run away. Capped at ×1.15, mirroring the rarity ceiling's intent
+ * (flavor, not power creep). Indexed by prestige level 0..PRESTIGE_MAX.
+ */
+export const PRESTIGE_MULTIPLIER_TABLE: readonly number[] = [
+  1.0, // 0 — never ascended
+  1.05,
+  1.09,
+  1.12,
+  1.14,
+  1.15, // 5 — hard cap
+];
+
+/** The cumulative multiplier for a prestige tier (clamped to 0..PRESTIGE_MAX). */
+export function prestigeMultiplierFor(prestigeLevel: number): number {
+  const clamped = Math.max(0, Math.min(PRESTIGE_MAX, prestigeLevel));
+  return PRESTIGE_MULTIPLIER_TABLE[clamped] ?? 1.0;
+}
+
 // ─── Level table ──────────────────────────────────────────────────────────────
 
 export const MAX_LEVEL = 20;
@@ -130,6 +156,8 @@ export interface UnlockableReaction {
   template: string;
   species?: Species[];
   rarity?: Rarity[];
+  /** Minimum prestige tier required to buy (omitted = available to everyone). */
+  prestigeLevel?: number;
 }
 
 /**
@@ -163,6 +191,8 @@ export interface UnlockableUpgrade {
   effect?: UpgradeEffect;
   /** Whether this upgrade is currently active on a companion */
   active?: boolean;
+  /** Minimum prestige tier required to buy (omitted = available to everyone). */
+  prestigeLevel?: number;
 }
 
 // Behavioral unlocks are reactions: owned templates surface on buddy_pet via
@@ -236,6 +266,23 @@ export const UNLOCKABLE_REACTIONS: UnlockableReaction[] = [
     category: "behavioral",
     template: "*ancient calm* you've come a long way.",
     rarity: ["epic", "legendary"],
+  },
+  // ── Prestige-exclusive (additional-rewards FR1.4; gated on prestigeLevel) ──
+  {
+    id: "prestige_reset_quip",
+    level: 1,
+    cost: 2,
+    category: "behavioral",
+    template: "*back at level one* we've done this before.",
+    prestigeLevel: 1,
+  },
+  {
+    id: "prestige_veteran_quip",
+    level: 1,
+    cost: 3,
+    category: "behavioral",
+    template: "*unbothered* resetting the counter, never the standards.",
+    prestigeLevel: 3,
   },
 ];
 
@@ -418,6 +465,50 @@ export const UNLOCKABLE_UPGRADES: UnlockableUpgrade[] = [
     description: "A prestige title reserved for the maxed and mighty.",
     icon: "\ud83c\udff7",
   },
+  // \u2500\u2500 Prestige-exclusive (additional-rewards FR1.4; gated on prestigeLevel) \u2500\u2500
+  {
+    id: "prestige_aura",
+    level: 1,
+    cost: 2,
+    category: "cosmetic",
+    name: "Ascendant Aura",
+    description: "A faint halo that only the ascended carry.",
+    icon: "\ud83d\udcab",
+    effect: { type: "flag", flag: "ascendant_aura" },
+    prestigeLevel: 2,
+  },
+  {
+    id: "prestige_resolve",
+    level: 1,
+    cost: 3,
+    category: "stat",
+    name: "Tempered Resolve",
+    description: "+5 to peak stat \u2014 forged across resets.",
+    icon: "\u2694\ufe0f",
+    effect: { type: "stat", amount: 5 },
+    prestigeLevel: 4,
+  },
+  {
+    id: "title_ascendant",
+    level: 1,
+    cost: 4,
+    category: "prestige",
+    name: "Ascendant",
+    description: "A prestige title for those who reached the summit and climbed again.",
+    icon: "\ud83d\udd31",
+    prestigeLevel: 5,
+  },
+  {
+    id: "prestige_crown",
+    level: 1,
+    cost: 4,
+    category: "cosmetic",
+    name: "Ascendant Crown",
+    description: "A crown reserved for the fully ascended.",
+    icon: "\ud83d\udc51",
+    effect: { type: "hat", hat: "crown" },
+    prestigeLevel: 5,
+  },
 ];
 
 /** Look up the skill-point cost of any unlockable by id (0 if unknown). */
@@ -468,6 +559,10 @@ export interface XpState {
 
   // Prestige identity.
   title: string | null; // equipped prestige title, null if none
+
+  // Ascension (additional-rewards FR1).
+  prestigeLevel: number; // 0 = never ascended; caps at PRESTIGE_MAX
+  prestigeMultiplier: number; // derived from prestigeLevel, cached for display
 }
 
 /** Level at and beyond which respec is permanently locked. */
@@ -530,6 +625,13 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
         : null
       : p.respecLockedAt;
 
+  // Prestige back-fills to 0; the multiplier is always re-derived from the tier
+  // (self-healing, like pointsTotal) rather than trusting the stored cache.
+  const prestigeLevel =
+    typeof p.prestigeLevel === "number"
+      ? Math.max(0, Math.min(PRESTIGE_MAX, Math.floor(p.prestigeLevel)))
+      : 0;
+
   return {
     totalXp,
     level,
@@ -541,6 +643,8 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
     pointsSpent,
     respecLockedAt,
     title: p.title ?? null,
+    prestigeLevel,
+    prestigeMultiplier: prestigeMultiplierFor(prestigeLevel),
   };
 }
 
@@ -569,16 +673,24 @@ function saveXpState(state: XpState): void {
 
 // ─── Core functions ───────────────────────────────────────────────────────────
 
-/** Compute XP awarded for an event, applying species/rarity multipliers */
+/**
+ * Compute XP awarded for an event, applying the species, rarity, and prestige
+ * multipliers. The prestige factor stacks multiplicatively with rarity at the
+ * same point (additional-rewards FR1.3); it defaults to 1.0 so callers without
+ * a loaded state are unaffected.
+ */
 function computeXpForEvent(
   event: XpEvent,
   species?: Species,
   rarity?: Rarity,
+  prestigeMult: number = 1,
 ): number {
   const rule = getRule(event);
   const speciesMult =
     species && rule.speciesBonus?.[species] ? rule.speciesBonus[species]! : 1;
-  return Math.floor(rule.baseXp * rarityMultiplier(rarity) * speciesMult);
+  return Math.floor(
+    rule.baseXp * rarityMultiplier(rarity) * speciesMult * prestigeMult,
+  );
 }
 
 /**
@@ -622,7 +734,10 @@ export function awardXp(
   rarity?: Rarity,
 ): XpState {
   const state = loadXpState();
-  applyXpGain(state, computeXpForEvent(event, species, rarity));
+  applyXpGain(
+    state,
+    computeXpForEvent(event, species, rarity, state.prestigeMultiplier),
+  );
   saveXpState(state);
   return state;
 }
@@ -834,6 +949,12 @@ export function purchaseError(
   if (state.level < found.item.level) {
     return `${labelOf(found)} unlocks at level ${found.item.level} — you're ${state.level}.`;
   }
+  if (
+    found.item.prestigeLevel &&
+    state.prestigeLevel < found.item.prestigeLevel
+  ) {
+    return `${labelOf(found)} unlocks at Prestige ${found.item.prestigeLevel} — you're Prestige ${state.prestigeLevel}.`;
+  }
   if (!meetsRequirements(found.item, companion)) {
     return `Your companion doesn't qualify for ${labelOf(found)}.`;
   }
@@ -855,6 +976,11 @@ export function refundError(state: XpState, id: string): string | null {
   const found = findUnlockable(id);
   if (!found) return `Unknown unlock "${id}".`;
   if (!isOwned(state, id)) return `You don't own ${labelOf(found)}.`;
+  // Prestige-tier unlocks are permanent — they can carry lossy hat/stat effects
+  // and respec is open right after an ascension, so refunds are disallowed.
+  if (found.item.prestigeLevel) {
+    return `${labelOf(found)} is a prestige unlock — those are permanent.`;
+  }
   return null;
 }
 
@@ -949,6 +1075,61 @@ export function equipTitle(id: string): UnlockResult {
   return {
     ok: true,
     message: `Title set to "${found.item.name}".`,
+    state,
+    companionChanged: false,
+  };
+}
+
+// ─── Ascension / prestige (additional-rewards FR1) ────────────────────────────
+
+/**
+ * Pure: validation message for ascending `state`, or null when allowed.
+ * Ascension is only available at max level and below the prestige cap.
+ */
+export function ascendError(state: XpState): string | null {
+  if (state.level < MAX_LEVEL) {
+    return `Ascension unlocks at level ${MAX_LEVEL} — you're level ${state.level}.`;
+  }
+  if (state.prestigeLevel >= PRESTIGE_MAX) {
+    return `You're already at the maximum prestige tier (${PRESTIGE_MAX}).`;
+  }
+  return null;
+}
+
+/**
+ * Pure: apply an ascension to a state in place. Bumps the prestige tier and its
+ * multiplier, resets level/XP to 1 and the point budget to fresh, and reopens
+ * respec. Owned reactions/upgrades/cosmetic flags and the equipped title are
+ * deliberately preserved — nothing purchased is lost (FR1.2).
+ */
+export function applyAscension(state: XpState): void {
+  state.prestigeLevel = Math.min(PRESTIGE_MAX, state.prestigeLevel + 1);
+  state.prestigeMultiplier = prestigeMultiplierFor(state.prestigeLevel);
+  state.totalXp = 0;
+  state.level = 1;
+  state.pointsTotal = pointsForLevel(1); // 0 — points re-earned by re-leveling
+  state.pointsSpent = 0; // fresh budget; owned items stay owned
+  state.respecLockedAt = null; // respec reopens until the next L10 crossing
+  state.levelUpAchieved = false;
+}
+
+/**
+ * Ascend: reset to level 1 for a permanent prestige multiplier and access to
+ * the prestige-exclusive catalog tier. Validates via ascendError, then commits.
+ */
+export function ascend(): UnlockResult {
+  const state = loadXpState();
+  const err = ascendError(state);
+  if (err) return fail(state, err);
+  applyAscension(state);
+  saveXpState(state);
+  return {
+    ok: true,
+    message:
+      `Ascended to Prestige ${state.prestigeLevel}! Level and XP reset to 1; ` +
+      `every unlock and title is kept. Permanent XP multiplier is now ` +
+      `×${state.prestigeMultiplier.toFixed(2)}. Heads up: respec is open again ` +
+      `until you next reach level ${RESPEC_LOCK_LEVEL}.`,
     state,
     companionChanged: false,
   };

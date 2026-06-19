@@ -70,9 +70,11 @@ import {
   spendUnlock,
   refundUnlock,
   equipTitle,
+  ascend,
   availablePoints,
   pickOwnedReaction,
   MAX_LEVEL,
+  PRESTIGE_MAX,
   computeLevel,
 } from "./xp";
 import {
@@ -811,7 +813,7 @@ server.tool(
 
 server.tool(
   "buddy_upgrades",
-  "Spend skill points earned by leveling up. With no argument, lists every unlock (owned / affordable / locked) and your point balance. Use `buy` to purchase an unlock, `refund` to reclaim one (only while respec is open, below level 10), or `equipTitle` to wear a prestige title.",
+  "Spend skill points earned by leveling up. With no argument, lists every unlock (owned / affordable / locked) and your point balance. Use `buy` to purchase an unlock, `refund` to reclaim one (only while respec is open, below level 10), `equipTitle` to wear a prestige title, or `ascend` (only at max level) to reset to level 1 for a permanent XP multiplier and access to the prestige-exclusive catalog \u2014 all owned unlocks and titles are kept.",
   {
     buy: z
       .string()
@@ -825,8 +827,14 @@ server.tool(
       .string()
       .optional()
       .describe("Prestige title id to equip, or 'none' to clear"),
+    ascend: z
+      .boolean()
+      .optional()
+      .describe(
+        "Ascend at max level: resets level/XP to 1 for a permanent prestige multiplier; keeps all unlocks/titles and reopens respec",
+      ),
   },
-  async ({ buy, refund, equipTitle: titleId }) => {
+  async ({ buy, refund, equipTitle: titleId, ascend: doAscend }) => {
     ensureCompanion();
     const text = (
       t: string,
@@ -850,6 +858,9 @@ server.tool(
     if (titleId !== undefined) {
       return text(equipTitle(titleId).message);
     }
+    if (doAscend) {
+      return text(ascend().message);
+    }
 
     // No action \u2014 render the catalog with ownership/affordability status.
     const state = getXpState();
@@ -862,7 +873,9 @@ server.tool(
       state.respecLockedAt === null ? "open" : "locked (choices are final)";
 
     const lines: string[] = [];
-    lines.push(`### Level ${state.level} \u2014 Upgrades`);
+    const prestigeTag =
+      state.prestigeLevel > 0 ? ` \u00b7 Prestige ${state.prestigeLevel}` : "";
+    lines.push(`### Level ${state.level}${prestigeTag} \u2014 Upgrades`);
     lines.push(`**${avail}** skill point(s) available \u00b7 respec ${respec}`);
     lines.push("");
 
@@ -872,18 +885,22 @@ server.tool(
         label: `\u{1F4AC} "${r.template}"`,
         level: r.level,
         cost: r.cost,
+        prestigeLevel: r.prestigeLevel,
       })),
       ...UNLOCKABLE_UPGRADES.map((u) => ({
         id: u.id,
         label: `${u.icon} ${u.name} \u2014 ${u.description}`,
         level: u.level,
         cost: u.cost,
+        prestigeLevel: u.prestigeLevel,
       })),
     ].sort((a, b) => a.level - b.level || a.cost - b.cost);
 
     for (const i of catalog) {
       let status: string;
       if (owned.has(i.id)) status = "\u2705 owned";
+      else if (i.prestigeLevel && state.prestigeLevel < i.prestigeLevel)
+        status = `\u{1F512} Prestige ${i.prestigeLevel}`;
       else if (state.level < i.level) status = `\u{1F512} Lvl ${i.level}`;
       else if (avail < i.cost) status = `\u{1F4B8} ${i.cost} pt`;
       else status = `\u{1F7E2} ${i.cost} pt`;
@@ -891,6 +908,11 @@ server.tool(
     }
     lines.push("");
     lines.push("Buy with `buddy_upgrades buy=<id>`.");
+    if (state.level >= MAX_LEVEL && state.prestigeLevel < PRESTIGE_MAX) {
+      lines.push(
+        "\u2728 Max level reached \u2014 `buddy_upgrades ascend=true` to ascend (keeps everything, resets to Lvl 1 for a permanent multiplier).",
+      );
+    }
 
     return text(lines.join("\n"));
   },

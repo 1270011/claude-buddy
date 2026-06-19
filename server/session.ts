@@ -21,7 +21,12 @@ import { join } from "path";
 import { buddyStateDir } from "./path.ts";
 import { sessionId } from "./state.ts";
 import { loadGlobalEvents, type GlobalCounters } from "./achievements.ts";
-import { awardXpAmount, rarityMultiplier, type XpState } from "./xp.ts";
+import {
+  awardXpAmount,
+  rarityMultiplier,
+  getXpState,
+  type XpState,
+} from "./xp.ts";
 import { updateStreak } from "./streak.ts";
 import type { Species, Rarity } from "./engine.ts";
 
@@ -155,9 +160,13 @@ export function awardSessionComplete(
   // multiplier as the rest of the session reward (additional-rewards FR2).
   const streakReward = updateStreak();
 
-  // Cap the raw bonus first (§3.2), then apply the global rarity multiplier.
+  // Cap the raw bonus first (§3.2), then apply the rarity and prestige
+  // multipliers — both stack multiplicatively (additional-rewards FR1.3).
   const raw = computeSessionBonus(counterDelta(current, baseline));
-  const bonus = Math.floor((raw + streakReward) * rarityMultiplier(rarity));
+  const prestigeMult = getXpState().prestigeMultiplier;
+  const bonus = Math.floor(
+    (raw + streakReward) * rarityMultiplier(rarity) * prestigeMult,
+  );
   const state = awardXpAmount(bonus, slot, species, rarity);
 
   // Re-baseline: the next session starts counting from here.

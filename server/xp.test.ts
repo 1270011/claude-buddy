@@ -18,6 +18,13 @@ import {
   refundError,
   rarityMultiplier,
   RESPEC_LOCK_LEVEL,
+  prestigeMultiplierFor,
+  PRESTIGE_MAX,
+  PRESTIGE_MULTIPLIER_TABLE,
+  ascendError,
+  applyAscension,
+  MAX_LEVEL,
+  xpForLevel,
   type XpState,
 } from "./xp.ts";
 import type { Companion } from "./engine.ts";
@@ -35,6 +42,8 @@ function makeState(partial: Partial<XpState>): XpState {
     pointsSpent: 0,
     respecLockedAt: null,
     title: null,
+    prestigeLevel: 0,
+    prestigeMultiplier: 1.0,
     ...partial,
   };
 }
@@ -98,6 +107,8 @@ describe("availablePoints", () => {
     pointsSpent: 0,
     respecLockedAt: null,
     title: null,
+    prestigeLevel: 0,
+    prestigeMultiplier: 1.0,
   };
 
   test("is total minus spent", () => {
@@ -310,6 +321,18 @@ describe("refundError", () => {
     const s = makeState({ level: 5, respecLockedAt: null });
     expect(refundError(s, "nope")).toContain("Unknown unlock");
   });
+
+  test("rejects refunding a prestige unlock even with respec open", () => {
+    // prestige_aura is owned; respec is open (as it is right after ascension),
+    // but prestige items are permanent.
+    const s = makeState({
+      level: 5,
+      respecLockedAt: null,
+      prestigeLevel: 2,
+      unlockedUpgrades: ["prestige_aura"],
+    });
+    expect(refundError(s, "prestige_aura")).toContain("permanent");
+  });
 });
 
 describe("rarityMultiplier", () => {
@@ -330,5 +353,166 @@ describe("rarityMultiplier", () => {
 
   test("undefined rarity is neutral (1.0)", () => {
     expect(rarityMultiplier(undefined)).toBe(1);
+  });
+});
+
+// ─── Prestige / ascension (additional-rewards FR1) ────────────────────────────
+
+describe("prestigeMultiplierFor", () => {
+  test("tier 0 is the 1.0 baseline", () => {
+    expect(prestigeMultiplierFor(0)).toBe(1.0);
+  });
+
+  test("matches the documented table at each tier", () => {
+    expect(prestigeMultiplierFor(1)).toBeCloseTo(1.05);
+    expect(prestigeMultiplierFor(2)).toBeCloseTo(1.09);
+    expect(prestigeMultiplierFor(3)).toBeCloseTo(1.12);
+    expect(prestigeMultiplierFor(4)).toBeCloseTo(1.14);
+    expect(prestigeMultiplierFor(PRESTIGE_MAX)).toBeCloseTo(1.15);
+  });
+
+  test("gains shrink each tier (diminishing returns)", () => {
+    const gains: number[] = [];
+    for (let t = 1; t <= PRESTIGE_MAX; t++) {
+      gains.push(
+        PRESTIGE_MULTIPLIER_TABLE[t] - PRESTIGE_MULTIPLIER_TABLE[t - 1],
+      );
+    }
+    for (let i = 1; i < gains.length; i++) {
+      expect(gains[i]).toBeLessThanOrEqual(gains[i - 1] + 1e-9);
+    }
+  });
+
+  test("clamps out-of-range tiers to the 0..MAX bounds", () => {
+    expect(prestigeMultiplierFor(-3)).toBe(1.0);
+    expect(prestigeMultiplierFor(999)).toBeCloseTo(1.15);
+  });
+});
+
+describe("backfillXpState — prestige", () => {
+  test("absent prestige fields back-fill to 0 / ×1.0", () => {
+    const s = backfillXpState({ totalXp: 0 });
+    expect(s.prestigeLevel).toBe(0);
+    expect(s.prestigeMultiplier).toBe(1.0);
+  });
+
+  test("the multiplier is re-derived from the tier, not trusted from disk", () => {
+    // A corrupt/stale cached multiplier must be ignored.
+    const s = backfillXpState({
+      totalXp: 0,
+      prestigeLevel: 2,
+      prestigeMultiplier: 99,
+    } as Partial<XpState>);
+    expect(s.prestigeLevel).toBe(2);
+    expect(s.prestigeMultiplier).toBeCloseTo(1.09);
+  });
+
+  test("clamps an over-range stored prestige tier", () => {
+    const s = backfillXpState({
+      totalXp: 0,
+      prestigeLevel: 50,
+    } as Partial<XpState>);
+    expect(s.prestigeLevel).toBe(PRESTIGE_MAX);
+    expect(s.prestigeMultiplier).toBeCloseTo(1.15);
+  });
+});
+
+describe("ascendError", () => {
+  test("rejects below max level", () => {
+    expect(ascendError(makeState({ level: 19 }))).toContain(
+      `level ${MAX_LEVEL}`,
+    );
+  });
+
+  test("rejects at the prestige cap", () => {
+    const s = makeState({ level: MAX_LEVEL, prestigeLevel: PRESTIGE_MAX });
+    expect(ascendError(s)).toContain("maximum prestige");
+  });
+
+  test("allows ascension at max level below the cap", () => {
+    const s = makeState({ level: MAX_LEVEL, prestigeLevel: 0 });
+    expect(ascendError(s)).toBeNull();
+  });
+});
+
+describe("applyAscension", () => {
+  test("resets level/XP but bumps the prestige tier and multiplier", () => {
+    const s = makeState({
+      totalXp: xpForLevel(MAX_LEVEL),
+      level: MAX_LEVEL,
+      prestigeLevel: 0,
+    });
+    applyAscension(s);
+    expect(s.prestigeLevel).toBe(1);
+    expect(s.prestigeMultiplier).toBeCloseTo(1.05);
+    expect(s.totalXp).toBe(0);
+    expect(s.level).toBe(1);
+  });
+
+  test("preserves owned unlocks and the equipped title (FR1.2)", () => {
+    const s = makeState({
+      totalXp: xpForLevel(MAX_LEVEL),
+      level: MAX_LEVEL,
+      unlockedReactions: ["greet_level2"],
+      unlockedUpgrades: ["bonus_eye"],
+      cosmeticFlags: ["has_third_eye"],
+      title: "Legend",
+    });
+    applyAscension(s);
+    expect(s.unlockedReactions).toEqual(["greet_level2"]);
+    expect(s.unlockedUpgrades).toEqual(["bonus_eye"]);
+    expect(s.cosmeticFlags).toEqual(["has_third_eye"]);
+    expect(s.title).toBe("Legend");
+  });
+
+  test("reopens respec and grants a fresh point budget", () => {
+    const s = makeState({
+      totalXp: xpForLevel(MAX_LEVEL),
+      level: MAX_LEVEL,
+      respecLockedAt: RESPEC_LOCK_LEVEL,
+      pointsSpent: 7,
+    });
+    applyAscension(s);
+    expect(s.respecLockedAt).toBeNull();
+    expect(s.pointsSpent).toBe(0);
+    expect(s.pointsTotal).toBe(0);
+  });
+
+  test("never exceeds the prestige cap", () => {
+    const s = makeState({
+      totalXp: xpForLevel(MAX_LEVEL),
+      level: MAX_LEVEL,
+      prestigeLevel: PRESTIGE_MAX - 1,
+    });
+    applyAscension(s);
+    expect(s.prestigeLevel).toBe(PRESTIGE_MAX);
+    applyAscension(s); // one more — should hold at the cap
+    expect(s.prestigeLevel).toBe(PRESTIGE_MAX);
+  });
+});
+
+describe("purchaseError — prestige gate", () => {
+  test("blocks a prestige-gated item below the required tier", () => {
+    // prestige_aura requires prestigeLevel 2.
+    const s = makeState({ level: MAX_LEVEL, prestigeLevel: 1 });
+    expect(purchaseError(s, "prestige_aura", null)).toContain("Prestige 2");
+  });
+
+  test("allows a prestige-gated item once the tier is met (points aside)", () => {
+    const s = makeState({
+      level: MAX_LEVEL,
+      prestigeLevel: 2,
+      pointsTotal: 10,
+    });
+    expect(purchaseError(s, "prestige_aura", null)).toBeNull();
+  });
+});
+
+describe("multiplier stacking ceiling (risk R2)", () => {
+  test("rarity × prestige stays modest at the combined max", () => {
+    const combined =
+      rarityMultiplier("legendary") * prestigeMultiplierFor(PRESTIGE_MAX);
+    expect(combined).toBeCloseTo(1.38); // 1.20 × 1.15
+    expect(combined).toBeLessThan(1.5);
   });
 });
