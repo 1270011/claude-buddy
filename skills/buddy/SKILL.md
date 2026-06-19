@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats [bar [on|off]]|xp|upgrades [buy|refund|title <id>]|mood|memory [resolve <bug-id>]|theme [dark|light|auto]|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
+argument-hint: "[show|pet|stats [bar [on|off]]|xp|upgrades [buy|refund|title <id>|ascend]|badge [on|off]|mood|memory [resolve <bug-id>]|theme [dark|light|auto]|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
 allowed-tools: mcp__claude_buddy__*, Bash
 ---
 
@@ -51,6 +51,10 @@ Based on `$ARGUMENTS`:
 | `upgrades buy <id>`      | Call `buddy_upgrades` with buy=id                                                            |
 | `upgrades refund <id>`   | Call `buddy_upgrades` with refund=id                                                         |
 | `upgrades title <id>`    | Call `buddy_upgrades` with equipTitle=id (use `none` to clear)                               |
+| `upgrades ascend`        | Call `buddy_upgrades` with ascend=true (only at max level; resets to L1 for a permanent prestige multiplier, keeps all unlocks) |
+| `badge`                  | Call `buddy_prestige_badge` with no args (toggle the prestige/streak status-line badge)      |
+| `badge on`               | Call `buddy_prestige_badge` with `enabled=true`                                             |
+| `badge off`              | Call `buddy_prestige_badge` with `enabled=false`                                            |
 | `mood`                   | Call `buddy_mood`                                                                            |
 | `memory`                 | Call `buddy_memory` with no args                                                             |
 | `memory <project>`       | Call `buddy_memory` with project filter                                                      |
