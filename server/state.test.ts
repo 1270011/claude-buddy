@@ -8,7 +8,19 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { slugify } from "./state.ts";
+import { slugify, raritySetProgress } from "./state.ts";
+import type { Companion, Rarity } from "./engine.ts";
+
+/** Build a companions record from a list of rarities (other bones irrelevant). */
+function companionsWithRarities(
+  rarities: Rarity[],
+): Record<string, Companion> {
+  const out: Record<string, Companion> = {};
+  rarities.forEach((rarity, i) => {
+    out[`slot${i}`] = { bones: { rarity } } as unknown as Companion;
+  });
+  return out;
+}
 
 describe("slugify", () => {
   test("lowercases input", () => {
@@ -53,5 +65,51 @@ describe("slugify", () => {
   test("unicode / emoji input falls back to 'buddy'", () => {
     expect(slugify("🐢")).toBe("buddy");
     expect(slugify("日本語")).toBe("buddy");
+  });
+});
+
+describe("raritySetProgress (additional-rewards FR3)", () => {
+  test("an empty menagerie owns nothing", () => {
+    const p = raritySetProgress({});
+    expect(p.ownedCount).toBe(0);
+    expect(p.total).toBe(5);
+    expect(p.complete).toBe(false);
+  });
+
+  test("counts distinct rarities, ignoring duplicates", () => {
+    const p = raritySetProgress(
+      companionsWithRarities(["common", "common", "rare"]),
+    );
+    expect(p.owned).toEqual(["common", "rare"]);
+    expect(p.ownedCount).toBe(2);
+    expect(p.complete).toBe(false);
+  });
+
+  test("reports the missing tiers in canonical order", () => {
+    const p = raritySetProgress(
+      companionsWithRarities(["common", "uncommon", "rare"]),
+    );
+    expect(p.missing).toEqual(["epic", "legendary"]);
+  });
+
+  test("is complete only when all five tiers are present", () => {
+    const four = raritySetProgress(
+      companionsWithRarities(["common", "uncommon", "rare", "epic"]),
+    );
+    expect(four.complete).toBe(false);
+    expect(four.ownedCount).toBe(4);
+
+    const all = raritySetProgress(
+      companionsWithRarities([
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "legendary",
+      ]),
+    );
+    expect(all.complete).toBe(true);
+    expect(all.missing).toEqual([]);
+    expect(all.ownedCount).toBe(5);
   });
 });

@@ -94,6 +94,13 @@ export function prestigeMultiplierFor(prestigeLevel: number): number {
   return PRESTIGE_MULTIPLIER_TABLE[clamped] ?? 1.0;
 }
 
+// ─── Collection milestone (menagerie rarity-set) ──────────────────────────────
+
+/** Account-wide XP multiplier bonus for owning a full rarity set (FR3.1). */
+export const COLLECTION_MULTIPLIER_BONUS = 0.05;
+/** The account-wide title granted by the full-rarity-set milestone. */
+export const COLLECTOR_TITLE = "Collector";
+
 // ─── Level table ──────────────────────────────────────────────────────────────
 
 export const MAX_LEVEL = 20;
@@ -556,6 +563,8 @@ export interface XpState {
   pointsSpent: number; // points consumed by owned unlocks
   /** Bonus skill points from loot boxes — durable, not derived (FR4). */
   bonusPoints: number;
+  /** Account-wide multiplier from the rarity-set milestone (1.0 until earned, FR3). */
+  collectionMultiplier: number;
   /** Level at which respec became permanent (null until first crossing L10). */
   respecLockedAt: number | null;
 
@@ -629,6 +638,12 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
       ? Math.floor(p.bonusPoints)
       : 0;
 
+  // Collection multiplier is a granted reward (like title), default ×1.0.
+  const collectionMultiplier =
+    typeof p.collectionMultiplier === "number" && p.collectionMultiplier >= 1
+      ? p.collectionMultiplier
+      : 1.0;
+
   // Legacy blobs have no pointsSpent — derive it from owned unlocks. Clamp to
   // the full budget (level grant + loot bonus) so spending funded by bonus
   // points survives a reload instead of being silently refunded.
@@ -665,6 +680,7 @@ export function backfillXpState(parsed: Partial<XpState> | null): XpState {
     pointsTotal,
     pointsSpent,
     bonusPoints,
+    collectionMultiplier,
     respecLockedAt,
     title: p.title ?? null,
     prestigeLevel,
@@ -699,22 +715,30 @@ function saveXpState(state: XpState): void {
 // ─── Core functions ───────────────────────────────────────────────────────────
 
 /**
- * Compute XP awarded for an event, applying the species, rarity, and prestige
- * multipliers. The prestige factor stacks multiplicatively with rarity at the
- * same point (additional-rewards FR1.3); it defaults to 1.0 so callers without
- * a loaded state are unaffected.
+ * The account-wide XP multiplier: prestige × collection-milestone. Both stack
+ * multiplicatively with the per-event rarity/species factors (FR1.3 / FR3.3).
+ */
+export function accountMultiplier(state: XpState): number {
+  return state.prestigeMultiplier * state.collectionMultiplier;
+}
+
+/**
+ * Compute XP awarded for an event, applying the species, rarity, and account
+ * (prestige × collection) multipliers. The account factor stacks
+ * multiplicatively with rarity at the same point (additional-rewards FR1.3 /
+ * FR3.3); it defaults to 1.0 so callers without a loaded state are unaffected.
  */
 function computeXpForEvent(
   event: XpEvent,
   species?: Species,
   rarity?: Rarity,
-  prestigeMult: number = 1,
+  accountMult: number = 1,
 ): number {
   const rule = getRule(event);
   const speciesMult =
     species && rule.speciesBonus?.[species] ? rule.speciesBonus[species]! : 1;
   return Math.floor(
-    rule.baseXp * rarityMultiplier(rarity) * speciesMult * prestigeMult,
+    rule.baseXp * rarityMultiplier(rarity) * speciesMult * accountMult,
   );
 }
 
@@ -789,7 +813,7 @@ export function awardXp(
   const prevLevel = state.level;
   applyXpGain(
     state,
-    computeXpForEvent(event, species, rarity, state.prestigeMultiplier),
+    computeXpForEvent(event, species, rarity, accountMultiplier(state)),
   );
   saveXpState(state);
   if (state.level > prevLevel) fireLoot("level_up", slot);
@@ -1119,6 +1143,21 @@ export function equipTitle(id: string): UnlockResult {
     saveXpState(state);
     return { ok: true, message: "Title cleared.", state, companionChanged: false };
   }
+  // The Collector title is earned via the rarity-set milestone, not bought —
+  // it's equippable once that account-wide bonus is active (FR3.1).
+  if (id.toLowerCase() === COLLECTOR_TITLE.toLowerCase()) {
+    if (state.collectionMultiplier <= 1) {
+      return fail(state, "You haven't earned the Collector title yet.");
+    }
+    state.title = COLLECTOR_TITLE;
+    saveXpState(state);
+    return {
+      ok: true,
+      message: `Title set to "${COLLECTOR_TITLE}".`,
+      state,
+      companionChanged: false,
+    };
+  }
   const found = findUnlockable(id);
   if (!found || found.kind !== "upgrade" || found.item.category !== "prestige") {
     return fail(state, `"${id}" is not a prestige title.`);
@@ -1190,6 +1229,28 @@ export function ascend(): UnlockResult {
     state,
     companionChanged: false,
   };
+}
+
+// ─── Collection milestone reward (additional-rewards FR3) ─────────────────────
+
+/**
+ * Pure: grant the rarity-set milestone reward to a state in place. Idempotent —
+ * a state that already has the collection bonus is left unchanged. Sets the
+ * account-wide multiplier and auto-equips the Collector title only if no title
+ * is currently worn (so a deliberately-equipped prestige title isn't clobbered).
+ */
+export function applyCollectionReward(state: XpState): void {
+  if (state.collectionMultiplier > 1) return; // already granted
+  state.collectionMultiplier = 1 + COLLECTION_MULTIPLIER_BONUS;
+  if (state.title === null) state.title = COLLECTOR_TITLE;
+}
+
+/** Grant the collection-milestone reward and persist it. Returns the state. */
+export function grantCollectionReward(): XpState {
+  const state = loadXpState();
+  applyCollectionReward(state);
+  saveXpState(state);
+  return state;
 }
 
 // ─── Rendering helpers ────────────────────────────────────────────────────────

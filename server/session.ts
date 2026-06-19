@@ -25,6 +25,7 @@ import {
   awardXpAmount,
   rarityMultiplier,
   getXpState,
+  accountMultiplier,
   type XpState,
 } from "./xp.ts";
 import { updateStreak } from "./streak.ts";
@@ -161,12 +162,13 @@ export function awardSessionComplete(
   // multiplier as the rest of the session reward (additional-rewards FR2).
   const streakReward = updateStreak();
 
-  // Cap the raw bonus first (§3.2), then apply the rarity and prestige
-  // multipliers — both stack multiplicatively (additional-rewards FR1.3).
+  // Cap the raw bonus first (§3.2), then apply the rarity and account
+  // (prestige × collection) multipliers — all stack multiplicatively
+  // (additional-rewards FR1.3 / FR3.3).
   const raw = computeSessionBonus(counterDelta(current, baseline));
-  const prestigeMult = getXpState().prestigeMultiplier;
+  const acctMult = accountMultiplier(getXpState());
   const bonus = Math.floor(
-    (raw + streakReward) * rarityMultiplier(rarity) * prestigeMult,
+    (raw + streakReward) * rarityMultiplier(rarity) * acctMult,
   );
   const state = awardXpAmount(bonus, slot, species, rarity);
 

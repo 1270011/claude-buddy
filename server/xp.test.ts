@@ -23,6 +23,10 @@ import {
   PRESTIGE_MULTIPLIER_TABLE,
   ascendError,
   applyAscension,
+  applyCollectionReward,
+  accountMultiplier,
+  COLLECTION_MULTIPLIER_BONUS,
+  COLLECTOR_TITLE,
   MAX_LEVEL,
   xpForLevel,
   type XpState,
@@ -41,6 +45,7 @@ function makeState(partial: Partial<XpState>): XpState {
     pointsTotal: 0,
     pointsSpent: 0,
     bonusPoints: 0,
+    collectionMultiplier: 1.0,
     respecLockedAt: null,
     title: null,
     prestigeLevel: 0,
@@ -107,6 +112,7 @@ describe("availablePoints", () => {
     pointsTotal: 0,
     pointsSpent: 0,
     bonusPoints: 0,
+    collectionMultiplier: 1.0,
     respecLockedAt: null,
     title: null,
     prestigeLevel: 0,
@@ -510,11 +516,78 @@ describe("purchaseError — prestige gate", () => {
   });
 });
 
+// ─── Collection milestone (additional-rewards FR3) ────────────────────────────
+
+describe("applyCollectionReward", () => {
+  test("grants the account-wide multiplier", () => {
+    const s = makeState({});
+    applyCollectionReward(s);
+    expect(s.collectionMultiplier).toBeCloseTo(1 + COLLECTION_MULTIPLIER_BONUS);
+  });
+
+  test("auto-equips the Collector title when none is worn", () => {
+    const s = makeState({ title: null });
+    applyCollectionReward(s);
+    expect(s.title).toBe(COLLECTOR_TITLE);
+  });
+
+  test("does not clobber a deliberately-equipped title", () => {
+    const s = makeState({ title: "Legend" });
+    applyCollectionReward(s);
+    expect(s.title).toBe("Legend");
+    expect(s.collectionMultiplier).toBeCloseTo(1.05); // multiplier still granted
+  });
+
+  test("is idempotent — a second grant changes nothing", () => {
+    const s = makeState({ title: null });
+    applyCollectionReward(s);
+    const after = { ...s };
+    applyCollectionReward(s);
+    expect(s.collectionMultiplier).toBe(after.collectionMultiplier);
+    expect(s.title).toBe(after.title);
+  });
+});
+
+describe("accountMultiplier", () => {
+  test("is prestige × collection", () => {
+    const s = makeState({ prestigeMultiplier: 1.05, collectionMultiplier: 1.05 });
+    expect(accountMultiplier(s)).toBeCloseTo(1.05 * 1.05);
+  });
+
+  test("is neutral at the baseline", () => {
+    expect(accountMultiplier(makeState({}))).toBe(1.0);
+  });
+});
+
+describe("backfillXpState — collection multiplier", () => {
+  test("absent field back-fills to ×1.0", () => {
+    expect(backfillXpState({ totalXp: 0 }).collectionMultiplier).toBe(1.0);
+  });
+
+  test("a stored earned multiplier passes through", () => {
+    const s = backfillXpState({
+      totalXp: 0,
+      collectionMultiplier: 1.05,
+    } as Partial<XpState>);
+    expect(s.collectionMultiplier).toBeCloseTo(1.05);
+  });
+});
+
 describe("multiplier stacking ceiling (risk R2)", () => {
   test("rarity × prestige stays modest at the combined max", () => {
     const combined =
       rarityMultiplier("legendary") * prestigeMultiplierFor(PRESTIGE_MAX);
     expect(combined).toBeCloseTo(1.38); // 1.20 × 1.15
+    expect(combined).toBeLessThan(1.5);
+  });
+
+  test("rarity × prestige × collection stays under the design's ~1.45", () => {
+    const s = makeState({
+      prestigeMultiplier: prestigeMultiplierFor(PRESTIGE_MAX),
+      collectionMultiplier: 1 + COLLECTION_MULTIPLIER_BONUS,
+    });
+    const combined = rarityMultiplier("legendary") * accountMultiplier(s);
+    expect(combined).toBeCloseTo(1.2 * 1.15 * 1.05); // ≈ 1.449
     expect(combined).toBeLessThan(1.5);
   });
 });

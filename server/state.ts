@@ -30,7 +30,9 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import type { Companion, BuddyStats, StatName } from "./engine.ts";
+import type { Companion, BuddyStats, StatName, Rarity } from "./engine.ts";
+import { RARITIES } from "./engine.ts";
+import { grantCollectionReward } from "./xp.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -59,10 +61,15 @@ function reactionFile(): string {
 interface Manifest {
   active: string;
   companions: Record<string, Companion>;
+  /** Rarity-set milestone ids already granted (additional-rewards FR3). */
+  raritySetMilestones: string[];
 }
 
+/** The id for the "owns one companion of every rarity tier" milestone. */
+export const RARITY_SET_MILESTONE_ID = "full_set";
+
 function emptyManifest(): Manifest {
-  return { active: "buddy", companions: {} };
+  return { active: "buddy", companions: {}, raritySetMilestones: [] };
 }
 
 // ─── Atomic manifest I/O ─────────────────────────────────────────────────────
@@ -72,6 +79,8 @@ function loadManifest(): Manifest {
     const raw = readFileSync(MANIFEST_FILE, "utf8");
     const m = JSON.parse(raw) as Manifest;
     if (!m.companions) m.companions = {};
+    // Back-fill the milestone list for manifests written before FR3 shipped.
+    if (!Array.isArray(m.raritySetMilestones)) m.raritySetMilestones = [];
     return m;
   } catch {
     return emptyManifest();
@@ -83,6 +92,58 @@ function saveManifest(m: Manifest): void {
   const tmp = MANIFEST_FILE + ".tmp";
   writeFileSync(tmp, JSON.stringify(m, null, 2));
   renameSync(tmp, MANIFEST_FILE); // atomic on same filesystem
+}
+
+// ─── Rarity-set collection milestone (additional-rewards FR3) ─────────────────
+
+export interface RaritySetProgress {
+  /** Rarity tiers currently owned across the menagerie, in canonical order. */
+  owned: Rarity[];
+  /** Rarity tiers still needed for the full set, in canonical order. */
+  missing: Rarity[];
+  ownedCount: number;
+  total: number;
+  complete: boolean;
+}
+
+/**
+ * Pure: progress toward the full-rarity-set milestone for a set of companions.
+ * "Complete" means the menagerie holds at least one companion of every rarity
+ * tier simultaneously (FR3.1).
+ */
+export function raritySetProgress(
+  companions: Record<string, Companion>,
+): RaritySetProgress {
+  const present = new Set(
+    Object.values(companions).map((c) => c.bones.rarity),
+  );
+  const owned = RARITIES.filter((r) => present.has(r));
+  const missing = RARITIES.filter((r) => !present.has(r));
+  return {
+    owned,
+    missing,
+    ownedCount: owned.length,
+    total: RARITIES.length,
+    complete: missing.length === 0,
+  };
+}
+
+/**
+ * Check the rarity-set milestone after a menagerie change and grant its
+ * account-wide reward exactly once. Idempotent: a no-op once granted, and safe
+ * to call opportunistically. Returns true only on the grant that first
+ * completes the set. Cheap — companion count only changes on explicit player
+ * action, so no polling is needed (design §2.3 / §6.1).
+ */
+export function checkRaritySetMilestone(): boolean {
+  const m = loadManifest();
+  if (m.raritySetMilestones.includes(RARITY_SET_MILESTONE_ID)) return false;
+  if (!raritySetProgress(m.companions).complete) return false;
+
+  m.raritySetMilestones.push(RARITY_SET_MILESTONE_ID);
+  saveManifest(m);
+  grantCollectionReward(); // account-wide title + multiplier in xp.json
+  return true;
 }
 
 // ─── Slot helpers ────────────────────────────────────────────────────────────
@@ -153,6 +214,8 @@ export function saveCompanionSlot(companion: Companion, slot: string): void {
   }
   m.companions[slot] = companion;
   saveManifest(m);
+  // A new companion may complete the rarity set — grant the milestone once.
+  checkRaritySetMilestone();
 }
 
 /**
@@ -262,7 +325,7 @@ function migrateIfNeeded(): void {
     active = active && companions[active] ? active : Object.keys(companions)[0];
   }
 
-  saveManifest({ active, companions });
+  saveManifest({ active, companions, raritySetMilestones: [] });
 }
 
 // ─── Reaction state (session-scoped for tmux isolation) ──────────────────────
