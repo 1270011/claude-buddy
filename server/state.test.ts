@@ -8,7 +8,11 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { slugify, raritySetProgress } from "./state.ts";
+import {
+  slugify,
+  raritySetProgress,
+  formatRaritySetLine,
+} from "./state.ts";
 import type { Companion, Rarity } from "./engine.ts";
 
 /** Build a companions record from a list of rarities (other bones irrelevant). */
@@ -111,5 +115,32 @@ describe("raritySetProgress (additional-rewards FR3)", () => {
     expect(all.complete).toBe(true);
     expect(all.missing).toEqual([]);
     expect(all.ownedCount).toBe(5);
+  });
+});
+
+describe("formatRaritySetLine", () => {
+  test("lists the missing tiers when incomplete", () => {
+    const p = raritySetProgress(companionsWithRarities(["common", "rare"]));
+    const line = formatRaritySetLine(p);
+    expect(line).toContain("2/5");
+    expect(line).toContain("need:");
+    expect(line).toContain("uncommon");
+    expect(line).toContain("legendary");
+  });
+
+  test("reads as complete when the full set is owned", () => {
+    const p = raritySetProgress(
+      companionsWithRarities([
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "legendary",
+      ]),
+    );
+    const line = formatRaritySetLine(p);
+    expect(line).toContain("5/5");
+    expect(line).toContain("complete");
+    expect(line).not.toContain("need:");
   });
 });

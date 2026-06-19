@@ -128,6 +128,17 @@ export function raritySetProgress(
   };
 }
 
+/** Rarity-set progress for the current menagerie (I/O wrapper, for surfacing). */
+export function getRaritySetProgress(): RaritySetProgress {
+  return raritySetProgress(loadManifest().companions);
+}
+
+/** A one-line summary of rarity-set progress for cards (pure). */
+export function formatRaritySetLine(p: RaritySetProgress): string {
+  if (p.complete) return `Rarity set: ${p.ownedCount}/${p.total} — complete ✅`;
+  return `Rarity set: ${p.ownedCount}/${p.total} (need: ${p.missing.join(", ")})`;
+}
+
 /**
  * Check the rarity-set milestone after a menagerie change and grant its
  * account-wide reward exactly once. Idempotent: a no-op once granted, and safe

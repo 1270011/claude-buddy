@@ -21,6 +21,7 @@ import {
   loadLoot,
   saveLoot,
   recentLoot,
+  describeLootEntry,
   LOOT_COSMETICS,
   LOOT_COSMETIC_CHANCE,
   LOOT_BONUS_POINTS,
@@ -57,6 +58,22 @@ describe("LOOT_COSMETICS", () => {
       expect(c.flavorText.length).toBeGreaterThan(0);
       expect(typeof c.apply).toBe("function");
     }
+  });
+
+  test("describeLootEntry labels points and cosmetics", () => {
+    expect(
+      describeLootEntry({ id: "points", grantedAt: 0, trigger: "level_up" }),
+    ).toBe(`+${LOOT_BONUS_POINTS} pt`);
+
+    const cos = LOOT_COSMETICS[0];
+    expect(
+      describeLootEntry({ id: cos.id, grantedAt: 0, trigger: "ascension" }),
+    ).toBe(cos.flavorText);
+
+    // Unknown id falls back to the id itself (forward-compat).
+    expect(
+      describeLootEntry({ id: "mystery", grantedAt: 0, trigger: "achievement" }),
+    ).toBe("mystery");
   });
 
   test("apply mutates the expected bones field", () => {

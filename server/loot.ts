@@ -157,6 +157,13 @@ export function recentLoot(limit: number = 3): LootLogEntry[] {
   return log.slice(-Math.max(0, limit));
 }
 
+/** A human label for a loot log entry — the cosmetic's flavor, or the point bonus. */
+export function describeLootEntry(entry: LootLogEntry): string {
+  if (entry.id === "points") return `+${LOOT_BONUS_POINTS} pt`;
+  const c = LOOT_COSMETICS.find((x) => x.id === entry.id);
+  return c ? c.flavorText : entry.id;
+}
+
 // ─── Roll ─────────────────────────────────────────────────────────────────────
 
 /** Pick a random loot cosmetic the player doesn't already own, or null. */

@@ -1301,6 +1301,47 @@ export function renderXpCardMarkdown(): string {
     `**Skill points:** ${avail} available \u00b7 ${state.pointsSpent} spent \u00b7 respec ${respec}`,
   );
   if (state.title) parts.push(`**Title:** ${state.title}`);
+
+  // ── Additional rewards: prestige, streak, collection, recent loot ──────────
+  // Each cross-module read is lazy + guarded so a fresh install (no streak/loot/
+  // menagerie state yet) renders cleanly without throwing, and so xp.ts keeps no
+  // static dependency on state.ts/loot.ts (which depend on it).
+  if (state.prestigeLevel > 0) {
+    parts.push(
+      `**Prestige:** tier ${state.prestigeLevel} (×${state.prestigeMultiplier.toFixed(2)} XP)`,
+    );
+  }
+  try {
+    const { loadStreak } = require("./streak.ts") as typeof import("./streak.ts");
+    const s = loadStreak();
+    if (s.longest > 0) {
+      parts.push(`**Streak:** \u{1F525} ${s.current} (longest: ${s.longest})`);
+    }
+  } catch {
+    // Streak state is optional during first install / version skew.
+  }
+  try {
+    const { getRaritySetProgress, formatRaritySetLine } =
+      require("./state.ts") as typeof import("./state.ts");
+    const prog = getRaritySetProgress();
+    if (prog.ownedCount > 0) {
+      parts.push(`**${formatRaritySetLine(prog)}**`);
+    }
+  } catch {
+    // Menagerie state is optional during first install / version skew.
+  }
+  try {
+    const { recentLoot, describeLootEntry } =
+      require("./loot.ts") as typeof import("./loot.ts");
+    const recent = recentLoot(3);
+    if (recent.length > 0) {
+      parts.push(
+        `**Recent loot:** ${recent.map(describeLootEntry).join(", ")}`,
+      );
+    }
+  } catch {
+    // Loot state is optional during first install / version skew.
+  }
   parts.push("");
 
   const owned = [...state.unlockedReactions, ...state.unlockedUpgrades];
@@ -1317,9 +1358,16 @@ export function renderXpCardMarkdown(): string {
     parts.push("");
   }
 
-  // Up next: cheapest/lowest-level unlocks the player doesn't own yet.
+  // Up next: cheapest/lowest-level unlocks the player doesn't own yet. Prestige-
+  // gated items above the player's tier are excluded so the teaser stays focused
+  // on attainable goals (the full prestige catalog shows in buddy_upgrades).
   const purchasable = [...UNLOCKABLE_REACTIONS, ...UNLOCKABLE_UPGRADES]
-    .filter((i) => !owned.includes(i.id))
+    .filter(
+      (i) =>
+        !owned.includes(i.id) &&
+        (i.prestigeLevel === undefined ||
+          state.prestigeLevel >= i.prestigeLevel),
+    )
     .sort((a, b) => a.level - b.level || a.cost - b.cost)
     .slice(0, 4);
   if (purchasable.length > 0) {

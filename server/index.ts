@@ -42,6 +42,8 @@ import {
   saveCompanionSlot,
   deleteCompanionSlot,
   listCompanionSlots,
+  getRaritySetProgress,
+  formatRaritySetLine,
   setBuddyStatusLine,
   unsetBuddyStatusLine,
   cleanupPluginState,
@@ -1236,6 +1238,10 @@ server.tool(
       const shiny = companion.bones.shiny ? " ✨" : "";
       return `  ${companion.name} [${slot}] — ${companion.bones.rarity} ${companion.bones.species} ${stars}${shiny}${active}`;
     });
+
+    // Rarity-set collection-milestone progress (additional-rewards FR3.4).
+    lines.push("");
+    lines.push(formatRaritySetLine(getRaritySetProgress()));
 
     return { content: [{ type: "text", text: lines.join("\n") }] };
   },

@@ -7,9 +7,13 @@
  * factored into the pure backfillXpState() so it can be pinned down here.
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import {
   pointsForLevel,
+  renderXpCardMarkdown,
   backfillXpState,
   availablePoints,
   unlockCost,
@@ -589,5 +593,85 @@ describe("multiplier stacking ceiling (risk R2)", () => {
     const combined = rarityMultiplier("legendary") * accountMultiplier(s);
     expect(combined).toBeCloseTo(1.2 * 1.15 * 1.05); // ≈ 1.449
     expect(combined).toBeLessThan(1.5);
+  });
+});
+
+// ─── buddy_xp card surfacing (integration — additional-rewards FR1.5/2.4/4) ───
+//
+// renderXpCardMarkdown aggregates xp.json + streak.json + loot.json (all lazy-
+// pathed, so a temp CLAUDE_CONFIG_DIR isolates them). The rarity-set line reads
+// the menagerie via state.ts, whose dir is frozen at module load, so this suite
+// deliberately asserts only on the temp-backed lines (prestige/streak/loot) and
+// the fresh-install no-throw guarantee (checkpoint C6).
+describe("renderXpCardMarkdown — additional rewards surfacing", () => {
+  let cfgDir: string;
+  let stateDir: string;
+  let prevEnv: string | undefined;
+
+  beforeEach(() => {
+    prevEnv = process.env.CLAUDE_CONFIG_DIR;
+    cfgDir = mkdtempSync(join(tmpdir(), "buddy-xpcard-test-"));
+    stateDir = join(cfgDir, "buddy-state");
+    mkdirSync(stateDir, { recursive: true });
+    process.env.CLAUDE_CONFIG_DIR = cfgDir;
+  });
+
+  afterEach(() => {
+    if (prevEnv === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = prevEnv;
+    rmSync(cfgDir, { recursive: true, force: true });
+  });
+
+  test("fresh install renders the base card with no reward lines, no throw", () => {
+    const card = renderXpCardMarkdown();
+    expect(card).toContain("XP");
+    expect(card).not.toContain("Prestige:");
+    expect(card).not.toContain("Streak:");
+    expect(card).not.toContain("Recent loot:");
+  });
+
+  test("surfaces prestige tier and multiplier when ascended", () => {
+    writeFileSync(
+      join(stateDir, "xp.json"),
+      JSON.stringify({ totalXp: 0, prestigeLevel: 2 }),
+    );
+    const card = renderXpCardMarkdown();
+    expect(card).toContain("Prestige:");
+    expect(card).toContain("tier 2");
+    expect(card).toContain("×1.09");
+  });
+
+  test("surfaces current and longest streak", () => {
+    writeFileSync(
+      join(stateDir, "streak.json"),
+      JSON.stringify({
+        current: 7,
+        longest: 12,
+        lastSessionAt: 0,
+        lastStartAt: 0,
+      }),
+    );
+    const card = renderXpCardMarkdown();
+    expect(card).toContain("Streak:");
+    expect(card).toContain("longest: 12");
+  });
+
+  test("'Up next' hides prestige items above the player's tier", () => {
+    // Fresh player (prestige 0): no prestige-gated item should be teased.
+    const card = renderXpCardMarkdown();
+    expect(card).not.toContain("Ascendant Aura"); // Prestige 2
+    expect(card).not.toContain("Tempered Resolve"); // Prestige 4
+  });
+
+  test("surfaces recent loot entries", () => {
+    writeFileSync(
+      join(stateDir, "loot.json"),
+      JSON.stringify({
+        log: [{ id: "points", grantedAt: 1, trigger: "level_up" }],
+        ownedLootCosmetics: [],
+      }),
+    );
+    const card = renderXpCardMarkdown();
+    expect(card).toContain("Recent loot:");
   });
 });
