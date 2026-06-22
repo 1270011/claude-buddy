@@ -45,7 +45,7 @@ STREAK=$(jq -r '.streak // 0' "$STATE" 2>/dev/null)
 # status.json predates the stats field (older server) — the panel is skipped.
 STATS_TSV=$(jq -r '[.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv' "$STATE" 2>/dev/null)
 
-cat > /dev/null  # drain stdin
+CC_INPUT=$(cat)  # capture stdin JSON (model/context/rate-limit data)
 
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
@@ -183,6 +183,15 @@ if [ -f "$CONFIG_FILE" ]; then
     _spb=$(jq -r '.showPrestigeBadge // false' "$CONFIG_FILE" 2>/dev/null || echo false)
     [ "$_spb" = "true" ] && SHOW_PRESTIGE_BADGE="true"
 fi
+
+# Combined-mode toggle (config.json) — adds a model/context/usage/reset row
+# to the stats column below. Independent of SHOW_STATS so it works whether
+# or not the game-stats bars are on.
+USE_COMBINED="false"
+if [ -f "$CONFIG_FILE" ]; then
+    _uc=$(jq -r '.useCombinedStatus // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    [ "$_uc" = "true" ] && USE_COMBINED="true"
+fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
@@ -318,6 +327,75 @@ if [ "$SHOW_STATS" = "true" ] && [ -n "$STATS_TSV" ]; then
             ;;
     esac
 fi
+
+# Combined-mode metrics row: model/context/usage/reset, appended below the
+# stat bars (or as the only row, when SHOW_STATS is off) — same column, so
+# enabling this never pushes the bubble/art further right.
+if [ "$USE_COMBINED" = "true" ]; then
+    _METRICS_TSV=$(printf '%s' "$CC_INPUT" | jq -r '
+        [
+            (.model.display_name // ""),
+            (.context_window.context_window_size // ""),
+            (.context_window.used_percentage // ""),
+            (.rate_limits.five_hour.used_percentage // ""),
+            (.rate_limits.five_hour.resets_at // "")
+        ] | join("")
+    ' 2>/dev/null)
+    if [ -n "$_METRICS_TSV" ]; then
+        IFS=$'\x1f' read -r _M_MODEL _M_CTX_SIZE _M_CTX _M_USAGE _M_RESET <<< "$_METRICS_TSV"
+        _SDIM=$'\033[2m'
+        _METRICS_PARTS=()
+        if [ -n "$_M_MODEL" ]; then
+            _MODEL_TAG=$(printf '%s' "$_M_MODEL" | tr '[:upper:]' '[:lower:]')
+            case "$_M_CTX_SIZE" in
+                ''|*[!0-9]*) ;;
+                *) [ "$_M_CTX_SIZE" -ge 1000000 ] && _MODEL_TAG="${_MODEL_TAG}[1m]" ;;
+            esac
+            _METRICS_PARTS+=("$_MODEL_TAG")
+        fi
+        case "$_M_CTX" in
+            ''|*[!0-9.]*) ;;
+            *) _METRICS_PARTS+=("ctx $(printf '%.0f' "$_M_CTX")%") ;;
+        esac
+        case "$_M_USAGE" in
+            ''|*[!0-9.]*) ;;
+            *) _METRICS_PARTS+=("usage $(printf '%.0f' "$_M_USAGE")%") ;;
+        esac
+        case "$_M_RESET" in
+            ''|*[!0-9]*) ;;
+            *)
+                _SECS_LEFT=$(( _M_RESET - NOW ))
+                if [ "$_SECS_LEFT" -gt 0 ]; then
+                    _HRS=$(( _SECS_LEFT / 3600 ))
+                    _MINS=$(( (_SECS_LEFT % 3600) / 60 ))
+                    _METRICS_PARTS+=("reset ${_HRS}h${_MINS}m")
+                fi
+                ;;
+        esac
+        if [ ${#_METRICS_PARTS[@]} -gt 0 ]; then
+            _METRICS_LINE="${_METRICS_PARTS[0]}"
+            for (( _mi=1; _mi<${#_METRICS_PARTS[@]}; _mi++ )); do
+                _METRICS_LINE="${_METRICS_LINE} · ${_METRICS_PARTS[$_mi]}"
+            done
+            # Model name/percentage lengths vary, so this row can exceed the
+            # fixed STATS_W. Grow STATS_W to fit and backfill already-built
+            # rows with the same extra padding — every row in the stats
+            # column must share one width, or the gap/bubble/art columns
+            # drift on whichever row is narrower.
+            _METRICS_LEN=${#_METRICS_LINE}
+            if [ "$_METRICS_LEN" -gt "$STATS_W" ]; then
+                _EXTRA_PAD=$(printf '%*s' "$(( _METRICS_LEN - STATS_W ))" '')
+                for _bi in "${!STATS_LINES[@]}"; do
+                    STATS_LINES[$_bi]="${STATS_LINES[$_bi]}${_EXTRA_PAD}"
+                done
+                STATS_W=$_METRICS_LEN
+            fi
+            _METRICS_LINE=$(printf '%-*s' "$STATS_W" "$_METRICS_LINE")
+            STATS_LINES+=("${_SDIM}${_METRICS_LINE}${NC}")
+        fi
+    fi
+fi
+
 STATS_COUNT=${#STATS_LINES[@]}
 
 # ─── Speech bubble (left of art, word-wrapped) ──────────────────────────────
