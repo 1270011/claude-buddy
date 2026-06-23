@@ -33,6 +33,23 @@ SPECIES=$(jq -r '.species // "blob"' "$STATUS_FILE" 2>/dev/null)
 MUTED=$(jq -r '.muted // false' "$STATUS_FILE" 2>/dev/null)
 [ "$MUTED" = "true" ] && exit 0
 
+# Easter egg (game-feel FR-D3): count name-calls; unlock a hidden cosmetic once
+# the user has called the buddy by name 10 times. The sentinel file makes the
+# grant fire exactly once.
+EGG_COUNT_FILE="$STATE_DIR/.name_calls"
+EGG_DONE_FILE="$STATE_DIR/.namecaller_unlocked"
+if [ ! -f "$EGG_DONE_FILE" ]; then
+    _egg=$(cat "$EGG_COUNT_FILE" 2>/dev/null || echo 0)
+    case "$_egg" in ''|*[!0-9]*) _egg=0 ;; esac
+    _egg=$((_egg + 1))
+    echo "$_egg" > "$EGG_COUNT_FILE"
+    if [ "$_egg" -ge 10 ] && [ -x "$(command -v bun)" ]; then
+        touch "$EGG_DONE_FILE"
+        PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+        bun run "$PLUGIN_ROOT/server/easter-egg.ts" >/dev/null 2>&1 &
+    fi
+fi
+
 # Species-specific name-call reactions
 case "$SPECIES" in
   dragon)

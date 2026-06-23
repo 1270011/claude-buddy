@@ -1154,6 +1154,23 @@ if [ -n "$REASON" ] && echo "$REASON" | grep -qiE 'halloween|christmas|april-foo
     esac
 fi
 
+# Rare idle surprise (game-feel FR-D2): full intensity only, ~2% — the buddy
+# does something unexpected. Cosmetic text only.
+if [ -z "$REASON" ]; then
+    GAME_FEEL=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
+    if [ "$GAME_FEEL" = "full" ] && [ "$((RANDOM % 50))" -eq 0 ]; then
+        RARE=(
+            "*stares into the middle distance*"
+            "did you hear that? ...never mind."
+            "*reorganizes invisible desk items*"
+            "i had a dream about semicolons."
+            "*hums a small algorithmic tune*"
+        )
+        REASON="rare-idle"
+        REACTION="${RARE[$((RANDOM % ${#RARE[@]}))]}"
+    fi
+fi
+
 if [ -z "$REASON" ]; then
     RAND=$((RANDOM % 10))
     if [ "$HOUR" -ge 0 ] && [ "$HOUR" -lt 5 ]; then

@@ -30,9 +30,10 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import type { Companion, BuddyStats, StatName, Rarity } from "./engine.ts";
+import type { Companion, BuddyStats, StatName, Rarity, Hat } from "./engine.ts";
+import type { Emotion } from "./art.ts";
 import { RARITIES } from "./engine.ts";
-import { grantCollectionReward } from "./xp.ts";
+import { grantCollectionReward, xpForLevel } from "./xp.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -397,7 +398,12 @@ export interface BuddyConfig {
   showStats: boolean;
   /** Show the prestige/streak badge line under the title (additional-rewards FR1.5). */
   showPrestigeBadge: boolean;
+  /** Game-feel intensity gate (game-feel NFR0/FR-E1): off silences all juice. */
+  gameFeel: GameFeel;
 }
+
+/** Game-feel intensity level (game-feel FR-E1). */
+export type GameFeel = "off" | "subtle" | "full";
 
 const DEFAULT_CONFIG: BuddyConfig = {
   commentCooldown: 30,
@@ -416,6 +422,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   suggestionCooldown: 180,
   showStats: false,
   showPrestigeBadge: false,
+  gameFeel: "subtle",
 };
 
 export function loadConfig(): BuddyConfig {
@@ -433,6 +440,14 @@ export function saveConfig(config: Partial<BuddyConfig>): BuddyConfig {
   const merged = { ...current, ...config };
   writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2));
   return merged;
+}
+
+/**
+ * The active game-feel intensity (game-feel FR-E1). Backfills to "subtle" for
+ * configs written before the gate shipped (loadConfig merges DEFAULT_CONFIG).
+ */
+export function gameFeelLevel(): GameFeel {
+  return loadConfig().gameFeel;
 }
 
 // ─── Status line state (compact JSON for the shell script) ───────────────────
@@ -462,22 +477,159 @@ export interface StatusState {
   stats: BuddyStats;
   peak: StatName;
   dump: StatName;
+  /** Level-progress fill ratio, 0-100. 100 at MAX_LEVEL. */
+  xpPct: number;
+  /** Most recent XP award, for the statusline's transient toast. */
+  lastXpGain: { amount: number; at: number } | null;
+  /** Transient celebratory message preferred over `reaction` while fresh
+   *  (game-feel FR-A1/A2/etc.). Null when none / when gameFeel is off. */
+  celebration: Celebration | null;
+}
+
+// ─── Celebration channel (game-feel §2 — one transient slot, many producers) ──
+
+export type CelebrationKind =
+  | "levelup"
+  | "loot"
+  | "ascension"
+  | "whim"
+  | "discovery"
+  | "shiny";
+
+export interface Celebration {
+  text: string;
+  kind: CelebrationKind;
+  at: number; // Date.now(), for the statusline's TTL check
+}
+
+/** Options for {@link writeStatusState} — replaces the old positional tail. */
+export interface StatusOpts {
+  reaction?: string;
+  muted?: boolean;
+  achievement?: string;
+  level?: number;
+  xp?: number;
+  xpGain?: number;
+  /** An explicit celebration to surface (levelup/whim/ascension/shiny/...). */
+  celebration?: Celebration | null;
+  /** Which producer triggered this write — scopes the loot side-channel. */
+  cause?: "loot" | "levelup" | "ascension" | "whim" | "shiny" | "tool";
+}
+
+/** Higher wins when several celebrations contend for the single bubble slot. */
+const CELEB_PRIORITY: Record<CelebrationKind, number> = {
+  ascension: 5,
+  shiny: 4,
+  levelup: 3,
+  whim: 2,
+  loot: 1,
+  discovery: 0,
+};
+
+/** Loot causes that may surface the loot `lastDrop` side-channel as a toast. */
+const LOOT_CAUSES = new Set(["loot", "levelup", "whim", "ascension"]);
+
+/**
+ * Pure: pick the celebration to write this tick, or null. Gated by `gameFeel`
+ * (off ⇒ never). An explicit `opts.celebration` competes with a fresh loot
+ * `lastDrop` — but loot only surfaces when `opts.cause` is loot-related (so an
+ * unrelated tool write can't echo a stale 🎁). Highest {@link CELEB_PRIORITY}
+ * wins. Exported for unit tests.
+ */
+export function buildCelebration(
+  opts: StatusOpts,
+  gate: GameFeel,
+  lastDrop: { label: string; at: number } | null | undefined,
+  now: number = Date.now(),
+): Celebration | null {
+  if (gate === "off") return null;
+  const cands: Celebration[] = [];
+  if (opts.celebration) cands.push(opts.celebration);
+  if (lastDrop && opts.cause && LOOT_CAUSES.has(opts.cause)) {
+    const ageS = now / 1000 - lastDrop.at;
+    if (ageS >= 0 && ageS <= 10) {
+      cands.push({ text: `\u{1F381} ${lastDrop.label}`, kind: "loot", at: now });
+    }
+  }
+  if (cands.length === 0) return null;
+  cands.sort((a, b) => CELEB_PRIORITY[b.kind] - CELEB_PRIORITY[a.kind]);
+  return cands[0];
+}
+
+// ─── Emotion mapping (game-feel FR-A4) ────────────────────────────────────────
+
+/** Active-reaction reason → emotion. Unmapped reasons stay neutral. */
+const REASON_EMOTION: Record<string, Emotion> = {
+  pet: "happy",
+  buddy_pet: "happy",
+  error: "angry",
+  "test-fail": "angry",
+  idle: "bored",
+  "large-diff": "surprised",
+};
+
+/**
+ * Pure: which emotion the current reaction reason implies. Neutral when the gate
+ * is off, the reason is absent, or the reason isn't mapped. Exported for tests.
+ */
+export function resolveEmotion(
+  reason: string | undefined,
+  gate: GameFeel,
+): Emotion {
+  if (gate === "off" || !reason) return "neutral";
+  return REASON_EMOTION[reason] ?? "neutral";
+}
+
+/** Level-progress fill ratio (0-100) for the statusline XP bar. 100 once
+ *  there's no further level to progress toward (MAX_LEVEL). */
+export function computeXpPct(level: number, totalXp: number): number {
+  const lower = xpForLevel(level);
+  const upper = xpForLevel(level + 1);
+  if (upper <= lower) return 100;
+  return Math.min(100, Math.round(((totalXp - lower) / (upper - lower)) * 100));
 }
 
 export function writeStatusState(
   companion: Companion,
-  reaction?: string,
-  muted?: boolean,
-  achievement?: string,
-  level?: number,
-  xp?: number,
+  opts: StatusOpts = {},
 ): void {
+  const { reaction, muted, achievement, level, xp, xpGain } = opts;
   mkdirSync(STATE_DIR, { recursive: true });
   const { renderFace, RARITY_STARS } =
     require("./engine.ts") as typeof import("./engine.ts");
   const { getStatusFrames } =
     require("./art.ts") as typeof import("./art.ts");
-  const { frames, frameSequence } = getStatusFrames(companion.bones);
+
+  // Game-feel intensity, read once (guarded) — drives emotion + celebration.
+  let gate: GameFeel = "subtle";
+  try {
+    gate = loadConfig().gameFeel;
+  } catch {
+    // Config optional during first install / version skew.
+  }
+
+  // Emotion frames (FR-A4): derived from the active reaction's reason.
+  let emotion: Emotion = "neutral";
+  try {
+    emotion = resolveEmotion(loadReaction()?.reason, gate);
+  } catch {
+    // Reaction state optional.
+  }
+  // Seasonal cosmetic (FR-C2): an overlay hat in a date window, gate-gated.
+  let seasonalHat: Hat | undefined;
+  if (gate !== "off") {
+    try {
+      const { activeSeasonal } = require("./art.ts") as typeof import("./art.ts");
+      seasonalHat = activeSeasonal()?.hat;
+    } catch {
+      // Seasonal is a best-effort delighter.
+    }
+  }
+  const { frames, frameSequence } = getStatusFrames(
+    companion.bones,
+    emotion,
+    seasonalHat,
+  );
   let xpLevel = level ?? 1;
   let xpTotal = xp ?? 0;
   let xpTitle: string | null = null;
@@ -506,6 +658,26 @@ export function writeStatusState(
   } catch {
     // Mood state is optional during first install / version skew.
   }
+  const xpPct = computeXpPct(xpLevel, xpTotal);
+  const lastXpGain =
+    xpGain && xpGain > 0 ? { amount: xpGain, at: Date.now() } : null;
+
+  // Celebration channel (game-feel §2/§2.5): gated by gameFeel; loot drops
+  // ride a lazy/guarded side-channel so a roll failure never breaks the write.
+  let celebration: Celebration | null = null;
+  try {
+    let lastDrop: { label: string; at: number } | null = null;
+    try {
+      const { loadLoot } = require("./loot.ts") as typeof import("./loot.ts");
+      lastDrop = loadLoot().lastDrop ?? null;
+    } catch {
+      // Loot state is optional during first install / version skew.
+    }
+    celebration = buildCelebration(opts, gate, lastDrop);
+  } catch {
+    // Best-effort: a celebration must never break the status write.
+  }
+
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -529,8 +701,20 @@ export function writeStatusState(
     stats: companion.bones.stats,
     peak: companion.bones.peak,
     dump: companion.bones.dump,
+    xpPct,
+    lastXpGain,
+    celebration,
   };
-  writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
+  // Atomic write (game-feel §2.6): the MCP server, the award-xp.ts process, and
+  // react.sh's jq patch all touch status.json — tmp+rename avoids torn reads.
+  const file = join(STATE_DIR, "status.json");
+  const tmp = file + ".tmp";
+  writeFileSync(tmp, JSON.stringify(state));
+  try {
+    renameSync(tmp, file);
+  } catch {
+    writeFileSync(file, JSON.stringify(state));
+  }
 }
 
 // ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────

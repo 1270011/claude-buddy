@@ -154,7 +154,7 @@ ${CYAN}╚═══════════════════════�
 
   saveCompanionSlot(companion, slot);
   saveActiveSlot(slot);
-  writeStatusState(companion, `*${chosenName} arrives*`);
+  writeStatusState(companion, { reaction: `*${chosenName} arrives*` });
 
   console.log(`${GREEN}✓${NC}  ${chosenName} saved to slot "${slot}" and set as active.`);
   console.log(`\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);

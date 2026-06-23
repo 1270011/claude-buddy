@@ -37,6 +37,12 @@ interface StatusOverrides {
   streak?: number;
   /** Omit prestige/streak fields from status.json (simulates an older server). */
   omitBadgeFields?: boolean;
+  /** Level-progress percent in status.json (default 50). */
+  xpPct?: number;
+  /** Most recent XP gain — amount + seconds-ago for the toast window. */
+  lastXpGain?: { amount: number; secondsAgo: number } | null;
+  /** Omit xpPct/lastXpGain entirely (simulates an older server). */
+  omitXpFields?: boolean;
 }
 
 /** Write a minimal status.json into a temp config dir and run buddy-status.sh
@@ -75,6 +81,17 @@ function renderStatus(overrides: StatusOverrides): string {
     status.prestigeLevel = overrides.prestigeLevel ?? 0;
     status.streak = overrides.streak ?? 0;
   }
+  // Fixed reference "now" so toast-age assertions are deterministic.
+  const fakeNow = 1_700_000_000;
+  if (!overrides.omitXpFields) {
+    status.xpPct = overrides.xpPct ?? 50;
+    status.lastXpGain = overrides.lastXpGain
+      ? {
+          amount: overrides.lastXpGain.amount,
+          at: (fakeNow - overrides.lastXpGain.secondsAgo) * 1000,
+        }
+      : null;
+  }
   writeFileSync(join(stateDir, "status.json"), JSON.stringify(status));
 
   if (
@@ -99,6 +116,8 @@ function renderStatus(overrides: StatusOverrides): string {
   if (!env.LC_ALL && !env.LANG && !env.LC_CTYPE) env.LC_ALL = "en_US.UTF-8";
   // Pin width so right-alignment padding is deterministic and the buddy renders.
   env.COLUMNS = "125";
+  // Match the fixed reference "now" used to derive lastXpGain.at above.
+  env.BUDDY_FAKE_NOW = String(fakeNow);
 
   try {
     const result = spawnSync("bash", [SCRIPT], {
@@ -176,6 +195,47 @@ describe("buddy-status.sh stats panel", () => {
     expect(out).toContain("DEBUGGING");
     expect(out).toContain("nice commit");
     expect(out).toContain("Waffle");
+  });
+});
+
+describe("buddy-status.sh XP progress row", () => {
+  test("renders level, bar, and percent below the stat bars", () => {
+    const out = renderStatus({ showStats: true, level: 7, xpPct: 68 });
+    const plain = stripAnsi(out);
+    expect(plain).toMatch(/Lv7\s+█+░+\s+68%/);
+  });
+
+  test("shows the blue +N XP toast within the 10s window", () => {
+    const out = renderStatus({
+      showStats: true,
+      lastXpGain: { amount: 15, secondsAgo: 3 },
+    });
+    expect(out).toContain("+15 XP");
+  });
+
+  test("omits the toast once it ages past 10s", () => {
+    const out = renderStatus({
+      showStats: true,
+      lastXpGain: { amount: 15, secondsAgo: 30 },
+    });
+    expect(out).not.toContain("+15 XP");
+  });
+
+  test("omits the toast when there has been no gain", () => {
+    const out = renderStatus({ showStats: true, lastXpGain: null });
+    expect(out).not.toContain("XP");
+  });
+
+  test("degrades gracefully when status.json predates xpPct/lastXpGain", () => {
+    const out = renderStatus({ showStats: true, omitXpFields: true });
+    const plain = stripAnsi(out);
+    expect(plain).toMatch(/Lv\d+\s+░+\s+0%/);
+    expect(out).toContain("Waffle");
+  });
+
+  test("hides the row entirely when showStats is off", () => {
+    const out = renderStatus({ showStats: false, xpPct: 68 });
+    expect(out).not.toMatch(/Lv\d+/);
   });
 });
 

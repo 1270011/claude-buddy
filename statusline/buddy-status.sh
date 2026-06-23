@@ -44,6 +44,13 @@ STREAK=$(jq -r '.streak // 0' "$STATE" 2>/dev/null)
 # Stats panel data: 5 values + peak/dump as a single TSV line. Empty when
 # status.json predates the stats field (older server) — the panel is skipped.
 STATS_TSV=$(jq -r '[.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv' "$STATE" 2>/dev/null)
+# XP progress bar row + transient gain toast. Defaults to 0/null on older
+# status.json so the row renders as an empty bar instead of erroring.
+XP_PCT=$(jq -r '.xpPct // 0' "$STATE" 2>/dev/null)
+XP_GAIN_TSV=$(jq -r '[(.lastXpGain.amount // 0), (.lastXpGain.at // 0)] | @tsv' "$STATE" 2>/dev/null)
+# Celebration channel (game-feel §2): text + epoch-ms timestamp. Empty/0 on
+# older status.json so the bubble falls back to the normal reaction.
+CELEB_TSV=$(jq -r '[(.celebration.text // ""), (.celebration.at // 0)] | @tsv' "$STATE" 2>/dev/null)
 
 CC_INPUT=$(cat)  # capture stdin JSON (model/context/rate-limit data)
 
@@ -192,7 +199,37 @@ if [ -f "$CONFIG_FILE" ]; then
     _uc=$(jq -r '.useCombinedStatus // false' "$CONFIG_FILE" 2>/dev/null || echo false)
     [ "$_uc" = "true" ] && USE_COMBINED="true"
 fi
-if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
+# Game-feel intensity (game-feel FR-E1): off suppresses the celebration toast;
+# subtle/full differ only in the toast's dwell time.
+GAME_FEEL="subtle"
+if [ -f "$CONFIG_FILE" ]; then
+    _gf=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
+    case "$_gf" in off|subtle|full) GAME_FEEL="$_gf" ;; esac
+fi
+
+# Celebration channel (game-feel §2): a transient message that overrides the
+# normal reaction in the bubble while fresh. Self-expiring by timestamp age;
+# uses the top-level NOW so BUDDY_FAKE_NOW drives it deterministically in tests.
+CELEB_SHOWN=0
+if [ "$GAME_FEEL" != "off" ]; then
+    IFS=$'\t' read -r _CELEB_TEXT _CELEB_AT <<< "$CELEB_TSV"
+    case "$_CELEB_AT" in ''|*[!0-9]*) _CELEB_AT=0 ;; esac
+    if [ -n "$_CELEB_TEXT" ] && [ "$_CELEB_TEXT" != "null" ] && [ "$_CELEB_AT" -gt 0 ]; then
+        _CELEB_TTL=10
+        [ "$GAME_FEEL" = "subtle" ] && _CELEB_TTL=6
+        _CELEB_AGE=$(( NOW - _CELEB_AT / 1000 ))
+        if [ "$_CELEB_AGE" -ge 0 ] && [ "$_CELEB_AGE" -le "$_CELEB_TTL" ]; then
+            if [ -n "$BUBBLE" ]; then
+                BUBBLE="$BUBBLE | ${_CELEB_TEXT}"
+            else
+                BUBBLE="${_CELEB_TEXT}"
+            fi
+            CELEB_SHOWN=1
+        fi
+    fi
+fi
+
+if [ "$CELEB_SHOWN" -eq 0 ] && [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
         FRESH=1
@@ -324,6 +361,29 @@ if [ "$SHOW_STATS" = "true" ] && [ -n "$STATS_TSV" ]; then
                 fi
                 STATS_LINES+=("${_SDIM}${_label}${NC} ${C}${_bar}${NC} ${_SDIM}${_valstr}${NC}${_mark}")
             done
+
+            # XP progress row, below the 5 stat bars. Same bar style; shows a
+            # transient blue "+N XP" toast for ~10s after an award.
+            _BLUE=$'\033[34m'
+            IFS=$'\t' read -r _XP_AMT _XP_AT <<< "$XP_GAIN_TSV"
+            case "$_XP_AMT" in ''|*[!0-9]*) _XP_AMT=0 ;; esac
+            case "$_XP_AT" in ''|*[!0-9]*) _XP_AT=0 ;; esac
+            case "$XP_PCT" in ''|*[!0-9]*) XP_PCT=0 ;; esac
+            _xp_filled=$(( XP_PCT / 5 ))
+            [ "$_xp_filled" -gt 20 ] && _xp_filled=20
+            [ "$_xp_filled" -lt 0 ] && _xp_filled=0
+            _xp_bar="${_FULL_BAR:0:_xp_filled}${_EMPTY_BAR:0:$(( 20 - _xp_filled ))}"
+            _xp_label=$(printf '%-9s' "Lv${LEVEL}")
+            _xp_pctstr=$(printf '%3d%%' "$XP_PCT")
+            _xp_toast=""
+            if [ "$_XP_AMT" -gt 0 ] && [ "$_XP_AT" -gt 0 ]; then
+                _xp_at_s=$(( _XP_AT / 1000 ))
+                _xp_age=$(( NOW - _xp_at_s ))
+                if [ "$_xp_age" -ge 0 ] && [ "$_xp_age" -le 10 ]; then
+                    _xp_toast=" ${_BLUE}+${_XP_AMT} XP${NC}"
+                fi
+            fi
+            STATS_LINES+=("${_SDIM}${_xp_label}${NC} ${C}${_xp_bar}${NC} ${_SDIM}${_xp_pctstr}${NC}${_xp_toast}")
             ;;
     esac
 fi

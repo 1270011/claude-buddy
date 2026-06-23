@@ -244,7 +244,29 @@ export const STATUS_FRAME_SEQUENCE: readonly number[] = [
 // Pre-resolves eye, hat overlay, and blink so the statusline shell does no art
 // work — it just cycles whatever frames the server writes. Each frame is a
 // \n-joined 5-line string (one jq call + mapfile in bash).
-export function getStatusFrames(bones: BuddyBones): {
+// ─── Emotion animations (game-feel FR-A4) ───────────────────────────────────
+//
+// Derived at render time from existing species art by eye substitution + a
+// short micro-cycle — no new per-species frame data, all species covered. The
+// emotion owns the eyes; "neutral" is the unchanged 4-frame idle cycle.
+
+export type Emotion = "happy" | "angry" | "bored" | "surprised" | "neutral";
+
+const EMOTION_EYE: Record<Exclude<Emotion, "neutral">, string> = {
+  happy: "^",
+  angry: ">",
+  bored: "-",
+  surprised: "O",
+};
+
+// 2 sub-frames (art frames 0/1) on a gentle 6-tick oscillation.
+const EMOTION_FRAME_SEQUENCE: readonly number[] = [0, 0, 0, 1, 1, 1];
+
+export function getStatusFrames(
+  bones: BuddyBones,
+  emotion: Emotion = "neutral",
+  seasonalHat?: Hat,
+): {
   frames: string[];
   frameSequence: number[];
 } {
@@ -254,10 +276,29 @@ export function getStatusFrames(bones: BuddyBones): {
     const hatLine = HAT_ART[bones.hat];
     if (hatLine && !art[0].trim()) {
       art[0] = hatLine;
+    } else if (
+      seasonalHat &&
+      bones.hat === "none" &&
+      !art[0].trim()
+    ) {
+      // Seasonal cosmetic (FR-C2): only when the hat slot is empty — never
+      // clobbers a user-equipped hat. Date is resolved by the caller, so this
+      // function stays pure/testable.
+      art[0] = HAT_ART[seasonalHat];
     }
     return art.join("\n");
   };
 
+  // Emotion: swap in the emotion's eye and run a 2-frame micro-cycle.
+  if (emotion !== "neutral") {
+    const eye = EMOTION_EYE[emotion];
+    return {
+      frames: [resolveFrame(0, eye), resolveFrame(1, eye)],
+      frameSequence: [...EMOTION_FRAME_SEQUENCE],
+    };
+  }
+
+  // Neutral: the original idle cycle, byte-identical to before (game-feel R3).
   return {
     frames: [
       resolveFrame(0, bones.eye),
@@ -267,6 +308,47 @@ export function getStatusFrames(bones: BuddyBones): {
     ],
     frameSequence: [...STATUS_FRAME_SEQUENCE],
   };
+}
+
+// ─── Buddy growth / age tell (game-feel FR-C3) ───────────────────────────────
+
+/** A purely cosmetic glyph keyed to days-since-hatch. Visual only, no stats. */
+export function ageTell(hatchedAt: number, now: number = Date.now()): string {
+  const days = Math.floor((now - hatchedAt) / 86_400_000);
+  if (days >= 30) return "\u{1F333}"; // 🌳 mature
+  if (days >= 7) return "\u{1F33F}"; // 🌿 growing
+  return "\u{1F331}"; // 🌱 sprout
+}
+
+// ─── Seasonal cosmetics (game-feel FR-C2) ────────────────────────────────────
+
+export interface SeasonalCosmetic {
+  hat?: Hat;
+  /** Inclusive window as [month, day] (local). */
+  from: [number, number];
+  to: [number, number];
+  label: string;
+}
+
+/** A small, deliberately-tiny calendar (dated content is a maintenance tail). */
+export const SEASONAL: SeasonalCosmetic[] = [
+  { hat: "beanie", from: [12, 20], to: [12, 31], label: "winter" },
+  { hat: "beanie", from: [1, 1], to: [1, 2], label: "new-year" },
+];
+
+/** The active seasonal cosmetic for a date, or null. Pure (date injected). */
+export function activeSeasonal(now: Date = new Date()): SeasonalCosmetic | null {
+  const m = now.getMonth() + 1;
+  const d = now.getDate();
+  const cmp = (am: number, ad: number, bm: number, bd: number): number =>
+    am !== bm ? am - bm : ad - bd;
+  for (const s of SEASONAL) {
+    const afterFrom = cmp(m, d, s.from[0], s.from[1]) >= 0;
+    const beforeTo = cmp(m, d, s.to[0], s.to[1]) <= 0;
+    const wraps = cmp(s.from[0], s.from[1], s.to[0], s.to[1]) > 0;
+    if (wraps ? afterFrom || beforeTo : afterFrom && beforeTo) return s;
+  }
+  return null;
 }
 
 export function renderCompanionCard(

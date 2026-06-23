@@ -9,11 +9,80 @@
  * Events: errors_spotted | tests_passed | tests_failed | large_diff | turn | time_spent | buddy_pet
  */
 
-import { awardXp } from "./xp";
-import { loadCompanionSlot, loadActiveSlot } from "./state";
+import { awardXp, getXpState } from "./xp";
+import {
+  loadCompanionSlot,
+  loadActiveSlot,
+  writeStatusState,
+  type Celebration,
+  type StatusOpts,
+} from "./state";
 import { startSession, awardSessionComplete } from "./session";
 import { recordSessionStart } from "./streak";
+import { tickWhim } from "./quests";
+import { announceOnce } from "./discovery";
 import type { XpEvent } from "./xp";
+
+/**
+ * Pick the celebration to surface for an award. Level-up wins the single bubble
+ * slot; then a just-completed daily whim; then a one-time system discovery;
+ * otherwise the caller's fallback cause (so session-completion can still surface
+ * streak loot via the 🎁 toast).
+ */
+function pickCelebration(
+  level: number,
+  leveled: boolean,
+  whimRewarded: boolean,
+  discovered: boolean,
+  fallbackCause: StatusOpts["cause"],
+): { celebration: Celebration | null; cause: StatusOpts["cause"] } {
+  if (leveled) {
+    return {
+      celebration: { text: `✨ LEVEL ${level} ✨`, kind: "levelup", at: Date.now() },
+      cause: "levelup",
+    };
+  }
+  if (whimRewarded) {
+    return {
+      celebration: { text: "⭐ today's whim — done!", kind: "whim", at: Date.now() },
+      cause: "whim",
+    };
+  }
+  if (discovered) {
+    return {
+      celebration: {
+        text: "🎁 new: a daily whim — see /buddy xp",
+        kind: "discovery",
+        at: Date.now(),
+      },
+      cause: undefined,
+    };
+  }
+  return { celebration: null, cause: fallbackCause };
+}
+
+/** Reconcile today's whim, swallowing any failure (game-feel NFR4). */
+function safeTickWhim(slot?: string): boolean {
+  try {
+    return tickWhim(slot).justRewarded;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Announce the daily-whim system once ever — but only when nothing higher
+ * (level-up / whim reward) is already taking the bubble, so the introduction
+ * is actually seen. Best-effort.
+ */
+function maybeDiscoverWhim(suppressed: boolean): boolean {
+  if (suppressed) return false;
+  try {
+    return announceOnce("whim");
+  } catch {
+    return false;
+  }
+}
 
 const VALID_EVENTS = new Set([
   "errors_spotted",
@@ -55,14 +124,60 @@ function main(): void {
   }
 
   if (event === "session_complete") {
+    const prevLevel = getXpState().level;
     const { bonus, state } = awardSessionComplete(slot, species, rarity);
+    // A commit ticks the daily whim (commits_made was bumped before this runs).
+    const whimRewarded = safeTickWhim(slot);
+    if (companion) {
+      const leveled = state.level > prevLevel;
+      const discovered = maybeDiscoverWhim(leveled || whimRewarded);
+      // Fallback "loot" so any streak/whim loot drop surfaces as a 🎁 toast.
+      const { celebration, cause } = pickCelebration(
+        state.level,
+        leveled,
+        whimRewarded,
+        discovered,
+        "loot",
+      );
+      writeStatusState(companion, {
+        level: state.level,
+        xp: state.totalXp,
+        xpGain: bonus,
+        celebration,
+        cause,
+      });
+    }
     console.log(
       `Session bonus: +${bonus} XP → Level ${state.level} (${state.totalXp.toLocaleString()} XP total)`,
     );
     return;
   }
 
+  const prevState = getXpState();
+  const before = prevState.totalXp;
+  const prevLevel = prevState.level;
   const state = awardXp(event as XpEvent, slot, species, rarity);
+  const gained = state.totalXp - before;
+  const whimRewarded = safeTickWhim(slot);
+  if (companion) {
+    const leveled = state.level > prevLevel;
+    const discovered = maybeDiscoverWhim(leveled || whimRewarded);
+    // No fallback cause: a plain event rolls no loot, so no side-channel echo.
+    const { celebration, cause } = pickCelebration(
+      state.level,
+      leveled,
+      whimRewarded,
+      discovered,
+      undefined,
+    );
+    writeStatusState(companion, {
+      level: state.level,
+      xp: state.totalXp,
+      xpGain: gained,
+      celebration,
+      cause,
+    });
+  }
   console.log(
     `XP awarded: +${event} → Level ${state.level} (${state.totalXp.toLocaleString()} XP total)`,
   );

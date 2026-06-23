@@ -226,6 +226,10 @@ export interface Achievement {
   icon: string;
   check: (events: EventCounters) => boolean;
   secret: boolean;
+  /** Optional single-counter source for progress display (game-feel FR-B3). */
+  metric?: keyof EventCounters;
+  /** Optional threshold for progress display; paired with `metric`. */
+  target?: number;
 }
 
 export const ACHIEVEMENTS: Achievement[] = [
@@ -243,6 +247,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Pet your companion 10 times",
     icon: "\ud83e\uddf9",
     check: (e) => e.pets >= 10,
+    metric: "pets",
+    target: 10,
     secret: false,
   },
   {
@@ -251,6 +257,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Pet your companion 50 times",
     icon: "\ud83d\udc95",
     check: (e) => e.pets >= 50,
+    metric: "pets",
+    target: 50,
     secret: false,
   },
   {
@@ -267,6 +275,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Survive 25 errors as a team",
     icon: "\ud83d\udd27",
     check: (e) => e.errors_seen >= 25,
+    metric: "errors_seen",
+    target: 25,
     secret: false,
   },
   {
@@ -307,6 +317,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Make 10 large diffs",
     icon: "\ud83d\udd28",
     check: (e) => e.large_diffs >= 10,
+    metric: "large_diffs",
+    target: 10,
     secret: false,
   },
   {
@@ -315,6 +327,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Your buddy reacts 100 times",
     icon: "\ud83d\udcac",
     check: (e) => e.reactions_given >= 100,
+    metric: "reactions_given",
+    target: 100,
     secret: false,
   },
   {
@@ -323,6 +337,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Code with your buddy for 7 days",
     icon: "\ud83d\udd25",
     check: (e) => e.days_active >= 7,
+    metric: "days_active",
+    target: 7,
     secret: false,
   },
   {
@@ -339,6 +355,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Run 50 buddy commands",
     icon: "\u26a1",
     check: (e) => e.commands_run >= 50,
+    metric: "commands_run",
+    target: 50,
     secret: false,
   },
   {
@@ -371,6 +389,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Make 50 commits",
     icon: "\ud83c\udfed",
     check: (e) => e.commits_made >= 50,
+    metric: "commits_made",
+    target: 50,
     secret: false,
   },
   {
@@ -411,6 +431,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Push 20 times",
     icon: "\ud83d\ude80",
     check: (e) => e.pushes_made >= 20,
+    metric: "pushes_made",
+    target: 20,
     secret: false,
   },
   {
@@ -667,6 +689,8 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Start 10 coding sessions",
     icon: "\ud83d\udd04",
     check: (e) => e.sessions >= 10,
+    metric: "sessions",
+    target: 10,
     secret: false,
   },
   {
@@ -1404,11 +1428,23 @@ export function renderAchievementsCardMarkdown(): string {
   parts.push(`\`${bar}\``);
   parts.push("");
 
+  let slot: string | undefined;
+  try {
+    slot = (require("./state.ts") as typeof import("./state.ts")).loadActiveSlot();
+  } catch {
+    // active slot optional
+  }
+  const e = loadEvents(slot);
   for (const ach of ACHIEVEMENTS) {
     if (ach.secret && !unlockedIds.has(ach.id)) continue;
     const done = unlockedIds.has(ach.id);
     const status = done ? "\u2705" : "\u2610";
-    const line = `${ach.icon}${status} **${ach.name}** \u2014 ${ach.description}`;
+    let line = `${ach.icon}${status} **${ach.name}** \u2014 ${ach.description}`;
+    // Progress fraction for in-progress, countable achievements (FR-B3).
+    if (!done && ach.metric && ach.target) {
+      const cur = Math.min(e[ach.metric], ach.target);
+      line += ` (${cur}/${ach.target})`;
+    }
     parts.push(line);
   }
 

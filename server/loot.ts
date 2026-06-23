@@ -30,7 +30,8 @@ export type LootTrigger =
   | "level_up"
   | "streak_milestone"
   | "achievement"
-  | "ascension";
+  | "ascension"
+  | "whim";
 
 export interface LootLogEntry {
   /** A loot-exclusive cosmetic id, or "points" for a points-only roll. */
@@ -42,6 +43,12 @@ export interface LootLogEntry {
 export interface LootState {
   log: LootLogEntry[]; // capped at LOOT_LOG_CAP most-recent entries
   ownedLootCosmetics: string[]; // loot-exclusive ids already received
+  /**
+   * The most-recent roll's label + epoch-seconds timestamp, read by
+   * writeStatusState to surface a transient 🎁 toast (game-feel FR-A2). Set on
+   * every roll (cosmetic flavor, or the point-bonus label).
+   */
+  lastDrop?: { label: string; at: number } | null;
 }
 
 // ─── Loot-exclusive cosmetics (remix of existing bones fields) ────────────────
@@ -104,6 +111,42 @@ export const LOOT_COSMETICS: LootCosmetic[] = [
       c.bones.eye = "@";
     },
   },
+  // ── Expanded pool (game-feel FR-D1): cosmetic-only, unreachable combos ──────
+  {
+    id: "loot_prismatic",
+    category: "cosmetic",
+    flavorText: "A prismatic shimmer with a soft-glowing gaze.",
+    apply: (c) => {
+      c.bones.shiny = true;
+      c.bones.eye = "°"; // °
+    },
+  },
+  {
+    id: "loot_dapper",
+    category: "cosmetic",
+    flavorText: "A dapper top hat, and a shine to match.",
+    apply: (c) => {
+      c.bones.hat = "tophat";
+      c.bones.shiny = true;
+    },
+  },
+  {
+    id: "loot_whirligig",
+    category: "cosmetic",
+    flavorText: "A propeller cap, spinning with quiet glee.",
+    apply: (c) => {
+      c.bones.hat = "propeller";
+    },
+  },
+  {
+    id: "loot_crossed_stars",
+    category: "cosmetic",
+    flavorText: "Crossed stars for eyes — dazed, delighted.",
+    apply: (c) => {
+      c.bones.eye = "×"; // ×
+      c.bones.shiny = true;
+    },
+  },
 ];
 
 // ─── Tunables (conservative by design — FR4.4 / NFR6) ─────────────────────────
@@ -133,9 +176,10 @@ export function loadLoot(): LootState {
       ownedLootCosmetics: Array.isArray(p.ownedLootCosmetics)
         ? p.ownedLootCosmetics
         : [],
+      lastDrop: p.lastDrop ?? null,
     };
   } catch {
-    return { log: [], ownedLootCosmetics: [] };
+    return { log: [], ownedLootCosmetics: [], lastDrop: null };
   }
 }
 
@@ -225,6 +269,13 @@ export function rollLoot(
   if (state.log.length > LOOT_LOG_CAP) {
     state.log = state.log.slice(-LOOT_LOG_CAP);
   }
+
+  // Record the drop for the transient statusline toast (game-feel FR-A2). Every
+  // roll sets it — a points-only roll is never "silent".
+  state.lastDrop = {
+    label: cosmetic ? cosmetic.flavorText : `+${LOOT_BONUS_POINTS} pt`,
+    at: nowSeconds(),
+  };
   saveLoot(state);
 
   return { bonusPoints: LOOT_BONUS_POINTS, cosmetic };

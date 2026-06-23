@@ -1253,6 +1253,34 @@ export function grantCollectionReward(): XpState {
   return state;
 }
 
+/**
+ * Grant a cosmetic flag (idempotent) and persist. Used by loot/easter-egg/shiny
+ * hatch paths that mark the companion without going through the point economy.
+ * Returns the updated state.
+ */
+export function grantCosmeticFlag(flag: string): XpState {
+  const state = loadXpState();
+  if (!state.cosmeticFlags.includes(flag)) {
+    state.cosmeticFlags.push(flag);
+    saveXpState(state);
+  }
+  return state;
+}
+
+/**
+ * Equip a title only if none is currently worn (so a deliberately-chosen
+ * prestige/Collector title isn't clobbered). Idempotent. Used by the
+ * cosmetic-set milestone (game-feel FR-C1).
+ */
+export function grantTitleIfUnset(title: string): XpState {
+  const state = loadXpState();
+  if (state.title === null) {
+    state.title = title;
+    saveXpState(state);
+  }
+  return state;
+}
+
 // ─── Rendering helpers ────────────────────────────────────────────────────────
 
 /** Render an XP progress bar as a string */
@@ -1341,6 +1369,20 @@ export function renderXpCardMarkdown(): string {
     }
   } catch {
     // Loot state is optional during first install / version skew.
+  }
+  try {
+    const { formatWhimLine } =
+      require("./quests.ts") as typeof import("./quests.ts");
+    parts.push(formatWhimLine());
+  } catch {
+    // Whim state is optional during first install / version skew.
+  }
+  try {
+    const { formatSetsLines } = require("./sets.ts") as typeof import("./sets.ts");
+    const { loadCompanion } = require("./state.ts") as typeof import("./state.ts");
+    for (const line of formatSetsLines(state, loadCompanion())) parts.push(line);
+  } catch {
+    // Sets/companion state optional during first install / version skew.
   }
   parts.push("");
 

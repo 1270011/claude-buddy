@@ -1831,7 +1831,7 @@ function App() {
         if (slots[listCursor]) {
           const { slot, companion } = slots[listCursor];
           saveActiveSlot(slot);
-          writeStatusState(companion, `*${companion.name} arrives*`);
+          writeStatusState(companion, { reaction: `*${companion.name} arrives*` });
           setMessage(`✓ ${companion.name} is now active!`);
         }
         return;
@@ -1978,7 +1978,7 @@ function App() {
           };
           saveCompanionSlot(companion, slot);
           saveActiveSlot(slot);
-          writeStatusState(companion, `*${name} arrives*`);
+          writeStatusState(companion, { reaction: `*${name} arrives*` });
           setMessage(`✓ ${name} saved to slot "${slot}"`);
           setHuntNameInput("");
           setHuntResults([]);

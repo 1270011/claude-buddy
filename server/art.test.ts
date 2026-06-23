@@ -8,7 +8,13 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import {
+  displayWidth,
+  getStatusFrames,
+  STATUS_FRAME_SEQUENCE,
+  ageTell,
+  activeSeasonal,
+} from "./art.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
 
 describe("displayWidth", () => {
@@ -126,6 +132,72 @@ describe("getStatusFrames", () => {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
     }
+  });
+
+  // ── Emotion frames (game-feel FR-A4) ──────────────────────────────────────
+
+  test("neutral is the default and is byte-identical to the no-arg call", () => {
+    expect(getStatusFrames(bones(), "neutral")).toEqual(getStatusFrames(bones()));
+  });
+
+  test("each emotion yields a 2-frame micro-cycle with the emotion's eye", () => {
+    const eyes: Record<string, string> = {
+      happy: "^",
+      angry: ">",
+      bored: "-",
+      surprised: "O",
+    };
+    for (const [emotion, eye] of Object.entries(eyes)) {
+      const { frames, frameSequence } = getStatusFrames(
+        bones({ species: "capybara", eye: "@" }),
+        emotion as "happy",
+      );
+      expect(frames).toHaveLength(2);
+      expect(frames[0]).toContain(eye);
+      expect(frames[0]).not.toContain("@"); // the configured eye is overridden
+      // sequence only references valid indices
+      for (const idx of frameSequence) {
+        expect(idx).toBeGreaterThanOrEqual(0);
+        expect(idx).toBeLessThan(frames.length);
+      }
+    }
+  });
+
+  // ── Seasonal overlay (game-feel FR-C2) ────────────────────────────────────
+
+  test("seasonalHat overlays a hatless line 0, but never a worn hat", () => {
+    // duck frame 0 line 0 is blank → seasonal hat appears there.
+    const withSeasonal = getStatusFrames(
+      bones({ species: "duck", hat: "none" }),
+      "neutral",
+      "beanie",
+    );
+    expect(withSeasonal.frames[0].split("\n")[0]).toContain("(___)"); // beanie art
+    // a worn hat (crown) is not overridden by the seasonal hat.
+    const withWornHat = getStatusFrames(
+      bones({ species: "duck", hat: "crown" }),
+      "neutral",
+      "beanie",
+    );
+    expect(withWornHat.frames[0].split("\n")[0]).toContain("\\^^^/"); // crown, not beanie
+  });
+});
+
+describe("ageTell (game-feel FR-C3)", () => {
+  const DAY = 86_400_000;
+  const now = 1_000_000_000_000;
+  test("sprout → growing → mature by days since hatch", () => {
+    expect(ageTell(now - 0 * DAY, now)).toBe("\u{1F331}"); // 🌱
+    expect(ageTell(now - 10 * DAY, now)).toBe("\u{1F33F}"); // 🌿
+    expect(ageTell(now - 40 * DAY, now)).toBe("\u{1F333}"); // 🌳
+  });
+});
+
+describe("activeSeasonal (game-feel FR-C2)", () => {
+  test("returns the winter cosmetic inside its window and null outside", () => {
+    expect(activeSeasonal(new Date(2026, 11, 25))?.hat).toBe("beanie"); // Dec 25
+    expect(activeSeasonal(new Date(2026, 0, 1))?.hat).toBe("beanie"); // Jan 1
+    expect(activeSeasonal(new Date(2026, 5, 15))).toBeNull(); // Jun 15
   });
 });
 

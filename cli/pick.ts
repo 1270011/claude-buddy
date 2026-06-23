@@ -428,7 +428,7 @@ function onKey(key: string, s: State): boolean {
         };
         saveCompanionSlot(companion, slot);
         saveActiveSlot(slot);
-        writeStatusState(companion, `*${name} arrives*`);
+        writeStatusState(companion, { reaction: `*${name} arrives*` });
         s.message = `✓ ${name} saved to slot "${slot}" and set as active!`;
         return true;
       } else if (key === "\u007f" || key === "\b") {
@@ -450,7 +450,7 @@ function onKey(key: string, s: State): boolean {
           const entry = s.savedSlots[Math.floor(Math.random() * s.savedSlots.length)];
           s.savedCursor = s.savedSlots.indexOf(entry);
           saveActiveSlot(entry.slot);
-          writeStatusState(entry.companion, `*${entry.companion.name} arrives*`);
+          writeStatusState(entry.companion, { reaction: `*${entry.companion.name} arrives*` });
           s.message = `✓ ${entry.companion.name} summoned at random!`;
           return true;
         }
@@ -458,7 +458,7 @@ function onKey(key: string, s: State): boolean {
         const entry = s.savedSlots[s.savedCursor];
         if (entry) {
           saveActiveSlot(entry.slot);
-          writeStatusState(entry.companion, `*${entry.companion.name} arrives*`);
+          writeStatusState(entry.companion, { reaction: `*${entry.companion.name} arrives*` });
           s.message = `✓ ${entry.companion.name} summoned!`;
           return true;
         }

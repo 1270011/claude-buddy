@@ -32,6 +32,7 @@ import {
   loadReaction,
   saveReaction,
   writeStatusState,
+  gameFeelLevel,
   loadConfig,
   saveConfig,
   loadActiveSlot,
@@ -56,7 +57,8 @@ import {
 import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions";
-import { renderCompanionCardMarkdown } from "./art";
+import { renderCompanionCardMarkdown, ageTell } from "./art";
+import { historyCallback } from "./memory-callbacks";
 import {
   incrementEvent, checkAndAward, trackActiveDay,
   renderAchievementsCardMarkdown,
@@ -75,6 +77,7 @@ import {
   ascend,
   availablePoints,
   pickOwnedReaction,
+  grantCosmeticFlag,
   MAX_LEVEL,
   PRESTIGE_MAX,
   computeLevel,
@@ -149,7 +152,7 @@ function ensureCompanion(): Companion {
   if (saved.length > 0) {
     const { slot, companion: rescued } = saved[0];
     saveActiveSlot(slot);
-    writeStatusState(rescued, `*${rescued.name} arrives*`);
+    writeStatusState(rescued, { reaction: `*${rescued.name} arrives*` });
     return rescued;
   }
 
@@ -167,7 +170,21 @@ function ensureCompanion(): Companion {
   const slot = slugify(name);
   saveCompanionSlot(companion, slot);
   saveActiveSlot(slot);
-  writeStatusState(companion);
+  // Shiny hatch (game-feel FR-D4): the 1% roll already happened in generateBones;
+  // mark it as innate and announce it so it reads as special.
+  if (companion.bones.shiny) {
+    try {
+      grantCosmeticFlag("hatched_shiny");
+    } catch {
+      // best-effort flag
+    }
+    writeStatusState(companion, {
+      celebration: { text: "✨ a SHINY hatched! ✨", kind: "shiny", at: Date.now() },
+      cause: "shiny",
+    });
+  } else {
+    writeStatusState(companion);
+  }
 
   checkAndAward(slot);
   trackActiveDay();
@@ -203,12 +220,16 @@ server.tool(
       reactionText,
     );
 
-    writeStatusState(companion, reaction?.reaction);
+    writeStatusState(companion, { reaction: reaction?.reaction });
     incrementEvent("commands_run", 1, activeSlot());
     incrementEvent("shows", 1);
     checkAndAward(activeSlot());
 
-    return { content: [{ type: "text", text: card }] };
+    // Growth/age tell (game-feel FR-C3): a cosmetic, visual-only line.
+    const days = Math.floor((Date.now() - companion.hatchedAt) / 86_400_000);
+    const ageLine = `${ageTell(companion.hatchedAt)} ${days} day${days === 1 ? "" : "s"} together`;
+
+    return { content: [{ type: "text", text: `${card}\n\n${ageLine}` }] };
   },
 );
 
@@ -226,12 +247,18 @@ server.tool(
       companion.bones.species,
       companion.bones.rarity,
     );
-    const reaction =
+    let reaction =
       owned && Math.random() < 0.35
         ? owned
         : getReaction("pet", companion.bones.species, companion.bones.rarity);
+    // Memory-narrated milestone (game-feel FR-E3): on `full`, occasionally
+    // reference real shared history instead of a generic pet line.
+    if (gameFeelLevel() === "full" && Math.random() < 0.15) {
+      const cb = historyCallback();
+      if (cb) reaction = cb;
+    }
     saveReaction(reaction, "pet");
-    writeStatusState(companion, reaction);
+    writeStatusState(companion, { reaction });
     incrementEvent("pets", 1, activeSlot());
     awardXp("buddy_pet", activeSlot(), companion.bones.species, companion.bones.rarity);
 
@@ -310,7 +337,7 @@ server.tool(
 
     const newAch = checkAndAward(activeSlot());
     const achName = newAch.length > 0 ? newAch[0].icon + " " + newAch[0].name : undefined;
-    writeStatusState(companion, comment, undefined, achName);
+    writeStatusState(companion, { reaction: comment, achievement: achName });
 
     const face = renderFace(companion.bones.species, companion.bones.eye);
     const achNotice = newAch.length > 0
@@ -601,7 +628,7 @@ server.tool(
   {},
   async () => {
     const companion = ensureCompanion();
-    writeStatusState(companion, "", true);
+    writeStatusState(companion, { reaction: "", muted: true });
     incrementEvent("commands_run", 1, activeSlot());
     incrementEvent("mutes", 1);
 
@@ -623,7 +650,7 @@ server.tool(
 
 server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
   const companion = ensureCompanion();
-  writeStatusState(companion, "*stretches* I'm back!", false);
+  writeStatusState(companion, { reaction: "*stretches* I'm back!", muted: false });
   saveReaction("*stretches* I'm back!", "pet");
   incrementEvent("commands_run", 1, activeSlot());
   incrementEvent("unmutes", 1);
@@ -735,6 +762,80 @@ server.tool(
       );
     }
     return { content: [{ type: "text", text: lines.join("\n") }] };
+  },
+);
+
+// ─── Tool: buddy_gamefeel (game-feel FR-E1) ──────────────────────────────────
+
+server.tool(
+  "buddy_gamefeel",
+  "Set the game-feel intensity — how much celebratory juice (level-up/loot toasts, animations) the buddy shows. 'off' silences all of it (status line unchanged from the classic look), 'subtle' (default) shows brief toasts, 'full' adds the chattier surprises. Omit level to report the current setting. Backs /buddy gamefeel. Read live — no restart needed.",
+  {
+    level: z
+      .enum(["off", "subtle", "full"])
+      .optional()
+      .describe("off | subtle | full. Omit to report the current value."),
+  },
+  async ({ level }) => {
+    ensureCompanion();
+    const cfg = loadConfig();
+    if (level === undefined) {
+      return {
+        content: [
+          { type: "text", text: `Game-feel intensity: ${cfg.gameFeel}.` },
+        ],
+      };
+    }
+    saveConfig({ gameFeel: level });
+    return {
+      content: [{ type: "text", text: `Game-feel intensity set to ${level}.` }],
+    };
+  },
+);
+
+// ─── Tool: buddy_brag (game-feel FR-E2) ──────────────────────────────────────
+
+/**
+ * A paste-able markdown brag card: the companion card plus one milestone line.
+ * Built on the ANSI-free markdown renderer so it drops cleanly into a PR/Slack.
+ * The milestone line whitelists public stats only (level/prestige/title + one
+ * history figure) — never project paths, file names, or memory contents.
+ */
+function renderBragCard(companion: Companion, plain = false): string {
+  const xp = getXpState();
+  const bits: string[] = [`${plain ? "" : "🏆 "}Lv ${xp.level}`];
+  if (xp.prestigeLevel > 0) bits.push(`Prestige ${xp.prestigeLevel}`);
+  if (xp.title) bits.push(`«${xp.title}»`);
+  try {
+    const { loadStreak } = require("./streak") as typeof import("./streak");
+    const s = loadStreak();
+    if (s.longest > 0) bits.push(`${plain ? "" : "🔥 "}best streak ${s.longest}`);
+  } catch {
+    // streak state optional
+  }
+  const milestone = bits.join(" · ").trim();
+  const card = renderCompanionCardMarkdown(
+    companion.bones,
+    companion.name,
+    companion.personality,
+  );
+  return `${card}\n\n${milestone}`;
+}
+
+server.tool(
+  "buddy_brag",
+  "Generate a paste-able markdown 'brag card' for your buddy — the ASCII art card plus a milestone line (level, prestige, title, best streak) — ready to drop into a PR comment, Slack, or socials. Pass plain=true for an emoji-light variant. Contains only public stats; never leaks project or memory contents. Backs /buddy brag.",
+  {
+    plain: z
+      .boolean()
+      .optional()
+      .describe("true for an emoji-light variant for surfaces that mangle Unicode."),
+  },
+  async ({ plain }) => {
+    const companion = ensureCompanion();
+    const card = renderBragCard(companion, plain ?? false);
+    incrementEvent("commands_run", 1, activeSlot());
+    return { content: [{ type: "text", text: card }] };
   },
 );
 
@@ -877,7 +978,21 @@ server.tool(
       const companion = loadCompanion();
       const res = spendUnlock(buy, companion);
       if (res.ok && res.companionChanged && companion) saveCompanion(companion);
-      return text(res.message);
+      let msg = res.message;
+      // Cosmetic-set milestone (game-feel FR-C1): a purchase may complete a set.
+      if (res.ok) {
+        try {
+          const { grantCompletedSetTitle } =
+            require("./sets.ts") as typeof import("./sets.ts");
+          const granted = grantCompletedSetTitle(res.state, loadCompanion());
+          if (granted) {
+            msg += `\n\n✨ Cosmetic set complete — title earned: «${granted}»!`;
+          }
+        } catch {
+          // Sets are a best-effort delighter.
+        }
+      }
+      return text(msg);
     }
     if (refund) {
       const companion = loadCompanion();
@@ -889,7 +1004,22 @@ server.tool(
       return text(equipTitle(titleId).message);
     }
     if (doAscend) {
-      return text(ascend().message);
+      const res = ascend();
+      // Ascension flourish (game-feel FR-A3): a one-shot celebration on success.
+      if (res.ok) {
+        const companion = loadCompanion();
+        if (companion) {
+          writeStatusState(companion, {
+            celebration: {
+              text: `🌟 PRESTIGE ${res.state.prestigeLevel} 🌟`,
+              kind: "ascension",
+              at: Date.now(),
+            },
+            cause: "ascension",
+          });
+        }
+      }
+      return text(res.message);
     }
 
     // No action \u2014 render the catalog with ownership/affordability status.
@@ -1151,7 +1281,7 @@ server.tool(
     }
 
     saveActiveSlot(targetSlot);
-    writeStatusState(companion, `*${companion.name} arrives*`);
+    writeStatusState(companion, { reaction: `*${companion.name} arrives*` });
     incrementEvent("summons", 1);
 
     const newAch = checkAndAward(activeSlot());
@@ -1359,7 +1489,7 @@ server.tool(
 
     saveCompanionSlot(companion, slot);
     saveActiveSlot(slot);
-    writeStatusState(companion, `*${buddyName} hatches*`);
+    writeStatusState(companion, { reaction: `*${buddyName} hatches*` });
 
     const card = renderCompanionCardMarkdown(
       companion.bones,
@@ -1477,7 +1607,7 @@ try {
   const prevReaction = JSON.parse(
     readFileSync(join(buddyStateDir(), "status.json"), "utf8"),
   ).reaction as string;
-  writeStatusState(companion, prevReaction);
+  writeStatusState(companion, { reaction: prevReaction });
 } catch {
   // First run / no prior status.json — ensureCompanion()'s own
   // writeStatusState call already covers this case.

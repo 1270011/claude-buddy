@@ -136,6 +136,18 @@ if (menagerie) {
 if (status) {
   row("Status muted", String(status.muted ?? false));
   row("Current reaction", status.reaction || "(none)");
+}
+// Game-feel intensity + last celebration (game-feel FR-E1 supportability).
+const cfg = tryParseJson(tryRead(join(STATE_DIR, "config.json")));
+row("Game-feel intensity", cfg?.gameFeel ?? "(default: subtle)");
+if (status) {
+  const celeb = status.celebration;
+  if (celeb?.at) {
+    const ageS = Math.floor((Date.now() - celeb.at) / 1000);
+    row("Last celebration", `${celeb.kind} "${celeb.text}" (${ageS}s ago)`);
+  } else {
+    row("Last celebration", "(none active)");
+  }
 } else {
   warn(`No status state at ${join(STATE_DIR, "status.json")}`);
 }

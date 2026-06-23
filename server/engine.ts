@@ -270,6 +270,9 @@ function rollRarity(rng: () => number): Rarity {
   return "common";
 }
 
+/** Probability a freshly-hatched companion is shiny (game-feel FR-D4 tunable). */
+export const SHINY_HATCH_CHANCE = 0.01;
+
 export function generateBones(userId: string, salt: string = SALT): BuddyBones {
   const rng = mulberry32(hashString(userId + salt));
 
@@ -277,7 +280,7 @@ export function generateBones(userId: string, salt: string = SALT): BuddyBones {
   const species = pick(rng, SPECIES);
   const eye = pick(rng, EYES);
   const hat = rarity === "common" ? "none" : pick(rng, HATS);
-  const shiny = rng() < 0.01;
+  const shiny = rng() < SHINY_HATCH_CHANCE;
 
   const peak = pick(rng, STAT_NAMES);
   let dump = pick(rng, STAT_NAMES);
@@ -487,7 +490,7 @@ export function searchBuddy(
 
     const eye = pick(rng, EYES);
     const hat = rarity === "common" ? "none" : pick(rng, HATS);
-    const shiny = rng() < 0.01;
+    const shiny = rng() < SHINY_HATCH_CHANCE;
     if (criteria.wantShiny && !shiny) continue;
 
     const peak = pick(rng, STAT_NAMES);

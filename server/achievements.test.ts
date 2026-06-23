@@ -899,3 +899,23 @@ describe("EventCounters", () => {
     }
   });
 });
+
+describe("progress metadata (game-feel FR-B3)", () => {
+  test("annotated achievements carry a valid metric + positive target", () => {
+    const annotated = ACHIEVEMENTS.filter((a) => a.metric || a.target);
+    expect(annotated.length).toBeGreaterThan(0);
+    for (const a of annotated) {
+      expect(a.metric).toBeDefined();
+      expect(a.target).toBeGreaterThan(0);
+      expect(COUNTER_KEYS).toContain(a.metric!);
+    }
+  });
+
+  test("a metric/target pair matches its check threshold (good_boy = pets 10)", () => {
+    const a = ACHIEVEMENTS.find((x) => x.id === "good_boy")!;
+    expect(a.metric).toBe("pets");
+    expect(a.target).toBe(10);
+    expect(a.check({ pets: 9 } as EventCounters)).toBe(false);
+    expect(a.check({ pets: 10 } as EventCounters)).toBe(true);
+  });
+});

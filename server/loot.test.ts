@@ -43,8 +43,8 @@ function stubCompanion(): Companion {
 // ─── Pure: cosmetic apply effects ─────────────────────────────────────────────
 
 describe("LOOT_COSMETICS", () => {
-  test("there are six loot-exclusive cosmetics, all category cosmetic", () => {
-    expect(LOOT_COSMETICS.length).toBe(6);
+  test("every loot-exclusive cosmetic is category cosmetic (game-feel FR-D1)", () => {
+    expect(LOOT_COSMETICS.length).toBeGreaterThanOrEqual(6);
     for (const c of LOOT_COSMETICS) expect(c.category).toBe("cosmetic");
   });
 
@@ -175,6 +175,19 @@ describe("rollLoot", () => {
     expect(last.trigger).toBe("ascension");
   });
 
+  test("sets lastDrop on a points-only roll (game-feel FR-A2, never silent)", () => {
+    rollLoot("level_up", FAKE_SLOT, () => 0.99); // no cosmetic
+    const last = loadLoot().lastDrop!;
+    expect(last).toBeTruthy();
+    expect(last.label).toContain("pt");
+    expect(last.at).toBeGreaterThan(0);
+  });
+
+  test("sets lastDrop to the cosmetic flavor when one drops", () => {
+    const drop = rollLoot("ascension", FAKE_SLOT, () => 0);
+    expect(loadLoot().lastDrop!.label).toBe(drop.cosmetic!.flavorText);
+  });
+
   test("caps the log at the most-recent LOOT_LOG_CAP entries", () => {
     for (let i = 0; i < LOOT_LOG_CAP + 5; i++) {
       rollLoot("level_up", FAKE_SLOT, () => 0.99);
@@ -192,6 +205,6 @@ describe("rollLoot", () => {
   });
 
   test("an absent loot.json loads as an empty state", () => {
-    expect(loadLoot()).toEqual({ log: [], ownedLootCosmetics: [] });
+    expect(loadLoot()).toEqual({ log: [], ownedLootCosmetics: [], lastDrop: null });
   });
 });
