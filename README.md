@@ -247,6 +247,8 @@ An **opt-in** status-line badge (`P2 🔥7`) under your buddy's name shows prest
 
 When game-feel intensity is `full`, your buddy quietly **ambles back and forth** along the status line while it's idle — the speech bubble, stats panel, and name stay pinned, only the art drifts. Cosmetic-only motion, no power creep. Default on; toggle with `/buddy wander [on|off]`. Three extra modes are opt-in: `/buddy wander hop` adds a small vertical bob (costs one status-line row), `/buddy wander wide` opens a longer two-sided corridor, and `/buddy wander bubble` makes the speech bubble travel **with** the buddy (the connector stays attached) instead of staying pinned. `/buddy wander status` reports the current settings. The walk only animates at game-feel `full` (`/buddy gamefeel full`), so it stays out of the way for everyone else.
 
+**Motion feels distracting?** Stop the amble with `/buddy wander off`, or dial all the celebratory animation down with `/buddy gamefeel subtle` (brief toasts only) or `/buddy gamefeel off` (silent — the classic status line). Both are read live, no restart needed.
+
 > All multipliers stack multiplicatively but stay modest: rarity (≤×1.20) × prestige (≤×1.15) × collection (×1.05) caps around ×1.45. Every new reward back-fills cleanly onto existing buddies — nothing is lost on upgrade.
 
 </details>

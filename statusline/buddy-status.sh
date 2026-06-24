@@ -242,25 +242,37 @@ RAINBOW_LEN=${#RAINBOW[@]}
 RAINBOW_OFFSET=$(( NOW % RAINBOW_LEN ))
 
 # ─── Terminal width ──────────────────────────────────────────────────────────
+# CC's statusline stdin carries no width field (verified against the live
+# payload), so the width is found by walking up the process tree to the
+# controlling PTY. This reruns every ~1s, so the per-iteration forks are trimmed
+# vs. the obvious form: strip whitespace with `read` (a builtin) instead of
+# forking `tr`, parse `stty size` with `read` instead of `awk`, and skip the
+# Linux /proc probe entirely on hosts without /proc (e.g. macOS). Same result —
+# breaks on the first PTY that reports a sane width — validated identical across
+# a real PTY and the no-TTY fallback.
 COLS=0
+_HAS_PROC=0
+[ -d /proc ] && _HAS_PROC=1
 PID=$$
 for _ in 1 2 3 4 5; do
-    PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
+    read -r PID < <(ps -o ppid= -p "$PID" 2>/dev/null)
     [ -z "$PID" ] || [ "$PID" = "1" ] && break
 
-    # Linux: read PTY device from /proc
-    PTY=$(readlink "/proc/${PID}/fd/0" 2>/dev/null)
-    if [ -c "$PTY" ] 2>/dev/null; then
-        COLS=$(stty size < "$PTY" 2>/dev/null | awk '{print $2}')
-        [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+    # Linux: read PTY device from /proc (skipped where /proc doesn't exist).
+    if [ "$_HAS_PROC" = 1 ]; then
+        PTY=$(readlink "/proc/${PID}/fd/0" 2>/dev/null)
+        if [ -c "$PTY" ] 2>/dev/null; then
+            read -r _ COLS < <(stty size < "$PTY" 2>/dev/null)
+            [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+        fi
     fi
 
-    # macOS: /proc doesn't exist — get TTY name from process table
-    TTY_NAME=$(ps -o tty= -p "$PID" 2>/dev/null | tr -d ' ')
+    # macOS/BSD: /proc doesn't exist — get the TTY name from the process table.
+    read -r TTY_NAME < <(ps -o tty= -p "$PID" 2>/dev/null)
     if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ] && [ "$TTY_NAME" != "?" ]; then
         TTY_DEV="/dev/$TTY_NAME"
         if [ -c "$TTY_DEV" ] 2>/dev/null; then
-            COLS=$(stty size < "$TTY_DEV" 2>/dev/null | awk '{print $2}')
+            read -r _ COLS < <(stty size < "$TTY_DEV" 2>/dev/null)
             [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
         fi
     fi
