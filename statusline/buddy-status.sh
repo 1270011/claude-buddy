@@ -94,6 +94,31 @@ FRAME_BODY=$(jq -r --argjson now "$NOW" "
     | ${FRAME_SRC_FRAMES}[\$idx] // \"\"
 " "$STATE" 2>/dev/null)
 
+# ─── Idle wander (movement design-movement §5a) ─────────────────────────────
+# Per-tick horizontal (and, with hop, vertical) offsets picked from the server-
+# baked sequences exactly like the frame index. Gated to gameFeel=full and
+# parked while a celebration is fresh (the buddy comes home to talk). WANDER_ROW
+# is read/plumbed here but stays 0 in the render until the hop mode (P4).
+WANDER_OFF=0
+WANDER_ROW=0
+WANDER_ROW_MAX=0
+if [ "$GAME_FEEL" = "full" ] && [ "$_CELEB_FRESH" != 1 ]; then
+    WANDER_OFF=$(jq -r --argjson now "$NOW" '
+        (.wanderSequence // []) as $w
+        | if ($w|length) > 0 then ($w[$now % ($w|length)] // 0) else 0 end
+    ' "$STATE" 2>/dev/null || echo 0)
+    WANDER_ROW=$(jq -r --argjson now "$NOW" '
+        (.wanderRowSequence // []) as $w
+        | if ($w|length) > 0 then ($w[$now % ($w|length)] // 0) else 0 end
+    ' "$STATE" 2>/dev/null || echo 0)
+    # Max hop height across the whole sequence → constant headroom (P4); reading
+    # the max (not the live row) keeps the block height fixed so it can't bob.
+    WANDER_ROW_MAX=$(jq -r '(.wanderRowSequence // []) | max // 0' "$STATE" 2>/dev/null || echo 0)
+    case "$WANDER_OFF" in ''|*[!0-9]*) WANDER_OFF=0 ;; esac
+    case "$WANDER_ROW" in ''|*[!0-9]*) WANDER_ROW=0 ;; esac
+    case "$WANDER_ROW_MAX" in ''|*[!0-9]*) WANDER_ROW_MAX=0 ;; esac
+fi
+
 # Fallback when status.json lacks .frames — e.g. server/bash version skew
 # during install or while the MCP server hasn't rewritten the file yet. Keep
 # the buddy visible in a degraded form instead of emitting an empty block.
@@ -209,6 +234,36 @@ if [ -f "$CONFIG_FILE" ]; then
     _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
     case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
 fi
+
+# ─── Idle wander clamp (movement design-movement §5b / §7.B / §7.C) ─────────
+# The corridor is reclaimed from the right MARGIN; bash owns the clamp because
+# only it knows MARGIN/COLS (the baked sequence carries raw offsets). §7.C
+# resize robustness is automatic — MARGIN/COLS are recomputed every tick, so a
+# shrink caps WANDER_OFF on the next tick and the buddy never clips. §7.B wide
+# mode (flag wanderWide, full-gated) opens a left lane: it shifts the whole
+# bubble+art block left by a CONSTANT WANDER_LEFT (folded into PAD below, once)
+# so the corridor can span WANDER_RANGE_WIDE without the per-tick offset moving
+# anything. WANDER_PAD is plain spaces (never trimmed). WANDER_MAX=0 ⇒ park.
+WANDER_WIDE="false"
+if [ -f "$CONFIG_FILE" ]; then
+    _ww=$(jq -r '.wanderWide // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    [ "$_ww" = "true" ] && WANDER_WIDE="true"
+fi
+WANDER_RANGE=6
+WANDER_RANGE_WIDE=10
+WANDER_SAFETY=2
+WANDER_LEFT=0
+WANDER_RANGE_EFF=$WANDER_RANGE
+if [ "$GAME_FEEL" = "full" ] && [ "$WANDER_WIDE" = "true" ]; then
+    WANDER_RANGE_EFF=$WANDER_RANGE_WIDE
+    WANDER_LEFT=$(( WANDER_RANGE_WIDE - (MARGIN - WANDER_SAFETY) ))
+    [ "$WANDER_LEFT" -lt 0 ] && WANDER_LEFT=0
+fi
+WANDER_MAX=$(( MARGIN + WANDER_LEFT - WANDER_SAFETY ))
+[ "$WANDER_MAX" -lt 0 ] && WANDER_MAX=0
+[ "$WANDER_MAX" -gt "$WANDER_RANGE_EFF" ] && WANDER_MAX=$WANDER_RANGE_EFF
+[ "$WANDER_OFF" -gt "$WANDER_MAX" ] && WANDER_OFF=$WANDER_MAX
+WANDER_PAD=$(printf '%*s' "$WANDER_OFF" '')
 
 # Stats panel toggle (config.json, read live each tick → no restart on toggle).
 SHOW_STATS="false"
@@ -603,7 +658,10 @@ STATS_LEFT_MARGIN=1
 TOTAL_W=$ART_W
 [ $BUBBLE_COUNT -gt 0 ] && TOTAL_W=$(( BOX_W + GAP + TOTAL_W ))
 [ $STATS_COUNT -gt 0 ] && TOTAL_W=$(( STATS_W + STATS_GAP + TOTAL_W ))
-PAD=$(( COLS - TOTAL_W - MARGIN ))
+# §7.B wide: reserve the left lane once, here — shifts the bubble+art block left
+# by the constant WANDER_LEFT (0 unless wide). Offset-independent, so the bubble
+# position is identical on every tick.
+PAD=$(( COLS - TOTAL_W - MARGIN - WANDER_LEFT ))
 [ "$PAD" -lt 0 ] && PAD=0
 
 if [ $STATS_COUNT -gt 0 ]; then
@@ -626,14 +684,39 @@ esac
 MID_SPACER=$(printf '%*s' "$MID_PAD" '')
 STATS_GAP_STR=$(printf '%*s' "$STATS_GAP" '')
 
-# Vertically center each left column on the art
+# ─── Idle wander hop headroom (movement §7.A, flag wanderHop) ───────────────
+# Reserve HOP_RESERVE blank rows above the art ONLY when the server baked a
+# non-empty wanderRowSequence (hop on). Headroom = the sequence's max so it is
+# constant across ticks — the block height never changes, so the bubble/stats
+# (centered on the total height below) can't bob. Collapse to 0 if the block
+# would blow the height budget (degrade, NFR7); WANDER_ROW resets so the
+# connector logic and art position stay consistent with "no hop".
+HOP_RESERVE=0
+if [ "$WANDER_ROW_MAX" -gt 0 ]; then
+    HOP_RESERVE=$WANDER_ROW_MAX
+    HOP_CAP=2
+    [ "$HOP_RESERVE" -gt "$HOP_CAP" ] && HOP_RESERVE=$HOP_CAP
+    HOP_BUDGET=12
+    if [ $(( ART_COUNT + HOP_RESERVE )) -gt "$HOP_BUDGET" ]; then
+        HOP_RESERVE=0
+        WANDER_ROW=0
+    fi
+fi
+ART_COUNT_TOTAL=$(( ART_COUNT + HOP_RESERVE ))
+# Art's top row within the block: WANDER_ROW=0 rests on the floor (below the
+# headroom); WANDER_ROW=HOP_RESERVE touches the ceiling.
+ART_TOP=$(( HOP_RESERVE - WANDER_ROW ))
+[ "$ART_TOP" -lt 0 ] && ART_TOP=0
+
+# Vertically center each left column on the FLOOR baseline (the full block
+# height incl. headroom), independent of the live hop row → no vertical bob.
 BUBBLE_START=0
-if [ $BUBBLE_COUNT -gt 0 ] && [ $BUBBLE_COUNT -lt $ART_COUNT ]; then
-    BUBBLE_START=$(( (ART_COUNT - BUBBLE_COUNT) / 2 ))
+if [ $BUBBLE_COUNT -gt 0 ] && [ $BUBBLE_COUNT -lt $ART_COUNT_TOTAL ]; then
+    BUBBLE_START=$(( (ART_COUNT_TOTAL - BUBBLE_COUNT) / 2 ))
 fi
 STATS_START=0
-if [ $STATS_COUNT -gt 0 ] && [ $STATS_COUNT -lt $ART_COUNT ]; then
-    STATS_START=$(( (ART_COUNT - STATS_COUNT) / 2 ))
+if [ $STATS_COUNT -gt 0 ] && [ $STATS_COUNT -lt $ART_COUNT_TOTAL ]; then
+    STATS_START=$(( (ART_COUNT_TOTAL - STATS_COUNT) / 2 ))
 fi
 
 # ─── Find the connector line (middle text line → points to buddy's mouth) ─────
@@ -645,17 +728,23 @@ if [ $BUBBLE_COUNT -gt 2 ]; then
     LAST_TEXT=$(( BUBBLE_COUNT - 2 ))
     CONNECTOR_BI=$(( (FIRST_TEXT + LAST_TEXT) / 2 ))
 fi
+# Idle wander (design-movement §5c): retract the connector while the buddy is
+# away from home — the bubble box stays whole, it just stops pointing at thin
+# air. Reattaches at offset 0 (home). The "   " gap keeps the width identical.
+{ [ "$WANDER_OFF" -gt 0 ] || [ "$WANDER_ROW" -gt 0 ]; } && CONNECTOR_BI=-1
 
 # ─── Output: merged stats panel + bubble + connector + art per line ──────────
 TOTAL_BUBBLE=$(( BUBBLE_START + BUBBLE_COUNT ))
 TOTAL_STATS=$(( STATS_START + STATS_COUNT ))
-MAX_LINES=$ART_COUNT
+MAX_LINES=$ART_COUNT_TOTAL
 [ $TOTAL_BUBBLE -gt $MAX_LINES ] && MAX_LINES=$TOTAL_BUBBLE
 [ $TOTAL_STATS -gt $MAX_LINES ] && MAX_LINES=$TOTAL_STATS
 for (( i=0; i<MAX_LINES; i++ )); do
-    # Art part: actual art line or blank filler
-    if [ $i -lt $ART_COUNT ]; then
-        art_part="${ALL_COLORS[$i]}${ALL_LINES[$i]}${NC}"
+    # Art part: actual art line (shifted down by the hop headroom, up by the
+    # live hop row) or blank filler.
+    ai=$(( i - ART_TOP ))
+    if [ $ai -ge 0 ] && [ $ai -lt $ART_COUNT ]; then
+        art_part="${ALL_COLORS[$ai]}${ALL_LINES[$ai]}${NC}"
     else
         art_part=$(printf '%*s' "$ART_W" '')
     fi
@@ -702,6 +791,10 @@ for (( i=0; i<MAX_LINES; i++ )); do
         fi
     fi
 
+    # Idle wander (design-movement §5d): nudge the art block right into the
+    # reclaimed margin. Lands in formerly-empty space — nothing left of the art
+    # can observe it, so the bubble/stats/PAD never move (the layout invariant).
+    line_out+="$WANDER_PAD"
     line_out+="$art_part"
     echo "$line_out"
 done

@@ -37,6 +37,7 @@ import {
   autoQuietReason,
   loadConfig,
   saveConfig,
+  type BuddyConfig,
   loadActiveSlot,
   saveActiveSlot,
   slugify,
@@ -804,6 +805,61 @@ server.tool(
     saveConfig({ gameFeel: level });
     return {
       content: [{ type: "text", text: `Game-feel intensity set to ${level}.` }],
+    };
+  },
+);
+
+// ─── Tool: buddy_wander (movement design-movement §3) ────────────────────────
+
+/**
+ * Compose the human-readable wander state line, including the `full`-gate caveat
+ * when the buddy is enabled but the live intensity isn't `full` (so it won't
+ * actually animate). Shared by the report path and the post-set confirmation.
+ */
+function wanderStateLine(cfg: BuddyConfig): string {
+  const flags = [
+    `wander ${cfg.wanderEnabled ? "on" : "off"}`,
+    `hop ${cfg.wanderHop ? "on" : "off"}`,
+    `wide ${cfg.wanderWide ? "on" : "off"}`,
+  ].join(", ");
+  let note = "";
+  if (cfg.wanderEnabled && effectiveGameFeel() !== "full") {
+    note = " — note: only animates when game-feel is 'full'.";
+  }
+  return `Idle wander: ${flags}.${note}`;
+}
+
+server.tool(
+  "buddy_wander",
+  "Control the buddy's idle wander — the gentle amble back and forth on the status line while it's idle. `enabled` toggles the whole walk (default on); `hop` adds a small vertical bob (costs one status-line row, default off); `wide` opens a longer two-sided corridor (default off). Omit all args to report the current settings. Backs /buddy wander. Read live — no restart needed. The walk only animates when game-feel intensity is 'full'.",
+  {
+    enabled: z
+      .boolean()
+      .optional()
+      .describe("Turn the idle wander on/off. Omit to leave unchanged."),
+    hop: z
+      .boolean()
+      .optional()
+      .describe("Add a vertical hop arc (costs one row). Omit to leave unchanged."),
+    wide: z
+      .boolean()
+      .optional()
+      .describe("Use the wide corridor. Omit to leave unchanged."),
+  },
+  async ({ enabled, hop, wide }) => {
+    ensureCompanion();
+    if (enabled === undefined && hop === undefined && wide === undefined) {
+      return {
+        content: [{ type: "text", text: wanderStateLine(loadConfig()) }],
+      };
+    }
+    const patch: Partial<BuddyConfig> = {};
+    if (enabled !== undefined) patch.wanderEnabled = enabled;
+    if (hop !== undefined) patch.wanderHop = hop;
+    if (wide !== undefined) patch.wanderWide = wide;
+    saveConfig(patch);
+    return {
+      content: [{ type: "text", text: wanderStateLine(loadConfig()) }],
     };
   },
 );

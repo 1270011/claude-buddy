@@ -404,6 +404,16 @@ export interface BuddyConfig {
    *  session, clamp `full` down to `subtle` so flow isn't interrupted. Default
    *  off — it's the one fuzzy signal, so it never quiets unless asked. */
   autoQuietFocus: boolean;
+  /** Idle wander (movement design-movement §3): opt out of the buddy ambling on
+   *  the status line without dropping gameFeel below "full". Default true; the
+   *  walk still only animates when effectiveGameFeel() === "full". */
+  wanderEnabled: boolean;
+  /** §7.A vertical hop / path arc. Costs one reserved headroom row, so default
+   *  false (NFR6 real-estate). */
+  wanderHop: boolean;
+  /** §7.B wide two-sided corridor: shifts the bubble left by a constant to open
+   *  a left lane. Default false. */
+  wanderWide: boolean;
 }
 
 /** Game-feel intensity level (game-feel FR-E1). */
@@ -428,6 +438,9 @@ const DEFAULT_CONFIG: BuddyConfig = {
   showPrestigeBadge: false,
   gameFeel: "subtle",
   autoQuietFocus: false,
+  wanderEnabled: true,
+  wanderHop: false,
+  wanderWide: false,
 };
 
 export function loadConfig(): BuddyConfig {
@@ -640,6 +653,13 @@ export interface StatusState {
    *  Absent unless a flourish was requested and gameFeel ≠ off. */
   flourishFrames?: string[];
   flourishSequence?: number[];
+  /** Idle-wander (movement): per-tick horizontal offset (cells, ≥ 0) the buddy
+   *  art is nudged right within the reclaimed margin. Indexed by NOW % length,
+   *  like frameSequence. Absent unless gameFeel === "full" and wander is on. */
+  wanderSequence?: number[];
+  /** Idle-wander hop (§7.A): per-tick vertical offset (rows, 0..hopHeight), same
+   *  index. Present only when wanderHop is on; absent ⇒ floor-only. */
+  wanderRowSequence?: number[];
 }
 
 // ─── Celebration channel (game-feel §2 — one transient slot, many producers) ──
@@ -749,6 +769,10 @@ export function computeXpPct(level: number, totalXp: number): number {
   return Math.min(100, Math.round(((totalXp - lower) / (upper - lower)) * 100));
 }
 
+/** §7.B wide-corridor max amble distance (cells); see design-movement §8. The
+ *  bash side mirrors this constant when reclaiming the left lane. */
+const WANDER_RANGE_WIDE = 10;
+
 export function writeStatusState(
   companion: Companion,
   opts: StatusOpts = {},
@@ -856,6 +880,31 @@ export function writeStatusState(
     }
   }
 
+  // Idle wander (movement design-movement §4): gate-gated + opt-out, built via a
+  // lazy/guarded require like flourish — a generator failure leaves the buddy
+  // planted and the write still completes. `gate` is the already-clamped
+  // effectiveGameFeel(), so auto-quiet (full → subtle) omits the sequences and
+  // the buddy stops pacing during a spike, with no extra wiring.
+  let wanderSequence: number[] | undefined;
+  let wanderRowSequence: number[] | undefined;
+  if (gate === "full") {
+    try {
+      const cfg = loadConfig();
+      if (cfg.wanderEnabled) {
+        const { buildWanderSequence, moodWalkOpts } =
+          require("./wander.ts") as typeof import("./wander.ts");
+        const opts = moodWalkOpts(moodStr, xpLevel, Date.now());
+        if (!cfg.wanderHop) opts.hopHeight = 0; // §7.A opt-in
+        if (cfg.wanderWide) opts.range = WANDER_RANGE_WIDE; // §7.B opt-in
+        const walk = buildWanderSequence(opts);
+        wanderSequence = walk.horizontal;
+        wanderRowSequence = walk.vertical;
+      }
+    } catch {
+      // Best-effort delighter; a failure leaves the buddy planted.
+    }
+  }
+
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -885,6 +934,8 @@ export function writeStatusState(
     ...(flFrames && flSequence
       ? { flourishFrames: flFrames, flourishSequence: flSequence }
       : {}),
+    ...(wanderSequence ? { wanderSequence } : {}),
+    ...(wanderRowSequence ? { wanderRowSequence } : {}),
   };
   // Atomic write (game-feel §2.6): the MCP server, the award-xp.ts process, and
   // react.sh's jq patch all touch status.json — tmp+rename avoids torn reads.

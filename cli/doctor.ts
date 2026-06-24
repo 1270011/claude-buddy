@@ -150,6 +150,17 @@ const gfDisplay =
     ? `${configuredGameFeel} (auto-quieted → ${effectiveGf}: ${quietWhy})`
     : configuredGameFeel;
 row("Game-feel intensity", gfDisplay);
+// Idle wander (movement design-movement §3): report the toggles. The walk only
+// animates when the live intensity is `full`, so flag the gap when relevant.
+const wanderOn = cfg?.wanderEnabled ?? true;
+const wanderFlags = [
+  `wander ${wanderOn ? "on" : "off"}`,
+  `hop ${cfg?.wanderHop ? "on" : "off"}`,
+  `wide ${cfg?.wanderWide ? "on" : "off"}`,
+].join(", ");
+const wanderNote =
+  wanderOn && effectiveGf !== "full" ? " (idle until game-feel is full)" : "";
+row("Idle wander", `${wanderFlags}${wanderNote}`);
 if (status) {
   const celeb = status.celebration;
   if (celeb?.at) {
