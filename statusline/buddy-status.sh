@@ -392,15 +392,36 @@ if [ "$SHOW_STATS" = "true" ] && [ -n "$STATS_TSV" ]; then
             _xp_bar="${_FULL_BAR:0:_xp_filled}${_EMPTY_BAR:0:$(( 20 - _xp_filled ))}"
             _xp_label=$(printf '%-9s' "Lv${LEVEL}")
             _xp_pctstr=$(printf '%3d%%' "$XP_PCT")
+            # The transient toast adds width to this one row. Fold that width
+            # into STATS_W (and backfill the rows already built) so every row in
+            # the stats column shares one width — otherwise the toast pushes the
+            # gap/bubble/art right on the Lv row alone and the buddy's name
+            # "shifts" (and can truncate). Growing STATS_W keeps the art pinned:
+            # its position is independent of STATS_W (the extra width is absorbed
+            # from the mid-line slack), so the buddy stays put. Plain (ANSI-free)
+            # widths: Lv row is label 9 + 1 + bar 20 + 1 + pct 4 = 35 cols; the
+            # toast " +N XP" is 5 + len(N).
             _xp_toast=""
+            _xp_row_w=35
             if [ "$_XP_AMT" -gt 0 ] && [ "$_XP_AT" -gt 0 ]; then
                 _xp_at_s=$(( _XP_AT / 1000 ))
                 _xp_age=$(( NOW - _xp_at_s ))
                 if [ "$_xp_age" -ge 0 ] && [ "$_xp_age" -le 10 ]; then
                     _xp_toast=" ${_BLUE}+${_XP_AMT} XP${NC}"
+                    _xp_row_w=$(( 35 + 5 + ${#_XP_AMT} ))
                 fi
             fi
-            STATS_LINES+=("${_SDIM}${_xp_label}${NC} ${C}${_xp_bar}${NC} ${_SDIM}${_xp_pctstr}${NC}${_xp_toast}")
+            if [ "$_xp_row_w" -gt "$STATS_W" ]; then
+                _XP_EXTRA_PAD=$(printf '%*s' "$(( _xp_row_w - STATS_W ))" '')
+                for _bi in "${!STATS_LINES[@]}"; do
+                    STATS_LINES[$_bi]="${STATS_LINES[$_bi]}${_XP_EXTRA_PAD}"
+                done
+                STATS_W=$_xp_row_w
+            fi
+            # Pad the Lv row itself out to the (possibly grown) column width so it
+            # matches the stat rows exactly (fixes a latent 1-col under-width).
+            _XP_ROW_PAD=$(printf '%*s' "$(( STATS_W - _xp_row_w ))" '')
+            STATS_LINES+=("${_SDIM}${_xp_label}${NC} ${C}${_xp_bar}${NC} ${_SDIM}${_xp_pctstr}${NC}${_xp_toast}${_XP_ROW_PAD}")
             ;;
     esac
 fi

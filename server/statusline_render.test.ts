@@ -241,6 +241,43 @@ describe("buddy-status.sh XP progress row", () => {
     expect(out).not.toContain("+15 XP");
   });
 
+  test("the toast does not shift or truncate the buddy (regression)", () => {
+    // The "+N XP" toast widens only the Lv row; without folding it into the
+    // shared stats-column width it pushed the art/name right on that line alone
+    // (the buddy "shifted" and the name truncated). The art column position must
+    // be identical with and without the toast.
+    const nameCol = (s: string): number => {
+      const line = stripAnsi(s)
+        .split("\n")
+        .find((l) => l.includes("Waffle"));
+      return line ? line.indexOf("Waffle") : -1;
+    };
+    const withToast = renderStatus({
+      showStats: true,
+      lastXpGain: { amount: 1, secondsAgo: 2 },
+    });
+    const without = renderStatus({ showStats: true, lastXpGain: null });
+    expect(withToast).toContain("+1 XP"); // toast actually present
+    expect(nameCol(without)).toBeGreaterThan(0); // name rendered untruncated
+    expect(nameCol(withToast)).toBe(nameCol(without)); // and did not move
+  });
+
+  test("a multi-digit toast also keeps the buddy aligned", () => {
+    const nameCol = (s: string): number => {
+      const line = stripAnsi(s)
+        .split("\n")
+        .find((l) => l.includes("Waffle"));
+      return line ? line.indexOf("Waffle") : -1;
+    };
+    const big = renderStatus({
+      showStats: true,
+      lastXpGain: { amount: 250, secondsAgo: 1 },
+    });
+    const without = renderStatus({ showStats: true, lastXpGain: null });
+    expect(big).toContain("+250 XP");
+    expect(nameCol(big)).toBe(nameCol(without));
+  });
+
   test("omits the toast when there has been no gain", () => {
     const out = renderStatus({ showStats: true, lastXpGain: null });
     expect(out).not.toContain("XP");
