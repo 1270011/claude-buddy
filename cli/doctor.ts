@@ -18,6 +18,7 @@ import {
   claudeSkillDir,
   claudeUserConfigPath,
 } from "../server/path.ts";
+import { effectiveGameFeel, autoQuietReason } from "../server/state.ts";
 
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 const CLAUDE_DIR = claudeConfigDir();
@@ -139,7 +140,16 @@ if (status) {
 }
 // Game-feel intensity + last celebration (game-feel FR-E1 supportability).
 const cfg = tryParseJson(tryRead(join(STATE_DIR, "config.json")));
-row("Game-feel intensity", cfg?.gameFeel ?? "(default: subtle)");
+const configuredGameFeel = cfg?.gameFeel ?? "(default: subtle)";
+const effectiveGf = effectiveGameFeel();
+// Surface the transient auto-quiet clamp (FR-E1) when it's trimming `full`.
+const quietReason = autoQuietReason();
+const quietWhy = quietReason === "deep-focus" ? "deep focus" : "error spike";
+const gfDisplay =
+  cfg?.gameFeel && effectiveGf !== cfg.gameFeel
+    ? `${configuredGameFeel} (auto-quieted → ${effectiveGf}: ${quietWhy})`
+    : configuredGameFeel;
+row("Game-feel intensity", gfDisplay);
 if (status) {
   const celeb = status.celebration;
   if (celeb?.at) {

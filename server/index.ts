@@ -33,6 +33,8 @@ import {
   saveReaction,
   writeStatusState,
   gameFeelLevel,
+  effectiveGameFeel,
+  autoQuietReason,
   loadConfig,
   saveConfig,
   loadActiveSlot,
@@ -181,6 +183,7 @@ function ensureCompanion(): Companion {
     writeStatusState(companion, {
       celebration: { text: "✨ a SHINY hatched! ✨", kind: "shiny", at: Date.now() },
       cause: "shiny",
+      flourish: true,
     });
   } else {
     writeStatusState(companion);
@@ -253,7 +256,7 @@ server.tool(
         : getReaction("pet", companion.bones.species, companion.bones.rarity);
     // Memory-narrated milestone (game-feel FR-E3): on `full`, occasionally
     // reference real shared history instead of a generic pet line.
-    if (gameFeelLevel() === "full" && Math.random() < 0.15) {
+    if (effectiveGameFeel() === "full" && Math.random() < 0.15) {
       const cb = historyCallback();
       if (cb) reaction = cb;
     }
@@ -780,9 +783,21 @@ server.tool(
     ensureCompanion();
     const cfg = loadConfig();
     if (level === undefined) {
+      // Report the configured value, plus the live clamp if auto-quiet (FR-E1)
+      // is currently trimming it (error spike or opt-in deep focus).
+      const effective = effectiveGameFeel();
+      const reason = autoQuietReason();
+      const why = reason === "deep-focus" ? "deep focus" : "error spike";
+      const note =
+        effective !== cfg.gameFeel
+          ? ` (auto-quieted → ${effective}: ${why})`
+          : "";
       return {
         content: [
-          { type: "text", text: `Game-feel intensity: ${cfg.gameFeel}.` },
+          {
+            type: "text",
+            text: `Game-feel intensity: ${cfg.gameFeel}${note}.`,
+          },
         ],
       };
     }
@@ -1016,6 +1031,7 @@ server.tool(
               at: Date.now(),
             },
             cause: "ascension",
+            flourish: true,
           });
         }
       }

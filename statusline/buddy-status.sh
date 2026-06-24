@@ -56,10 +56,43 @@ CC_INPUT=$(cat)  # capture stdin JSON (model/context/rate-limit data)
 
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(jq -r --argjson now "$NOW" '
-    .frameSequence[$now % (.frameSequence | length)] as $idx
-    | .frames[$idx] // ""
-' "$STATE" 2>/dev/null)
+
+# Game-feel intensity (game-feel FR-E1) + celebration freshness, computed once
+# here so they gate BOTH the frame flourish (just below) and the bubble toast
+# (later). off suppresses celebrations entirely; subtle/full differ only in the
+# toast's dwell time.
+GAME_FEEL="subtle"
+if [ -f "$CONFIG_FILE" ]; then
+    _gf=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
+    case "$_gf" in off|subtle|full) GAME_FEEL="$_gf" ;; esac
+fi
+_CELEB_FRESH=0
+if [ "$GAME_FEEL" != "off" ]; then
+    IFS=$'\t' read -r _CELEB_TEXT _CELEB_AT <<< "$CELEB_TSV"
+    case "$_CELEB_AT" in ''|*[!0-9]*) _CELEB_AT=0 ;; esac
+    if [ -n "$_CELEB_TEXT" ] && [ "$_CELEB_TEXT" != "null" ] && [ "$_CELEB_AT" -gt 0 ]; then
+        _CELEB_TTL=10
+        [ "$GAME_FEEL" = "subtle" ] && _CELEB_TTL=6
+        _CELEB_AGE=$(( NOW - _CELEB_AT / 1000 ))
+        [ "$_CELEB_AGE" -ge 0 ] && [ "$_CELEB_AGE" -le "$_CELEB_TTL" ] && _CELEB_FRESH=1
+    fi
+fi
+
+# Frame source (game-feel FR-A3): while a celebration is fresh AND the server
+# wrote a flourish set, animate the flourish; otherwise the neutral idle frames.
+# Stale flourishFrames left in the file after the window are simply never picked,
+# so the flourish self-reverts on the celebration's own TTL — no second write.
+_HAS_FLOURISH=$(jq -r 'if ((.flourishFrames | type) == "array") and ((.flourishFrames | length) > 0) then 1 else 0 end' "$STATE" 2>/dev/null || echo 0)
+FRAME_SRC_FRAMES='.frames'
+FRAME_SRC_SEQ='.frameSequence'
+if [ "$_CELEB_FRESH" = 1 ] && [ "$_HAS_FLOURISH" = 1 ]; then
+    FRAME_SRC_FRAMES='.flourishFrames'
+    FRAME_SRC_SEQ='.flourishSequence'
+fi
+FRAME_BODY=$(jq -r --argjson now "$NOW" "
+    ${FRAME_SRC_SEQ}[\$now % (${FRAME_SRC_SEQ} | length)] as \$idx
+    | ${FRAME_SRC_FRAMES}[\$idx] // \"\"
+" "$STATE" 2>/dev/null)
 
 # Fallback when status.json lacks .frames — e.g. server/bash version skew
 # during install or while the MCP server hasn't rewritten the file yet. Keep
@@ -199,34 +232,18 @@ if [ -f "$CONFIG_FILE" ]; then
     _uc=$(jq -r '.useCombinedStatus // false' "$CONFIG_FILE" 2>/dev/null || echo false)
     [ "$_uc" = "true" ] && USE_COMBINED="true"
 fi
-# Game-feel intensity (game-feel FR-E1): off suppresses the celebration toast;
-# subtle/full differ only in the toast's dwell time.
-GAME_FEEL="subtle"
-if [ -f "$CONFIG_FILE" ]; then
-    _gf=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
-    case "$_gf" in off|subtle|full) GAME_FEEL="$_gf" ;; esac
-fi
-
 # Celebration channel (game-feel §2): a transient message that overrides the
-# normal reaction in the bubble while fresh. Self-expiring by timestamp age;
-# uses the top-level NOW so BUDDY_FAKE_NOW drives it deterministically in tests.
+# normal reaction in the bubble while fresh. Freshness (_CELEB_FRESH) and the
+# text (_CELEB_TEXT) were computed once up in the animation block, so the toast
+# and the frame flourish share a single TTL evaluation.
 CELEB_SHOWN=0
-if [ "$GAME_FEEL" != "off" ]; then
-    IFS=$'\t' read -r _CELEB_TEXT _CELEB_AT <<< "$CELEB_TSV"
-    case "$_CELEB_AT" in ''|*[!0-9]*) _CELEB_AT=0 ;; esac
-    if [ -n "$_CELEB_TEXT" ] && [ "$_CELEB_TEXT" != "null" ] && [ "$_CELEB_AT" -gt 0 ]; then
-        _CELEB_TTL=10
-        [ "$GAME_FEEL" = "subtle" ] && _CELEB_TTL=6
-        _CELEB_AGE=$(( NOW - _CELEB_AT / 1000 ))
-        if [ "$_CELEB_AGE" -ge 0 ] && [ "$_CELEB_AGE" -le "$_CELEB_TTL" ]; then
-            if [ -n "$BUBBLE" ]; then
-                BUBBLE="$BUBBLE | ${_CELEB_TEXT}"
-            else
-                BUBBLE="${_CELEB_TEXT}"
-            fi
-            CELEB_SHOWN=1
-        fi
+if [ "$_CELEB_FRESH" = 1 ]; then
+    if [ -n "$BUBBLE" ]; then
+        BUBBLE="$BUBBLE | ${_CELEB_TEXT}"
+    else
+        BUBBLE="${_CELEB_TEXT}"
     fi
+    CELEB_SHOWN=1
 fi
 
 if [ "$CELEB_SHOWN" -eq 0 ] && [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then

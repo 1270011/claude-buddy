@@ -400,6 +400,10 @@ export interface BuddyConfig {
   showPrestigeBadge: boolean;
   /** Game-feel intensity gate (game-feel NFR0/FR-E1): off silences all juice. */
   gameFeel: GameFeel;
+  /** Opt into deep-focus auto-quiet (game-feel FR-E1): during a long, error-free
+   *  session, clamp `full` down to `subtle` so flow isn't interrupted. Default
+   *  off — it's the one fuzzy signal, so it never quiets unless asked. */
+  autoQuietFocus: boolean;
 }
 
 /** Game-feel intensity level (game-feel FR-E1). */
@@ -423,6 +427,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   showStats: false,
   showPrestigeBadge: false,
   gameFeel: "subtle",
+  autoQuietFocus: false,
 };
 
 export function loadConfig(): BuddyConfig {
@@ -448,6 +453,152 @@ export function saveConfig(config: Partial<BuddyConfig>): BuddyConfig {
  */
 export function gameFeelLevel(): GameFeel {
   return loadConfig().gameFeel;
+}
+
+// ─── Auto-quiet: transient intensity clamp (game-feel FR-E1) ─────────────────
+
+/**
+ * Reaction reasons that signal a fresh error spike. While one of these is the
+ * active (non-expired) reaction, game-feel clamps itself down by one notch so it
+ * stays out of the way exactly when the work needs the glance (game-feel NFR0).
+ */
+const SPIKE_REASONS = new Set([
+  "error",
+  "test-fail",
+  "build-fail",
+  "type-error",
+  "lint-fail",
+]);
+
+/**
+ * Whether the active reaction indicates a fresh error spike.
+ *
+ * Pure — `reason` is the already-TTL-filtered `loadReaction()` reason; a
+ * null/undefined reason (no fresh reaction) means no spike.
+ *
+ * @param reason: The active reaction reason, or null/undefined.
+ * @returns True when the reason is an error-family spike.
+ */
+export function autoQuietActive(
+  reason: string | null | undefined,
+): boolean {
+  return !!reason && SPIKE_REASONS.has(reason);
+}
+
+/**
+ * Clamp the configured game-feel by one notch while auto-quiet is active.
+ *
+ * `full` drops to `subtle`; `subtle` and `off` are left untouched — auto-quiet
+ * never silences the core delight, it only trims the chatty `full` extras.
+ *
+ * @param configured: The user's configured game-feel level.
+ * @param quiet: Whether auto-quiet is currently active.
+ * @returns The effective game-feel level after the clamp.
+ */
+export function clampGameFeel(
+  configured: GameFeel,
+  quiet: boolean,
+): GameFeel {
+  return quiet && configured === "full" ? "subtle" : configured;
+}
+
+/** Seconds the deep-focus heuristic waits before it considers a session "deep". */
+export const FOCUS_MIN_SECONDS = 25 * 60; // 25 minutes
+
+/**
+ * Whether the deep-focus heuristic should clamp game-feel down a notch.
+ *
+ * Pure. Deep focus = a long, uninterrupted session with no fresh error. The
+ * "no recent celebration" clause from the design is intentionally dropped: the
+ * only persisted celebration timestamp is the transient one cleared on the very
+ * next status write, so it carries no reliable "last M minutes" signal without
+ * new state — and "no new persistence" is the governing principle here.
+ *
+ * @param opts.sessionElapsedSec: Seconds since the session baseline, or null
+ *     when no session snapshot exists yet (⇒ not deep focus).
+ * @param opts.hasFreshError: Whether an error-family reaction is currently
+ *     fresh (a spike overrides deep focus — the spike path handles it).
+ * @returns True when the session looks like deep focus.
+ */
+export function deepFocusActive(opts: {
+  sessionElapsedSec: number | null;
+  hasFreshError: boolean;
+}): boolean {
+  if (opts.hasFreshError) return false;
+  if (opts.sessionElapsedSec === null) return false;
+  return opts.sessionElapsedSec >= FOCUS_MIN_SECONDS;
+}
+
+/** Seconds since the current session's baseline snapshot, or null if none. */
+function sessionElapsedSeconds(): number | null {
+  try {
+    const { loadSnapshot } =
+      require("./session.ts") as typeof import("./session.ts");
+    const snap = loadSnapshot();
+    if (!snap) return null;
+    return Math.floor(Date.now() / 1000) - snap.startedAt;
+  } catch {
+    return null;
+  }
+}
+
+/** Why auto-quiet is clamping right now (for reporting), or null. */
+export type AutoQuietReason = "error-spike" | "deep-focus" | null;
+
+/**
+ * The live auto-quiet reason, for *reporting* (doctor / `buddy_gamefeel`).
+ *
+ * Error spike is checked first (cheapest, highest signal); deep focus only when
+ * the user has opted in via `autoQuietFocus`. Guarded; never throws.
+ *
+ * @returns The active clamp reason, or null when nothing is clamping.
+ */
+export function autoQuietReason(): AutoQuietReason {
+  let reason: string | null | undefined;
+  try {
+    reason = loadReaction()?.reason;
+  } catch {
+    // Reaction state optional.
+  }
+  if (autoQuietActive(reason)) return "error-spike";
+
+  let focusOptIn = false;
+  try {
+    focusOptIn = loadConfig().autoQuietFocus;
+  } catch {
+    // Config optional during first install / version skew.
+  }
+  if (
+    focusOptIn &&
+    deepFocusActive({
+      sessionElapsedSec: sessionElapsedSeconds(),
+      hasFreshError: autoQuietActive(reason),
+    })
+  ) {
+    return "deep-focus";
+  }
+  return null;
+}
+
+/**
+ * The effective game-feel intensity every *delight* producer should read.
+ *
+ * Wraps {@link gameFeelLevel} with the transient auto-quiet clamp (error spike,
+ * or opt-in deep focus). The raw {@link gameFeelLevel} survives only for
+ * *reporting* the configured value (`buddy_gamefeel`, doctor) — the clamp is
+ * transient and must never be persisted as the user's choice. Guarded; never
+ * throws.
+ *
+ * @returns The configured level, clamped to `subtle` while auto-quiet is active.
+ */
+export function effectiveGameFeel(): GameFeel {
+  let configured: GameFeel = "subtle";
+  try {
+    configured = loadConfig().gameFeel;
+  } catch {
+    // Config optional during first install / version skew.
+  }
+  return clampGameFeel(configured, autoQuietReason() !== null);
 }
 
 // ─── Status line state (compact JSON for the shell script) ───────────────────
@@ -484,6 +635,11 @@ export interface StatusState {
   /** Transient celebratory message preferred over `reaction` while fresh
    *  (game-feel FR-A1/A2/etc.). Null when none / when gameFeel is off. */
   celebration: Celebration | null;
+  /** Optional celebratory frame cycle (game-feel FR-A3), animated by the status
+   *  line only while the celebration is fresh, then it falls back to `frames`.
+   *  Absent unless a flourish was requested and gameFeel ≠ off. */
+  flourishFrames?: string[];
+  flourishSequence?: number[];
 }
 
 // ─── Celebration channel (game-feel §2 — one transient slot, many producers) ──
@@ -514,6 +670,10 @@ export interface StatusOpts {
   celebration?: Celebration | null;
   /** Which producer triggered this write — scopes the loot side-channel. */
   cause?: "loot" | "levelup" | "ascension" | "whim" | "shiny" | "tool";
+  /** Opt this write into the ascension frame flourish (game-feel FR-A3).
+   *  Default off — reserved for the big moments (ascension/shiny), never the
+   *  common loot/level-up case. Ignored when gameFeel is off. */
+  flourish?: boolean;
 }
 
 /** Higher wins when several celebrations contend for the single bubble slot. */
@@ -601,11 +761,12 @@ export function writeStatusState(
     require("./art.ts") as typeof import("./art.ts");
 
   // Game-feel intensity, read once (guarded) — drives emotion + celebration.
+  // effectiveGameFeel() applies the transient error-spike clamp (FR-E1).
   let gate: GameFeel = "subtle";
   try {
-    gate = loadConfig().gameFeel;
+    gate = effectiveGameFeel();
   } catch {
-    // Config optional during first install / version skew.
+    // Config / reaction optional during first install / version skew.
   }
 
   // Emotion frames (FR-A4): derived from the active reaction's reason.
@@ -678,6 +839,23 @@ export function writeStatusState(
     // Best-effort: a celebration must never break the status write.
   }
 
+  // Ascension frame flourish (game-feel FR-A3): opt-in, gate-gated. Written as a
+  // *separate* frame set; the status line animates it only while the celebration
+  // is fresh, then falls back to the neutral `frames` above (self-reverting, no
+  // second server write). Omitted entirely when off / not requested.
+  let flFrames: string[] | undefined;
+  let flSequence: number[] | undefined;
+  if (opts.flourish && gate !== "off") {
+    try {
+      const { flourishFrames } = require("./art.ts") as typeof import("./art.ts");
+      const fl = flourishFrames(companion.bones);
+      flFrames = fl.frames;
+      flSequence = fl.frameSequence;
+    } catch {
+      // Flourish is a best-effort delighter; never break the write.
+    }
+  }
+
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -704,6 +882,9 @@ export function writeStatusState(
     xpPct,
     lastXpGain,
     celebration,
+    ...(flFrames && flSequence
+      ? { flourishFrames: flFrames, flourishSequence: flSequence }
+      : {}),
   };
   // Atomic write (game-feel §2.6): the MCP server, the award-xp.ts process, and
   // react.sh's jq patch all touch status.json — tmp+rename avoids torn reads.

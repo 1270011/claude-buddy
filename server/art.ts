@@ -262,6 +262,38 @@ const EMOTION_EYE: Record<Exclude<Emotion, "neutral">, string> = {
 // 2 sub-frames (art frames 0/1) on a gentle 6-tick oscillation.
 const EMOTION_FRAME_SEQUENCE: readonly number[] = [0, 0, 0, 1, 1, 1];
 
+/**
+ * Render one species art frame with a given eye glyph substituted in.
+ *
+ * Shared by the idle/emotion cycle and the ascension flourish so they apply
+ * identical eye + hat (incl. seasonal overlay) substitution. Pure — the date is
+ * resolved by the caller via `seasonalHat`, keeping this testable.
+ *
+ * @param bones: The buddy's bones (species + hat).
+ * @param frameIdx: Index into the species' art frames.
+ * @param eye: The glyph to substitute for the `{E}` eye placeholder.
+ * @param seasonalHat: Optional seasonal hat to overlay when the hat slot is
+ *     empty (never clobbers a user-equipped hat).
+ * @returns The rendered frame as a newline-joined string.
+ */
+function renderSpeciesFrame(
+  bones: BuddyBones,
+  frameIdx: number,
+  eye: string,
+  seasonalHat?: Hat,
+): string {
+  const raw = SPECIES_ART[bones.species][frameIdx];
+  const art = raw.map((line) => line.replace(/\{E\}/g, eye));
+  const hatLine = HAT_ART[bones.hat];
+  if (hatLine && !art[0].trim()) {
+    art[0] = hatLine;
+  } else if (seasonalHat && bones.hat === "none" && !art[0].trim()) {
+    // Seasonal cosmetic (FR-C2): only when the hat slot is empty.
+    art[0] = HAT_ART[seasonalHat];
+  }
+  return art.join("\n");
+}
+
 export function getStatusFrames(
   bones: BuddyBones,
   emotion: Emotion = "neutral",
@@ -270,24 +302,8 @@ export function getStatusFrames(
   frames: string[];
   frameSequence: number[];
 } {
-  const resolveFrame = (frameIdx: number, eye: string): string => {
-    const raw = SPECIES_ART[bones.species][frameIdx];
-    const art = raw.map((line) => line.replace(/\{E\}/g, eye));
-    const hatLine = HAT_ART[bones.hat];
-    if (hatLine && !art[0].trim()) {
-      art[0] = hatLine;
-    } else if (
-      seasonalHat &&
-      bones.hat === "none" &&
-      !art[0].trim()
-    ) {
-      // Seasonal cosmetic (FR-C2): only when the hat slot is empty — never
-      // clobbers a user-equipped hat. Date is resolved by the caller, so this
-      // function stays pure/testable.
-      art[0] = HAT_ART[seasonalHat];
-    }
-    return art.join("\n");
-  };
+  const resolveFrame = (frameIdx: number, eye: string): string =>
+    renderSpeciesFrame(bones, frameIdx, eye, seasonalHat);
 
   // Emotion: swap in the emotion's eye and run a 2-frame micro-cycle.
   if (emotion !== "neutral") {
@@ -307,6 +323,38 @@ export function getStatusFrames(
       resolveFrame(0, "-"),
     ],
     frameSequence: [...STATUS_FRAME_SEQUENCE],
+  };
+}
+
+// ─── Ascension frame flourish (game-feel FR-A3) ──────────────────────────────
+
+// A livelier celebratory eye cycle (joy → pop → spark → joy), reusing the
+// FR-A4 eye-substitution machinery so it needs no new per-species art.
+const FLOURISH_EYES: readonly string[] = ["^", "O", "*", "^"];
+// A quick bob through the four flourish frames.
+const FLOURISH_FRAME_SEQUENCE: readonly number[] = [0, 1, 2, 3, 2, 1];
+
+/**
+ * A short, celebratory animation cycle for any species (game-feel FR-A3).
+ *
+ * Produced as a *separate* frame set from the neutral idle frames so the
+ * status line can animate it only while the ascension celebration is fresh,
+ * then fall back to the co-present neutral `frames`. No new per-species art —
+ * each flourish frame is the species body with a celebratory eye glyph and a
+ * one-step body bob.
+ *
+ * @param bones: The buddy's bones (species + hat).
+ * @returns The flourish frames and their playback sequence.
+ */
+export function flourishFrames(bones: BuddyBones): {
+  frames: string[];
+  frameSequence: number[];
+} {
+  return {
+    frames: FLOURISH_EYES.map((eye, i) =>
+      renderSpeciesFrame(bones, i % 2, eye),
+    ),
+    frameSequence: [...FLOURISH_FRAME_SEQUENCE],
   };
 }
 

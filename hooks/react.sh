@@ -1158,7 +1158,16 @@ fi
 # does something unexpected. Cosmetic text only.
 if [ -z "$REASON" ]; then
     GAME_FEEL=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
-    if [ "$GAME_FEEL" = "full" ] && [ "$((RANDOM % 50))" -eq 0 ]; then
+    # Deep-focus auto-quiet (game-feel FR-E1, opt-in): during a long session the
+    # rare-idle surprise is suppressed so flow isn't interrupted. This branch
+    # already implies no fresh error (REASON is empty), so the only signal left
+    # is session length. FOCUS threshold mirrors FOCUS_MIN_SECONDS in state.ts.
+    AUTO_QUIET_FOCUS=$(jq -r '.autoQuietFocus // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    _DEEP_FOCUS=0
+    if [ "$AUTO_QUIET_FOCUS" = "true" ] && [ "$SESSION_ELAPSED" -gt 1500 ]; then
+        _DEEP_FOCUS=1
+    fi
+    if [ "$GAME_FEEL" = "full" ] && [ "$_DEEP_FOCUS" -eq 0 ] && [ "$((RANDOM % 50))" -eq 0 ]; then
         RARE=(
             "*stares into the middle distance*"
             "did you hear that? ...never mind."

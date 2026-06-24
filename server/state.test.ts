@@ -15,6 +15,10 @@ import {
   computeXpPct,
   buildCelebration,
   resolveEmotion,
+  autoQuietActive,
+  clampGameFeel,
+  deepFocusActive,
+  FOCUS_MIN_SECONDS,
   type Celebration,
   type StatusOpts,
 } from "./state.ts";
@@ -233,5 +237,90 @@ describe("resolveEmotion (game-feel FR-A4)", () => {
 
   test("gameFeel=off forces neutral even for a mapped reason", () => {
     expect(resolveEmotion("pet", "off")).toBe("neutral");
+  });
+});
+
+describe("autoQuietActive (game-feel FR-E1)", () => {
+  test("true for every error-family spike reason", () => {
+    for (const reason of [
+      "error",
+      "test-fail",
+      "build-fail",
+      "type-error",
+      "lint-fail",
+    ]) {
+      expect(autoQuietActive(reason)).toBe(true);
+    }
+  });
+
+  test("false for non-spike reasons and absent reactions", () => {
+    expect(autoQuietActive("pet")).toBe(false);
+    expect(autoQuietActive("idle")).toBe(false);
+    expect(autoQuietActive("commit")).toBe(false);
+    expect(autoQuietActive("large-diff")).toBe(false);
+    expect(autoQuietActive(null)).toBe(false);
+    expect(autoQuietActive(undefined)).toBe(false);
+    expect(autoQuietActive("")).toBe(false);
+  });
+});
+
+describe("clampGameFeel (game-feel FR-E1)", () => {
+  test("clamps full→subtle only while quiet", () => {
+    expect(clampGameFeel("full", true)).toBe("subtle");
+  });
+
+  test("never silences the core: subtle/off unchanged while quiet", () => {
+    expect(clampGameFeel("subtle", true)).toBe("subtle");
+    expect(clampGameFeel("off", true)).toBe("off");
+  });
+
+  test("no clamp when not quiet, at any level", () => {
+    expect(clampGameFeel("full", false)).toBe("full");
+    expect(clampGameFeel("subtle", false)).toBe("subtle");
+    expect(clampGameFeel("off", false)).toBe("off");
+  });
+});
+
+describe("deepFocusActive (game-feel FR-E1 deep-focus)", () => {
+  test("true for a long, error-free session", () => {
+    expect(
+      deepFocusActive({
+        sessionElapsedSec: FOCUS_MIN_SECONDS,
+        hasFreshError: false,
+      }),
+    ).toBe(true);
+    expect(
+      deepFocusActive({
+        sessionElapsedSec: FOCUS_MIN_SECONDS + 600,
+        hasFreshError: false,
+      }),
+    ).toBe(true);
+  });
+
+  test("false before the focus threshold", () => {
+    expect(
+      deepFocusActive({
+        sessionElapsedSec: FOCUS_MIN_SECONDS - 1,
+        hasFreshError: false,
+      }),
+    ).toBe(false);
+    expect(
+      deepFocusActive({ sessionElapsedSec: 0, hasFreshError: false }),
+    ).toBe(false);
+  });
+
+  test("a fresh error overrides deep focus (the spike path handles it)", () => {
+    expect(
+      deepFocusActive({
+        sessionElapsedSec: FOCUS_MIN_SECONDS + 9999,
+        hasFreshError: true,
+      }),
+    ).toBe(false);
+  });
+
+  test("no session snapshot ⇒ never deep focus", () => {
+    expect(
+      deepFocusActive({ sessionElapsedSec: null, hasFreshError: false }),
+    ).toBe(false);
   });
 });

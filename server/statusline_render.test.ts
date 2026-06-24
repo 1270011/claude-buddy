@@ -43,6 +43,13 @@ interface StatusOverrides {
   lastXpGain?: { amount: number; secondsAgo: number } | null;
   /** Omit xpPct/lastXpGain entirely (simulates an older server). */
   omitXpFields?: boolean;
+  /** Game-feel intensity written into config.json (default unset → subtle). */
+  gameFeel?: "off" | "subtle" | "full";
+  /** A celebration with a seconds-ago age for the toast/flourish window. */
+  celebration?: { text: string; secondsAgo: number } | null;
+  /** Flourish frame set (game-feel FR-A3) written into status.json. */
+  flourishFrames?: string[];
+  flourishSequence?: number[];
 }
 
 /** Write a minimal status.json into a temp config dir and run buddy-status.sh
@@ -83,6 +90,17 @@ function renderStatus(overrides: StatusOverrides): string {
   }
   // Fixed reference "now" so toast-age assertions are deterministic.
   const fakeNow = 1_700_000_000;
+  if (overrides.celebration) {
+    status.celebration = {
+      text: overrides.celebration.text,
+      kind: "ascension",
+      at: (fakeNow - overrides.celebration.secondsAgo) * 1000,
+    };
+  }
+  if (overrides.flourishFrames) {
+    status.flourishFrames = overrides.flourishFrames;
+    status.flourishSequence = overrides.flourishSequence ?? [0];
+  }
   if (!overrides.omitXpFields) {
     status.xpPct = overrides.xpPct ?? 50;
     status.lastXpGain = overrides.lastXpGain
@@ -96,13 +114,15 @@ function renderStatus(overrides: StatusOverrides): string {
 
   if (
     overrides.showStats !== undefined ||
-    overrides.showPrestigeBadge !== undefined
+    overrides.showPrestigeBadge !== undefined ||
+    overrides.gameFeel !== undefined
   ) {
     const cfg: Record<string, unknown> = {};
     if (overrides.showStats !== undefined) cfg.showStats = overrides.showStats;
     if (overrides.showPrestigeBadge !== undefined) {
       cfg.showPrestigeBadge = overrides.showPrestigeBadge;
     }
+    if (overrides.gameFeel !== undefined) cfg.gameFeel = overrides.gameFeel;
     writeFileSync(join(stateDir, "config.json"), JSON.stringify(cfg));
   }
 
@@ -314,5 +334,74 @@ describe("buddy-status.sh prestige/streak badge (FR1.5)", () => {
     expect(out).toContain("«Legend»");
     expect(out).toContain("P1");
     expect(out).toContain("🔥3");
+  });
+});
+
+describe("buddy-status.sh ascension flourish (FR-A3)", () => {
+  // Distinctive bodies so we can tell which frame set the script animated.
+  const NEUTRAL = "            \n    (··)    \n    (  )    \n            \n            ";
+  const FLOURISH = "            \n    (**)    \n    (  )    \n            \n            ";
+
+  test("animates the flourish frames while the celebration is fresh", () => {
+    const out = renderStatus({
+      gameFeel: "full",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 2 },
+      flourishFrames: [FLOURISH],
+      flourishSequence: [0],
+    });
+    expect(out).toContain("(**)"); // flourish body
+    expect(out).not.toContain("(··)"); // not the neutral body
+    expect(out).toContain("🌟 PRESTIGE 1 🌟"); // toast shares the same window
+  });
+
+  test("reverts to the neutral frames after the celebration TTL expires", () => {
+    const out = renderStatus({
+      gameFeel: "full",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 30 }, // > 10s full TTL
+      flourishFrames: [FLOURISH],
+      flourishSequence: [0],
+    });
+    expect(out).toContain("(··)"); // neutral body restored
+    expect(out).not.toContain("(**)"); // flourish no longer selected
+    expect(out).not.toContain("🌟 PRESTIGE 1 🌟"); // toast also expired
+  });
+
+  test("never shows the flourish when gameFeel is off", () => {
+    const out = renderStatus({
+      gameFeel: "off",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 2 },
+      flourishFrames: [FLOURISH],
+      flourishSequence: [0],
+    });
+    expect(out).toContain("(··)");
+    expect(out).not.toContain("(**)");
+  });
+
+  test("reverts at the shorter 6s window under subtle", () => {
+    const fresh = renderStatus({
+      gameFeel: "subtle",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 3 },
+      flourishFrames: [FLOURISH],
+      flourishSequence: [0],
+    });
+    expect(fresh).toContain("(**)");
+    const stale = renderStatus({
+      gameFeel: "subtle",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 8 }, // > 6s subtle TTL
+      flourishFrames: [FLOURISH],
+      flourishSequence: [0],
+    });
+    expect(stale).toContain("(··)");
+    expect(stale).not.toContain("(**)");
+  });
+
+  test("old status.json without flourish fields animates the neutral frames", () => {
+    const out = renderStatus({
+      gameFeel: "full",
+      celebration: { text: "🌟 PRESTIGE 1 🌟", secondsAgo: 2 },
+      // no flourishFrames — simulates an older server / non-flourish write
+    });
+    expect(out).toContain("(··)");
+    expect(out).not.toContain("(**)");
   });
 });

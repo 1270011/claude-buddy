@@ -11,6 +11,7 @@ import { join } from "path";
 import {
   displayWidth,
   getStatusFrames,
+  flourishFrames,
   STATUS_FRAME_SEQUENCE,
   ageTell,
   activeSeasonal,
@@ -180,6 +181,49 @@ describe("getStatusFrames", () => {
       "beanie",
     );
     expect(withWornHat.frames[0].split("\n")[0]).toContain("\\^^^/"); // crown, not beanie
+  });
+});
+
+describe("flourishFrames (game-feel FR-A3)", () => {
+  const bones = (overrides: Partial<BuddyBones> = {}): BuddyBones => ({
+    rarity: "common",
+    species: "capybara",
+    eye: "°",
+    hat: "none",
+    shiny: false,
+    stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+    peak: "DEBUGGING",
+    dump: "PATIENCE",
+    ...overrides,
+  });
+
+  test("every species yields non-empty frames + a valid sequence", () => {
+    for (const species of SPECIES) {
+      const { frames, frameSequence } = flourishFrames(bones({ species }));
+      expect(frames.length).toBeGreaterThan(0);
+      expect(frameSequence.length).toBeGreaterThan(0);
+      for (const body of frames) {
+        expect(body.length).toBeGreaterThan(0);
+        expect(body).not.toContain("{E}"); // eye placeholder always resolved
+      }
+      for (const idx of frameSequence) {
+        expect(idx).toBeGreaterThanOrEqual(0);
+        expect(idx).toBeLessThan(frames.length);
+      }
+    }
+  });
+
+  test("uses celebratory eyes, not the configured idle eye", () => {
+    const { frames } = flourishFrames(bones({ species: "capybara", eye: "@" }));
+    expect(frames.join("")).not.toContain("@");
+    expect(frames.join("")).toContain("*"); // the spark eye
+  });
+
+  test("does not mutate or replace the neutral idle frames", () => {
+    // Baking a flourish must leave getStatusFrames byte-identical (R3).
+    const before = getStatusFrames(bones());
+    flourishFrames(bones());
+    expect(getStatusFrames(bones())).toEqual(before);
   });
 });
 
