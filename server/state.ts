@@ -414,6 +414,11 @@ export interface BuddyConfig {
   /** §7.B wide two-sided corridor: shifts the bubble left by a constant to open
    *  a left lane. Default false. */
   wanderWide: boolean;
+  /** Bubble-follows-buddy: when true, the speech bubble + connector travel with
+   *  the buddy as one rigid block (connector stays attached) instead of the
+   *  bubble staying pinned while the connector retracts. Default false (the
+   *  pinned-bubble layout invariant). Pure render flag, read live by bash. */
+  wanderBubble: boolean;
 }
 
 /** Game-feel intensity level (game-feel FR-E1). */
@@ -441,6 +446,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   wanderEnabled: true,
   wanderHop: false,
   wanderWide: false,
+  wanderBubble: false,
 };
 
 export function loadConfig(): BuddyConfig {

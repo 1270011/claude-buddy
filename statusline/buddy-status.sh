@@ -245,9 +245,15 @@ fi
 # so the corridor can span WANDER_RANGE_WIDE without the per-tick offset moving
 # anything. WANDER_PAD is plain spaces (never trimmed). WANDER_MAX=0 ⇒ park.
 WANDER_WIDE="false"
+# wanderBubble (design-movement §5e): when true, the bubble+connector travel WITH
+# the buddy as one rigid block (connector stays attached) instead of the bubble
+# staying pinned + connector retracting. Pure render flag, read live here.
+WANDER_BUBBLE="false"
 if [ -f "$CONFIG_FILE" ]; then
     _ww=$(jq -r '.wanderWide // false' "$CONFIG_FILE" 2>/dev/null || echo false)
     [ "$_ww" = "true" ] && WANDER_WIDE="true"
+    _wb=$(jq -r '.wanderBubble // false' "$CONFIG_FILE" 2>/dev/null || echo false)
+    [ "$_wb" = "true" ] && WANDER_BUBBLE="true"
 fi
 WANDER_RANGE=6
 WANDER_RANGE_WIDE=10
@@ -264,6 +270,19 @@ WANDER_MAX=$(( MARGIN + WANDER_LEFT - WANDER_SAFETY ))
 [ "$WANDER_MAX" -gt "$WANDER_RANGE_EFF" ] && WANDER_MAX=$WANDER_RANGE_EFF
 [ "$WANDER_OFF" -gt "$WANDER_MAX" ] && WANDER_OFF=$WANDER_MAX
 WANDER_PAD=$(printf '%*s' "$WANDER_OFF" '')
+# Where the horizontal offset is inserted (§5e). Default: before the art only, so
+# the buddy slides right and the bubble stays pinned (connector retracts). With
+# wanderBubble on: before the whole bubble cluster, so bubble+connector+art
+# translate together as one block (connector stays attached). Exactly one of
+# these two pads is non-empty per tick; both modes shift the art's right edge by
+# the same WANDER_OFF, so the corridor budget (WANDER_MAX) is unchanged.
+if [ "$WANDER_BUBBLE" = "true" ]; then
+    WANDER_PAD_BUBBLE="$WANDER_PAD"
+    WANDER_PAD_ART=""
+else
+    WANDER_PAD_BUBBLE=""
+    WANDER_PAD_ART="$WANDER_PAD"
+fi
 
 # Stats panel toggle (config.json, read live each tick → no restart on toggle).
 SHOW_STATS="false"
@@ -301,6 +320,16 @@ if [ "$_CELEB_FRESH" = 1 ]; then
     CELEB_SHOWN=1
 fi
 
+# Sticky bubble: status.json's .reaction is volatile — an incidental status
+# refresh (writeStatusState with no reaction) clears it to "". The per-session
+# reaction.$SID.json instead persists the LAST real reaction (hooks only ever
+# write it with content), so fall back to it when the live field is empty. The
+# bubble then stays until a new message replaces it. The TTL check below still
+# uses this file's timestamp, so an opt-in reactionTTL>0 keeps expiring as before.
+if { [ -z "$REACTION" ] || [ "$REACTION" = "null" ]; } && [ -f "$REACTION_FILE" ]; then
+    REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null || echo "")
+fi
+
 if [ "$CELEB_SHOWN" -eq 0 ] && [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
@@ -308,7 +337,8 @@ if [ "$CELEB_SHOWN" -eq 0 ] && [ -n "$REACTION" ] && [ "$REACTION" != "null" ] &
     elif [ -f "$REACTION_FILE" ]; then
         TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
         if [ "$TS" != "0" ]; then
-            NOW=$(date +%s)
+            # Use the top-level NOW (honors BUDDY_FAKE_NOW), consistent with the
+            # celebration/xp age checks — don't re-fetch the real clock here.
             AGE=$(( NOW - TS / 1000 ))
             [ "$AGE" -lt "$REACTION_TTL" ] && FRESH=1
         fi
@@ -731,7 +761,14 @@ fi
 # Idle wander (design-movement §5c): retract the connector while the buddy is
 # away from home — the bubble box stays whole, it just stops pointing at thin
 # air. Reattaches at offset 0 (home). The "   " gap keeps the width identical.
-{ [ "$WANDER_OFF" -gt 0 ] || [ "$WANDER_ROW" -gt 0 ]; } && CONNECTOR_BI=-1
+# §5e exception: when wanderBubble is on, the bubble travels WITH the buddy, so
+# the connector stays attached for horizontal motion — only a vertical hop
+# (WANDER_ROW>0), where the mouth is on a different row, still retracts it.
+if [ "$WANDER_BUBBLE" = "true" ]; then
+    [ "$WANDER_ROW" -gt 0 ] && CONNECTOR_BI=-1
+else
+    { [ "$WANDER_OFF" -gt 0 ] || [ "$WANDER_ROW" -gt 0 ]; } && CONNECTOR_BI=-1
+fi
 
 # ─── Output: merged stats panel + bubble + connector + art per line ──────────
 TOTAL_BUBBLE=$(( BUBBLE_START + BUBBLE_COUNT ))
@@ -763,6 +800,12 @@ for (( i=0; i<MAX_LINES; i++ )); do
         line_out+="$MID_SPACER"
     fi
 
+    # §5e: when the bubble travels with the buddy, the offset is inserted here —
+    # before the whole bubble cluster — so bubble+connector+art shift together.
+    # Empty (no-op) in the default pinned-bubble mode. Applied on every row so
+    # blank-bubble rows (top/bottom art) translate by the same amount.
+    line_out+="$WANDER_PAD_BUBBLE"
+
     # Bubble column
     if [ $BUBBLE_COUNT -gt 0 ]; then
         bi=$(( i - BUBBLE_START ))
@@ -792,9 +835,10 @@ for (( i=0; i<MAX_LINES; i++ )); do
     fi
 
     # Idle wander (design-movement §5d): nudge the art block right into the
-    # reclaimed margin. Lands in formerly-empty space — nothing left of the art
-    # can observe it, so the bubble/stats/PAD never move (the layout invariant).
-    line_out+="$WANDER_PAD"
+    # reclaimed margin. In the default mode this is the whole offset (bubble
+    # pinned); with wanderBubble on it's empty because the offset already shifted
+    # the bubble cluster above (art rode along, connector attached).
+    line_out+="$WANDER_PAD_ART"
     line_out+="$art_part"
     echo "$line_out"
 done

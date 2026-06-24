@@ -62,6 +62,13 @@ interface StatusOverrides {
   frames?: string[];
   /** §7.B wide corridor flag, written into config.json. */
   wanderWide?: boolean;
+  /** §5e bubble-follows-buddy flag, written into config.json. */
+  wanderBubble?: boolean;
+  /** Writes reaction.<SID>.json (the persistent per-session reaction file) so the
+   *  sticky-bubble fallback can be exercised. SID is "default" outside tmux. */
+  persistedReaction?: { reaction: string; secondsAgo?: number };
+  /** reactionTTL (seconds) written into config.json — 0 (default) = permanent. */
+  reactionTTL?: number;
   /** bubbleMargin in config.json (default 8) — drives the wander clamp/§7.C. */
   bubbleMargin?: number;
   /** Terminal width (default 125) — shrink it to exercise §7.C resize. */
@@ -135,11 +142,26 @@ function renderStatus(overrides: StatusOverrides): string {
   }
   writeFileSync(join(stateDir, "status.json"), JSON.stringify(status));
 
+  // The persistent per-session reaction file (sticky-bubble fallback source).
+  if (overrides.persistedReaction) {
+    writeFileSync(
+      join(stateDir, "reaction.default.json"),
+      JSON.stringify({
+        reaction: overrides.persistedReaction.reaction,
+        timestamp:
+          (fakeNow - (overrides.persistedReaction.secondsAgo ?? 0)) * 1000,
+        reason: "turn",
+      }),
+    );
+  }
+
   if (
     overrides.showStats !== undefined ||
     overrides.showPrestigeBadge !== undefined ||
     overrides.gameFeel !== undefined ||
     overrides.wanderWide !== undefined ||
+    overrides.wanderBubble !== undefined ||
+    overrides.reactionTTL !== undefined ||
     overrides.bubbleMargin !== undefined
   ) {
     const cfg: Record<string, unknown> = {};
@@ -149,9 +171,13 @@ function renderStatus(overrides: StatusOverrides): string {
     }
     if (overrides.gameFeel !== undefined) cfg.gameFeel = overrides.gameFeel;
     if (overrides.wanderWide !== undefined) cfg.wanderWide = overrides.wanderWide;
+    if (overrides.wanderBubble !== undefined) {
+      cfg.wanderBubble = overrides.wanderBubble;
+    }
     if (overrides.bubbleMargin !== undefined) {
       cfg.bubbleMargin = overrides.bubbleMargin;
     }
+    if (overrides.reactionTTL !== undefined) cfg.reactionTTL = overrides.reactionTTL;
     writeFileSync(join(stateDir, "config.json"), JSON.stringify(cfg));
   }
 
@@ -472,6 +498,64 @@ describe("buddy-status.sh ascension flourish (FR-A3)", () => {
   });
 });
 
+// ─── Sticky speech bubble — persists until a new message ─────────────────────
+//
+// status.json's .reaction is volatile (an incidental writeStatusState clears it
+// to ""), but reaction.<SID>.json persists the last real reaction. The bubble
+// falls back to it so it stays visible until a NEW message arrives — unless an
+// opt-in reactionTTL has elapsed.
+describe("buddy-status.sh sticky bubble", () => {
+  test("falls back to the persisted reaction when status.json's is empty", () => {
+    const out = stripAnsi(
+      renderStatus({
+        reaction: "", // live field cleared by an incidental status write
+        persistedReaction: { reaction: "still here from last turn" },
+      }),
+    );
+    expect(out).toContain("still here from last turn");
+  });
+
+  test("the live reaction wins over the persisted one when present", () => {
+    const out = stripAnsi(
+      renderStatus({
+        reaction: "fresh live reaction",
+        persistedReaction: { reaction: "older persisted reaction" },
+      }),
+    );
+    expect(out).toContain("fresh live reaction");
+    expect(out).not.toContain("older persisted reaction");
+  });
+
+  test("with reactionTTL>0 the persisted bubble still expires once stale", () => {
+    const out = stripAnsi(
+      renderStatus({
+        reaction: "",
+        reactionTTL: 10,
+        persistedReaction: { reaction: "expired note", secondsAgo: 30 },
+      }),
+    );
+    expect(out).not.toContain("expired note");
+  });
+
+  test("with reactionTTL>0 a recent persisted bubble still shows", () => {
+    const out = stripAnsi(
+      renderStatus({
+        reaction: "",
+        reactionTTL: 60,
+        persistedReaction: { reaction: "recent note", secondsAgo: 5 },
+      }),
+    );
+    expect(out).toContain("recent note");
+  });
+
+  test("no bubble when both the live and persisted reactions are empty", () => {
+    const out = stripAnsi(renderStatus({ reaction: "" }));
+    // The buddy still renders, just without a speech bubble border.
+    expect(out).toContain("Waffle");
+    expect(out).not.toContain(".--");
+  });
+});
+
 // ─── Idle wander — the per-tick layout invariant (movement P3, design §9) ─────
 //
 // The keystone gate: as the buddy ambles right into the reclaimed margin, NOTHING
@@ -746,6 +830,81 @@ describe("buddy-status.sh idle wander (wide corridor)", () => {
       fakeNow: 0,
     });
     expect(wideButGated).toBe(plain);
+  });
+});
+
+// ─── Idle wander — bubble follows buddy (§5e, flag wanderBubble) ──────────────
+//
+// Inverts the default pinned-bubble invariant: with wanderBubble on, the whole
+// [bubble · connector · art] block translates right by the offset as a rigid
+// unit, so the bubble moves WITH the buddy and the connector stays attached.
+// We bake [0..6] and sweep BUDDY_FAKE_NOW so NOW%7 lands on each offset.
+describe("buddy-status.sh idle wander (bubble follows buddy)", () => {
+  const SEQ = [0, 1, 2, 3, 4, 5, 6];
+  const REACTION = "hello friend"; // no dashes → "|--" uniquely marks connector
+
+  function render(now: number): string {
+    return stripAnsi(
+      renderStatus({
+        reaction: REACTION,
+        name: "Waffle",
+        showStats: true,
+        gameFeel: "full",
+        wanderBubble: true,
+        wanderSequence: SEQ,
+        fakeNow: now,
+      }),
+    );
+  }
+  function colOf(frame: string, needle: string): number {
+    return frame.split("\n").find((l) => l.includes(needle))!.indexOf(needle);
+  }
+
+  test("the bubble moves right by exactly the offset (travels with the buddy)", () => {
+    const baseBubble = colOf(render(0), REACTION);
+    const baseArt = colOf(render(0), "Waffle");
+    for (let k = 0; k < SEQ.length; k++) {
+      // Both the bubble and the art shift right by k — as one rigid block.
+      expect(colOf(render(k), REACTION)).toBe(baseBubble + k);
+      expect(colOf(render(k), "Waffle")).toBe(baseArt + k);
+    }
+  });
+
+  test("the connector stays attached at every offset (never points at thin air)", () => {
+    for (let k = 0; k < SEQ.length; k++) {
+      expect(render(k).includes("|--")).toBe(true);
+    }
+  });
+
+  test("the bubble→art gap is constant (connector width never changes)", () => {
+    const gaps = SEQ.map((_, k) => {
+      const f = render(k);
+      return colOf(f, "Waffle") - colOf(f, REACTION);
+    });
+    expect(new Set(gaps).size).toBe(1);
+  });
+
+  test("stats column stays left-pinned even as the bubble travels", () => {
+    const cols = SEQ.map((_, k) => colOf(render(k), "DEBUGGING"));
+    expect(new Set(cols).size).toBe(1);
+  });
+
+  test("default (flag off) keeps the bubble pinned — connector retracts away from home", () => {
+    const off = (now: number) =>
+      stripAnsi(
+        renderStatus({
+          reaction: REACTION,
+          name: "Waffle",
+          showStats: true,
+          gameFeel: "full",
+          wanderSequence: SEQ,
+          fakeNow: now,
+        }),
+      );
+    // Pinned bubble: its column does not move with the offset.
+    expect(colOf(off(5), REACTION)).toBe(colOf(off(0), REACTION));
+    // And the connector is gone once away from home.
+    expect(off(5).includes("|--")).toBe(false);
   });
 });
 

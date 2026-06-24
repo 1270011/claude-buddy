@@ -38,3 +38,9 @@ coverage/
 main.py
 pyproject.toml
 uv.lock
+
+# Docs
+claudedocs/
+docs/additional-rewards/
+docs/leveling-system/
+docs/statusline/

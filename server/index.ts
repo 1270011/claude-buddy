@@ -821,6 +821,7 @@ function wanderStateLine(cfg: BuddyConfig): string {
     `wander ${cfg.wanderEnabled ? "on" : "off"}`,
     `hop ${cfg.wanderHop ? "on" : "off"}`,
     `wide ${cfg.wanderWide ? "on" : "off"}`,
+    `bubble ${cfg.wanderBubble ? "on" : "off"}`,
   ].join(", ");
   let note = "";
   if (cfg.wanderEnabled && effectiveGameFeel() !== "full") {
@@ -831,7 +832,7 @@ function wanderStateLine(cfg: BuddyConfig): string {
 
 server.tool(
   "buddy_wander",
-  "Control the buddy's idle wander — the gentle amble back and forth on the status line while it's idle. `enabled` toggles the whole walk (default on); `hop` adds a small vertical bob (costs one status-line row, default off); `wide` opens a longer two-sided corridor (default off). Omit all args to report the current settings. Backs /buddy wander. Read live — no restart needed. The walk only animates when game-feel intensity is 'full'.",
+  "Control the buddy's idle wander — the gentle amble back and forth on the status line while it's idle. `enabled` toggles the whole walk (default on); `hop` adds a small vertical bob (costs one status-line row, default off); `wide` opens a longer two-sided corridor (default off); `bubble` makes the speech bubble travel with the buddy so the connector stays attached, instead of the bubble staying pinned (default off). Omit all args to report the current settings. Backs /buddy wander. Read live — no restart needed. The walk only animates when game-feel intensity is 'full'.",
   {
     enabled: z
       .boolean()
@@ -845,10 +846,21 @@ server.tool(
       .boolean()
       .optional()
       .describe("Use the wide corridor. Omit to leave unchanged."),
+    bubble: z
+      .boolean()
+      .optional()
+      .describe(
+        "Make the speech bubble travel with the buddy (connector stays attached). Omit to leave unchanged.",
+      ),
   },
-  async ({ enabled, hop, wide }) => {
+  async ({ enabled, hop, wide, bubble }) => {
     ensureCompanion();
-    if (enabled === undefined && hop === undefined && wide === undefined) {
+    if (
+      enabled === undefined &&
+      hop === undefined &&
+      wide === undefined &&
+      bubble === undefined
+    ) {
       return {
         content: [{ type: "text", text: wanderStateLine(loadConfig()) }],
       };
@@ -857,6 +869,7 @@ server.tool(
     if (enabled !== undefined) patch.wanderEnabled = enabled;
     if (hop !== undefined) patch.wanderHop = hop;
     if (wide !== undefined) patch.wanderWide = wide;
+    if (bubble !== undefined) patch.wanderBubble = bubble;
     saveConfig(patch);
     return {
       content: [{ type: "text", text: wanderStateLine(loadConfig()) }],

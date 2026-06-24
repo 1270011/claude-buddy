@@ -243,6 +243,10 @@ Own one companion of **every rarity tier** (common → legendary) at once and ea
 
 An **opt-in** status-line badge (`P2 🔥7`) under your buddy's name shows prestige tier and current streak. Default off — toggle with `/buddy badge [on|off]`.
 
+### Idle wander
+
+When game-feel intensity is `full`, your buddy quietly **ambles back and forth** along the status line while it's idle — the speech bubble, stats panel, and name stay pinned, only the art drifts. Cosmetic-only motion, no power creep. Default on; toggle with `/buddy wander [on|off]`. Three extra modes are opt-in: `/buddy wander hop` adds a small vertical bob (costs one status-line row), `/buddy wander wide` opens a longer two-sided corridor, and `/buddy wander bubble` makes the speech bubble travel **with** the buddy (the connector stays attached) instead of staying pinned. `/buddy wander status` reports the current settings. The walk only animates at game-feel `full` (`/buddy gamefeel full`), so it stays out of the way for everyone else.
+
 > All multipliers stack multiplicatively but stay modest: rarity (≤×1.20) × prestige (≤×1.15) × collection (×1.05) caps around ×1.45. Every new reward back-fills cleanly onto existing buddies — nothing is lost on upgrade.
 
 </details>
@@ -324,6 +328,7 @@ claude-buddy/
 | `/buddy upgrades title <id\|none>` | Equip a prestige title, or clear it |
 | `/buddy upgrades ascend` | At max level: reset to L1 for a permanent prestige multiplier (keeps all unlocks) |
 | `/buddy badge [on\|off]` | Toggle the prestige/streak badge (`P2 🔥7`) in the status line |
+| `/buddy wander [on\|off\|hop\|wide\|bubble\|status]` | Toggle the idle status-line amble (and the `hop`/`wide`/`bubble` modes); animates at game-feel `full` |
 | `/buddy mood` | Show current mood and what's influencing it |
 | `/buddy theme [dark\|light\|auto]` | Show or set color theme |
 | `/buddy stats bar [on\|off]` | Toggle the stat-bar panel in the status line |

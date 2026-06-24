@@ -157,6 +157,7 @@ const wanderFlags = [
   `wander ${wanderOn ? "on" : "off"}`,
   `hop ${cfg?.wanderHop ? "on" : "off"}`,
   `wide ${cfg?.wanderWide ? "on" : "off"}`,
+  `bubble ${cfg?.wanderBubble ? "on" : "off"}`,
 ].join(", ");
 const wanderNote =
   wanderOn && effectiveGf !== "full" ? " (idle until game-feel is full)" : "";
