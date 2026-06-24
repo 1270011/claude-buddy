@@ -25,99 +25,158 @@ SID="${SID:-default}"
 
 [ -f "$STATE" ] || exit 0
 
-MUTED=$(jq -r '.muted // false' "$STATE" 2>/dev/null)
+# Wall clock (overridable for snapshot tests). Needed by the consolidated
+# status read below to resolve the animation frame + wander offsets in one pass.
+NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
+
+# ─── Single config.json read (perf: ~11 jq forks → 1) ───────────────────────
+# The status line runs every ~1s; one jq fork per field was ~11 process spawns
+# per tick. Fetch every config field in a single jq pass instead. rainbowColors
+# is an array → joined with commas here, re-split in bash. All the per-field
+# defaulting/validation the scattered reads used to do is re-applied just below.
+GAME_FEEL="subtle"
+_CFG_THEME="auto"
+_RAINBOW_CSV=""
+REACTION_TTL=0
+INNER_W=44
+MARGIN=8
+WANDER_WIDE="false"
+WANDER_BUBBLE="false"
+SHOW_STATS="false"
+SHOW_PRESTIGE_BADGE="false"
+USE_COMBINED="false"
+if [ -f "$CONFIG_FILE" ]; then
+    # Join with 0x1F (non-whitespace) rather than @tsv: an empty field (e.g. no
+    # rainbowColors) would COLLAPSE under IFS=$'\t' (tab is IFS-whitespace),
+    # silently shifting every later field and misreading the booleans.
+    IFS=$'\x1f' read -r \
+        GAME_FEEL _CFG_THEME _RAINBOW_CSV \
+        REACTION_TTL INNER_W MARGIN \
+        WANDER_WIDE WANDER_BUBBLE \
+        SHOW_STATS SHOW_PRESTIGE_BADGE USE_COMBINED \
+    <<< "$(jq -r '[
+        (.gameFeel // "subtle"),
+        (.theme // "auto"),
+        ((.rainbowColors // []) | join(",")),
+        ((.reactionTTL // 0) | tostring),
+        ((.bubbleWidth // 44) | tostring),
+        ((.bubbleMargin // 8) | tostring),
+        ((.wanderWide // false) | tostring),
+        ((.wanderBubble // false) | tostring),
+        ((.showStats // false) | tostring),
+        ((.showPrestigeBadge // false) | tostring),
+        ((.useCombinedStatus // false) | tostring)
+    ] | join("")' "$CONFIG_FILE" 2>/dev/null)"
+fi
+# Re-apply the exact per-field validation/defaulting the old scattered reads did,
+# so a missing/garbled value (incl. an empty read on malformed JSON) still falls
+# back to the documented default.
+case "$GAME_FEEL" in off|subtle|full) ;; *) GAME_FEEL="subtle" ;; esac
+case "$REACTION_TTL" in ''|*[!0-9]*) REACTION_TTL=0 ;; esac
+case "$INNER_W" in ''|*[!0-9]*) INNER_W=44 ;; esac
+case "$MARGIN" in ''|*[!0-9]*) MARGIN=8 ;; esac
+[ "$WANDER_WIDE" = "true" ] || WANDER_WIDE="false"
+[ "$WANDER_BUBBLE" = "true" ] || WANDER_BUBBLE="false"
+[ "$SHOW_STATS" = "true" ] || SHOW_STATS="false"
+[ "$SHOW_PRESTIGE_BADGE" = "true" ] || SHOW_PRESTIGE_BADGE="false"
+[ "$USE_COMBINED" = "true" ] || USE_COMBINED="false"
+
+# ─── Single status.json read (perf: ~17 jq forks → 1) ───────────────────────
+# All status.json fields PLUS the celebration-freshness, frame-pick (game-feel
+# FR-A3) and idle-wander offset logic that used to be separate jq calls are
+# resolved in one pass. Fields are joined with the ASCII Unit Separator (0x1F,
+# same idiom as the combined-metrics read below) so the inner @tsv blobs
+# (stats / xp / celebration) keep their own tabs and split downstream exactly as
+# before. The multi-line frame art is base64'd to survive the single-line read,
+# then decoded after the early-exit checks. Free-text fields are tab/newline-
+# sanitized so a stray control char can't shift the columns.
+_STATUS=$(jq -r --argjson now "$NOW" --arg gf "$GAME_FEEL" '
+    # Celebration freshness — mirrors the old bash TTL/age math, gameFeel-gated.
+    (if $gf == "off" then 0
+     else
+       (.celebration.text // "") as $ct
+       | (.celebration.at // 0) as $ca
+       | (if ($ct | type) == "string" and $ct != "" and $ct != "null"
+             and ($ca | type) == "number" and $ca > 0 then
+            (if $gf == "subtle" then 6 else 10 end) as $ttl
+            | ($now - ($ca / 1000 | floor)) as $age
+            | (if $age >= 0 and $age <= $ttl then 1 else 0 end)
+          else 0 end)
+     end) as $celeb_fresh
+    # Frame source: animate the flourish set only while a celebration is fresh.
+    | (if ((.flourishFrames | type) == "array")
+          and ((.flourishFrames | length) > 0) then 1 else 0 end) as $has_fl
+    | (if $celeb_fresh == 1 and $has_fl == 1
+       then .flourishSequence else .frameSequence end) as $seq
+    | (if $celeb_fresh == 1 and $has_fl == 1
+       then .flourishFrames else .frames end) as $frms
+    | ($seq | length) as $slen
+    | (if $slen > 0 then ($seq[$now % $slen] // 0) else 0 end) as $idx
+    | ($frms[$idx] // "") as $frame
+    # Wander offsets — only at gameFeel=full with no fresh celebration; all three
+    # stay 0 otherwise (parity with the old gf==full && !celeb_fresh gate, incl.
+    # WANDER_ROW_MAX, which must not reserve hop headroom when wander is idle).
+    | (if $gf == "full" and $celeb_fresh != 1
+       then ((.wanderSequence // []) as $w
+             | if ($w | length) > 0 then ($w[$now % ($w | length)] // 0) else 0 end)
+       else 0 end) as $woff
+    | (if $gf == "full" and $celeb_fresh != 1
+       then ((.wanderRowSequence // []) as $w
+             | if ($w | length) > 0 then ($w[$now % ($w | length)] // 0) else 0 end)
+       else 0 end) as $wrow
+    | (if $gf == "full" and $celeb_fresh != 1
+       then (((.wanderRowSequence // []) | max) // 0)
+       else 0 end) as $wrmax
+    | [
+        ((.muted // false) | tostring),
+        ((.name // "") | gsub("[\t\n\r]"; " ")),
+        ((.rarity // "common") | gsub("[\t\n\r]"; " ")),
+        ((.shiny // false) | tostring),
+        ((.reaction // "") | gsub("[\t\n\r]"; " ")),
+        ((.achievement // "") | gsub("[\t\n\r]"; " ")),
+        ((.level // 1) | tostring),
+        ((.mood // "focused") | gsub("[\t\n\r]"; " ")),
+        ((.title // "") | gsub("[\t\n\r]"; " ")),
+        ((.prestigeLevel // 0) | tostring),
+        ((.streak // 0) | tostring),
+        ([.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv),
+        ((.xpPct // 0) | tostring),
+        ([(.lastXpGain.amount // 0), (.lastXpGain.at // 0)] | @tsv),
+        ([(.celebration.text // ""), (.celebration.at // 0)] | @tsv),
+        ($has_fl | tostring),
+        ($celeb_fresh | tostring),
+        ($woff | tostring),
+        ($wrow | tostring),
+        ($wrmax | tostring),
+        ($frame | @base64)
+      ] | join("")
+' "$STATE" 2>/dev/null)
+
+IFS=$'\x1f' read -r \
+    MUTED NAME RARITY SHINY REACTION ACHIEVEMENT \
+    LEVEL MOOD TITLE PRESTIGE STREAK \
+    STATS_TSV XP_PCT XP_GAIN_TSV CELEB_TSV \
+    _HAS_FLOURISH _CELEB_FRESH WANDER_OFF WANDER_ROW WANDER_ROW_MAX \
+    _FRAME_B64 <<< "$_STATUS"
+
 [ "$MUTED" = "true" ] && exit 0
-
-NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 [ -z "$NAME" ] && exit 0
-
-RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
-SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
-REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
-ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
-LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
-MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
-TITLE=$(jq -r '.title // ""' "$STATE" 2>/dev/null)
-# Prestige tier + streak for the optional badge (default 0 on older status.json).
-PRESTIGE=$(jq -r '.prestigeLevel // 0' "$STATE" 2>/dev/null)
-STREAK=$(jq -r '.streak // 0' "$STATE" 2>/dev/null)
-# Stats panel data: 5 values + peak/dump as a single TSV line. Empty when
-# status.json predates the stats field (older server) — the panel is skipped.
-STATS_TSV=$(jq -r '[.stats.DEBUGGING, .stats.PATIENCE, .stats.CHAOS, .stats.WISDOM, .stats.SNARK, .peak, .dump] | @tsv' "$STATE" 2>/dev/null)
-# XP progress bar row + transient gain toast. Defaults to 0/null on older
-# status.json so the row renders as an empty bar instead of erroring.
-XP_PCT=$(jq -r '.xpPct // 0' "$STATE" 2>/dev/null)
-XP_GAIN_TSV=$(jq -r '[(.lastXpGain.amount // 0), (.lastXpGain.at // 0)] | @tsv' "$STATE" 2>/dev/null)
-# Celebration channel (game-feel §2): text + epoch-ms timestamp. Empty/0 on
-# older status.json so the bubble falls back to the normal reaction.
-CELEB_TSV=$(jq -r '[(.celebration.text // ""), (.celebration.at // 0)] | @tsv' "$STATE" 2>/dev/null)
 
 CC_INPUT=$(cat)  # capture stdin JSON (model/context/rate-limit data)
 
-# ─── Animation: pick current frame from server-rendered frames ──────────────
-NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
+# Decode the base64'd frame art (it's multi-line, so it couldn't ride the TSV
+# raw). Empty on a degraded/missing file → the fallback art below kicks in.
+FRAME_BODY=$(printf '%s' "$_FRAME_B64" | base64 -d 2>/dev/null)
 
-# Game-feel intensity (game-feel FR-E1) + celebration freshness, computed once
-# here so they gate BOTH the frame flourish (just below) and the bubble toast
-# (later). off suppresses celebrations entirely; subtle/full differ only in the
-# toast's dwell time.
-GAME_FEEL="subtle"
-if [ -f "$CONFIG_FILE" ]; then
-    _gf=$(jq -r '.gameFeel // "subtle"' "$CONFIG_FILE" 2>/dev/null || echo subtle)
-    case "$_gf" in off|subtle|full) GAME_FEEL="$_gf" ;; esac
-fi
-_CELEB_FRESH=0
-if [ "$GAME_FEEL" != "off" ]; then
-    IFS=$'\t' read -r _CELEB_TEXT _CELEB_AT <<< "$CELEB_TSV"
-    case "$_CELEB_AT" in ''|*[!0-9]*) _CELEB_AT=0 ;; esac
-    if [ -n "$_CELEB_TEXT" ] && [ "$_CELEB_TEXT" != "null" ] && [ "$_CELEB_AT" -gt 0 ]; then
-        _CELEB_TTL=10
-        [ "$GAME_FEEL" = "subtle" ] && _CELEB_TTL=6
-        _CELEB_AGE=$(( NOW - _CELEB_AT / 1000 ))
-        [ "$_CELEB_AGE" -ge 0 ] && [ "$_CELEB_AGE" -le "$_CELEB_TTL" ] && _CELEB_FRESH=1
-    fi
-fi
+# Celebration text for the bubble toast (its freshness is already resolved in the
+# single read above as _CELEB_FRESH).
+IFS=$'\t' read -r _CELEB_TEXT _CELEB_AT <<< "$CELEB_TSV"
 
-# Frame source (game-feel FR-A3): while a celebration is fresh AND the server
-# wrote a flourish set, animate the flourish; otherwise the neutral idle frames.
-# Stale flourishFrames left in the file after the window are simply never picked,
-# so the flourish self-reverts on the celebration's own TTL — no second write.
-_HAS_FLOURISH=$(jq -r 'if ((.flourishFrames | type) == "array") and ((.flourishFrames | length) > 0) then 1 else 0 end' "$STATE" 2>/dev/null || echo 0)
-FRAME_SRC_FRAMES='.frames'
-FRAME_SRC_SEQ='.frameSequence'
-if [ "$_CELEB_FRESH" = 1 ] && [ "$_HAS_FLOURISH" = 1 ]; then
-    FRAME_SRC_FRAMES='.flourishFrames'
-    FRAME_SRC_SEQ='.flourishSequence'
-fi
-FRAME_BODY=$(jq -r --argjson now "$NOW" "
-    ${FRAME_SRC_SEQ}[\$now % (${FRAME_SRC_SEQ} | length)] as \$idx
-    | ${FRAME_SRC_FRAMES}[\$idx] // \"\"
-" "$STATE" 2>/dev/null)
-
-# ─── Idle wander (movement design-movement §5a) ─────────────────────────────
-# Per-tick horizontal (and, with hop, vertical) offsets picked from the server-
-# baked sequences exactly like the frame index. Gated to gameFeel=full and
-# parked while a celebration is fresh (the buddy comes home to talk). WANDER_ROW
-# is read/plumbed here but stays 0 in the render until the hop mode (P4).
-WANDER_OFF=0
-WANDER_ROW=0
-WANDER_ROW_MAX=0
-if [ "$GAME_FEEL" = "full" ] && [ "$_CELEB_FRESH" != 1 ]; then
-    WANDER_OFF=$(jq -r --argjson now "$NOW" '
-        (.wanderSequence // []) as $w
-        | if ($w|length) > 0 then ($w[$now % ($w|length)] // 0) else 0 end
-    ' "$STATE" 2>/dev/null || echo 0)
-    WANDER_ROW=$(jq -r --argjson now "$NOW" '
-        (.wanderRowSequence // []) as $w
-        | if ($w|length) > 0 then ($w[$now % ($w|length)] // 0) else 0 end
-    ' "$STATE" 2>/dev/null || echo 0)
-    # Max hop height across the whole sequence → constant headroom (P4); reading
-    # the max (not the live row) keeps the block height fixed so it can't bob.
-    WANDER_ROW_MAX=$(jq -r '(.wanderRowSequence // []) | max // 0' "$STATE" 2>/dev/null || echo 0)
-    case "$WANDER_OFF" in ''|*[!0-9]*) WANDER_OFF=0 ;; esac
-    case "$WANDER_ROW" in ''|*[!0-9]*) WANDER_ROW=0 ;; esac
-    case "$WANDER_ROW_MAX" in ''|*[!0-9]*) WANDER_ROW_MAX=0 ;; esac
-fi
+# Wander offset sanitizers — the jq pass already gates these to gameFeel=full &&
+# no fresh celebration (0 otherwise); guard against a non-numeric on a bad file.
+case "$WANDER_OFF" in ''|*[!0-9]*) WANDER_OFF=0 ;; esac
+case "$WANDER_ROW" in ''|*[!0-9]*) WANDER_ROW=0 ;; esac
+case "$WANDER_ROW_MAX" in ''|*[!0-9]*) WANDER_ROW_MAX=0 ;; esac
 
 # Fallback when status.json lacks .frames — e.g. server/bash version skew
 # during install or while the MCP server hasn't rewritten the file yet. Keep
@@ -132,11 +191,9 @@ while IFS= read -r line; do
 done <<< "$FRAME_BODY"
 
 # ─── Rarity color (theme-aware) ─────────────────────────────────────────────
+# _CFG_THEME comes from the single config read above.
 _THEME="dark"
-if [ -f "$CONFIG_FILE" ]; then
-    _cfg_theme=$(jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
-    [ "$_cfg_theme" = "light" ] && _THEME="light"
-fi
+[ "$_CFG_THEME" = "light" ] && _THEME="light"
 
 NC=$'\033[0m'
 case "$RARITY" in
@@ -172,14 +229,13 @@ RAINBOW=(
   $'\033[38;2;180;50;220m'
 )
 
-if [ -f "$CONFIG_FILE" ]; then
-    _custom=$(jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
-    if [ -n "$_custom" ]; then
-        RAINBOW=()
-        for _hex in $_custom; do
-            RAINBOW+=("$(_hex_to_ansi "$_hex")")
-        done
-    fi
+# _RAINBOW_CSV (comma-joined rainbowColors) comes from the single config read.
+if [ -n "$_RAINBOW_CSV" ]; then
+    RAINBOW=()
+    IFS=',' read -ra _RAINBOW_HEXES <<< "$_RAINBOW_CSV"
+    for _hex in "${_RAINBOW_HEXES[@]}"; do
+        RAINBOW+=("$(_hex_to_ansi "$_hex")")
+    done
 fi
 
 RAINBOW_LEN=${#RAINBOW[@]}
@@ -223,17 +279,7 @@ if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != 
     BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
-REACTION_TTL=0
-INNER_W=44
-MARGIN=8
-if [ -f "$CONFIG_FILE" ]; then
-    _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
-    case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
-    _bw=$(jq -r '.bubbleWidth // 44' "$CONFIG_FILE" 2>/dev/null || echo 44)
-    case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
-    _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
-    case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
-fi
+# REACTION_TTL / INNER_W / MARGIN come (validated) from the single config read.
 
 # ─── Idle wander clamp (movement design-movement §5b / §7.B / §7.C) ─────────
 # The corridor is reclaimed from the right MARGIN; bash owns the clamp because
@@ -244,17 +290,10 @@ fi
 # bubble+art block left by a CONSTANT WANDER_LEFT (folded into PAD below, once)
 # so the corridor can span WANDER_RANGE_WIDE without the per-tick offset moving
 # anything. WANDER_PAD is plain spaces (never trimmed). WANDER_MAX=0 ⇒ park.
-WANDER_WIDE="false"
-# wanderBubble (design-movement §5e): when true, the bubble+connector travel WITH
-# the buddy as one rigid block (connector stays attached) instead of the bubble
-# staying pinned + connector retracting. Pure render flag, read live here.
-WANDER_BUBBLE="false"
-if [ -f "$CONFIG_FILE" ]; then
-    _ww=$(jq -r '.wanderWide // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-    [ "$_ww" = "true" ] && WANDER_WIDE="true"
-    _wb=$(jq -r '.wanderBubble // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-    [ "$_wb" = "true" ] && WANDER_BUBBLE="true"
-fi
+# WANDER_WIDE / WANDER_BUBBLE come from the single config read above. wanderBubble
+# (design-movement §5e): when true the bubble+connector travel WITH the buddy as
+# one rigid block (connector stays attached) instead of the bubble staying pinned
+# + connector retracting. Pure render flags.
 WANDER_RANGE=6
 WANDER_RANGE_WIDE=10
 WANDER_SAFETY=2
@@ -284,28 +323,10 @@ else
     WANDER_PAD_ART="$WANDER_PAD"
 fi
 
-# Stats panel toggle (config.json, read live each tick → no restart on toggle).
-SHOW_STATS="false"
-if [ -f "$CONFIG_FILE" ]; then
-    _ss=$(jq -r '.showStats // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-    [ "$_ss" = "true" ] && SHOW_STATS="true"
-fi
-
-# Prestige/streak badge toggle (config.json, read live each tick).
-SHOW_PRESTIGE_BADGE="false"
-if [ -f "$CONFIG_FILE" ]; then
-    _spb=$(jq -r '.showPrestigeBadge // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-    [ "$_spb" = "true" ] && SHOW_PRESTIGE_BADGE="true"
-fi
-
-# Combined-mode toggle (config.json) — adds a model/context/usage/reset row
-# to the stats column below. Independent of SHOW_STATS so it works whether
-# or not the game-stats bars are on.
-USE_COMBINED="false"
-if [ -f "$CONFIG_FILE" ]; then
-    _uc=$(jq -r '.useCombinedStatus // false' "$CONFIG_FILE" 2>/dev/null || echo false)
-    [ "$_uc" = "true" ] && USE_COMBINED="true"
-fi
+# SHOW_STATS (stats panel), SHOW_PRESTIGE_BADGE (prestige/streak badge) and
+# USE_COMBINED (model/context/usage/reset row) all come from the single config
+# read above — still live each tick (the whole script reruns at ~1 Hz), so a
+# config toggle still applies without a restart.
 # Celebration channel (game-feel §2): a transient message that overrides the
 # normal reaction in the bubble while fresh. Freshness (_CELEB_FRESH) and the
 # text (_CELEB_TEXT) were computed once up in the animation block, so the toast
