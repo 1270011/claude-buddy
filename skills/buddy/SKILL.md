@@ -33,44 +33,61 @@ Handle the user's `/buddy` command using the claude-buddy MCP tools.
 
 4. **Do not proceed with any buddy command in this session.** Tell the user: the MCP server is not running, here is what the diagnostic found, here is the recommended fix, and Claude Code must be restarted after the fix before buddy tools will be available.
 
-## Command Routing
+## Routing: run the LLM-free dispatcher
 
-Based on `$ARGUMENTS`:
+**Every typed `/buddy` command is a pure config/state operation — route it to the
+CLI dispatcher, not an MCP tool.** The dispatcher (`cli/buddy.ts`) mirrors each
+MCP tool exactly: same state writes, same output strings, same achievements. It
+runs as plain bun with no model round-trip. Run from the plugin directory and
+output its result verbatim (CRITICAL OUTPUT RULES below still apply):
 
-| Input                    | Action                                                                                       |
-| ------------------------ | -------------------------------------------------------------------------------------------- |
-| _(empty)_ or `show`      | Call `buddy_show`                                                                            |
-| `help`                   | Call `buddy_help`                                                                            |
-| `pet`                    | Call `buddy_pet`                                                                             |
-| `stats`                  | Call `buddy_stats`                                                                           |
-| `off`                    | Call `buddy_mute`                                                                            |
-| `on`                     | Call `buddy_unmute`                                                                          |
-| `rename <name>`          | Call `buddy_rename` with the given name                                                      |
-| `personality <text>`     | Call `buddy_set_personality` with the given text                                             |
-| `achievements`           | Call `buddy_achievements`                                                                    |
-| `summon`                 | Call `buddy_summon` with no args — picks a random saved buddy                                |
-| `summon <slot>`          | Call `buddy_summon` with the given slot name                                                 |
-| `save [slot]`            | Call `buddy_save` with optional slot name                                                    |
-| `list`                   | Call `buddy_list`                                                                            |
-| `dismiss <slot>`         | Call `buddy_dismiss` with the slot name                                                      |
-| `pick`                   | Tell user to run `! bun run pick` from the claude-buddy directory (launches interactive TUI) |
-| `frequency`              | Call `buddy_frequency` with no args (show current)                                           |
-| `frequency <seconds>`    | Call `buddy_frequency` with cooldown=seconds                                                 |
-| `style`                  | Call `buddy_style` with no args (show current)                                               |
-| `style <classic\|round>` | Call `buddy_style` with style arg                                                            |
-| `position`               | Call `buddy_style` with no args (show current)                                               |
-| `position <top\|left>`   | Call `buddy_style` with position arg                                                         |
-| `rarity on`              | Call `buddy_style` with showRarity=true                                                      |
-| `rarity off`             | Call `buddy_style` with showRarity=false                                                     |
-| `rainbow`                | Call `buddy_style` with no args (show current rainbow)                                       |
-| `rainbow <#hex> ...`     | Call `buddy_style` with rainbow=[...hex colors] to set shiny gradient                        |
-| `rainbow reset`          | Call `buddy_style` with rainbow=[] to restore default ROYGBIV                                |
-| `statusline`             | Call `buddy_statusline` with no args (show current)                                          |
-| `statusline on`          | Call `buddy_statusline` with enabled=true                                                    |
-| `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |
-| `statusline combined`    | Call `buddy_statusline` with combined=true (adds rate-limit usage bars, needs python3)       |
-| `statusline basic`       | Call `buddy_statusline` with combined=false (buddy only, no rate-limit bars)                 |
-| `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below)                           |
+```bash
+bun run cli/buddy.ts <command> [args]
+```
+
+Argument mapping (pass args positionally after the command):
+
+| Input                    | Dispatcher command                          |
+| ------------------------ | ------------------------------------------- |
+| _(empty)_ or `show`      | `buddy.ts show`                             |
+| `help`                   | `buddy.ts help`                             |
+| `pet`                    | `buddy.ts pet`                             |
+| `stats`                  | `buddy.ts stats`                           |
+| `off` / `on`             | `buddy.ts off` / `buddy.ts on`             |
+| `mute` / `unmute`        | `buddy.ts mute` / `buddy.ts unmute`        |
+| `rename <name>`          | `buddy.ts rename <name>`                   |
+| `personality <text>`     | `buddy.ts personality <text>`             |
+| `achievements`           | `buddy.ts achievements`                    |
+| `xp`                     | `buddy.ts xp`                             |
+| `upgrades [id]`          | `buddy.ts upgrades [id]`                   |
+| `mood`                   | `buddy.ts mood`                           |
+| `memory`                 | `buddy.ts memory` (flags: `--project`, `--type`, `--resolved`, `--resolve-bug <id>`) |
+| `summon [slot]`          | `buddy.ts summon [slot]`                   |
+| `save [slot]`            | `buddy.ts save [slot]`                     |
+| `list`                   | `buddy.ts list`                           |
+| `dismiss <slot>`         | `buddy.ts dismiss <slot>`                 |
+| `skin [name]`            | `buddy.ts skin [name]`                    |
+| `frequency [seconds]`    | `buddy.ts frequency [seconds]`            |
+| `style [classic\|round]` | `buddy.ts style [classic\|round]`         |
+| `position [top\|left]`   | `buddy.ts position [top\|left]`           |
+| `rarity [on\|off]`       | `buddy.ts rarity [on\|off]`               |
+| `width <10-60>`          | `buddy.ts width <n>`                       |
+| `margin <0-20>`          | `buddy.ts margin <n>`                      |
+| `rainbow [#hex...\|reset]`| `buddy.ts rainbow [#hex...\|reset]`       |
+| `statusline [on\|off\|combined\|basic]` | `buddy.ts statusline [on\|off\|combined\|basic]` |
+| `theme [dark\|light\|auto]` | `buddy.ts theme [dark\|light\|auto]`   |
+| `pick`                   | Tell user to run `! bun run pick` (interactive TUI) |
+| `uninstall`              | Run the uninstall sequence (see **Uninstall Orchestration** below) |
+
+Only two things still use the model, and neither is a typed command:
+- **Name mention** — if the user says the buddy's name in normal conversation,
+  call `buddy_react` (reason `turn`) and display it verbatim. This reads the
+  conversation, so it stays an MCP tool.
+- **Proactive suggestions** — `buddy_suggest` on a teachable moment, and the
+  end-of-turn `<!-- buddy: -->` comment. These read your code/turn.
+
+If the MCP server is unavailable (see fallback above) the dispatcher still works
+— it does not depend on the MCP server, only on `bun`.
 
 ## CRITICAL OUTPUT RULES
 

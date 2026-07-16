@@ -402,7 +402,10 @@ const FACE_TEMPLATES: Record<Species, string> = {
 };
 
 export function renderFace(species: Species, eye: Eye): string {
-  return FACE_TEMPLATES[species].replace(/\{E\}/g, eye);
+  const { getCustomFace } =
+    require("./custom-art.ts") as typeof import("./custom-art.ts");
+  const tmpl = getCustomFace(species) ?? FACE_TEMPLATES[species];
+  return (tmpl ?? "({E})").replace(/\{E\}/g, eye);
 }
 
 export function renderBuddy(bones: BuddyBones): string {
