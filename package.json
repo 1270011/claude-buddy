@@ -66,9 +66,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ramarivera/claude-buddy.git"
+    "url": "git+https://github.com/ramarivera/coding-buddy.git"
   },
-  "homepage": "https://github.com/ramarivera/claude-buddy#readme",
+  "homepage": "https://github.com/ramarivera/coding-buddy#readme",
   "license": "MIT",
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",

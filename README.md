@@ -13,9 +13,9 @@
 <!-- BADGES                                                        -->
 <!-- ============================================================ -->
 
-[![Version](https://img.shields.io/github/v/release/1270011/claude-buddy?style=flat-square&color=6366f1)](https://github.com/1270011/claude-buddy/releases)
-[![License](https://img.shields.io/github/license/1270011/claude-buddy?style=flat-square&color=10b981)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/1270011/claude-buddy?style=flat-square&color=f59e0b)](https://github.com/1270011/claude-buddy/stargazers)
+[![Version](https://img.shields.io/github/v/release/ramarivera/coding-buddy?style=flat-square&color=6366f1)](https://github.com/ramarivera/coding-buddy/releases)
+[![License](https://img.shields.io/github/license/ramarivera/coding-buddy?style=flat-square&color=10b981)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/ramarivera/coding-buddy?style=flat-square&color=f59e0b)](https://github.com/ramarivera/coding-buddy/stargazers)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.80%2B-8b5cf6?style=flat-square)](https://claude.ai/code)
 [![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macOS-blue?style=flat-square)](#requirements)
 [![MCP](https://img.shields.io/badge/powered%20by-MCP-ec4899?style=flat-square)](https://modelcontextprotocol.io)
@@ -124,7 +124,7 @@ OMP registers the package's native extension and stores companion state under `~
 ### From source
 
 ```bash
-git clone https://github.com/1270011/claude-buddy coding-buddy
+git clone https://github.com/ramarivera/coding-buddy coding-buddy
 cd coding-buddy
 bun install
 bun run install-buddy
@@ -389,7 +389,7 @@ jq '.mcpServers["claude-buddy"]' ~/.claude.json
 Known MVP issue on some terminal/platform combos — different terminals render Braille Pattern Blank (U+2800) at different widths.
 
 To help us fix it:
-1. Run `bun run doctor` and paste output in a [new issue](https://github.com/1270011/claude-buddy/issues/new)
+1. Run `bun run doctor` and paste output in a [new issue](https://github.com/ramarivera/coding-buddy/issues/new)
 2. Run `bun run test-statusline` and screenshot the result
 3. Then `bun run test-statusline restore`
 
@@ -443,15 +443,15 @@ bun run uninstall           # full clean removal
 
 Thank you to everyone who helped bring buddies back to life.
 
-<a href="https://github.com/1270011/claude-buddy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=1270011/claude-buddy" alt="Contributors" />
+<a href="https://github.com/ramarivera/coding-buddy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ramarivera/coding-buddy" alt="Contributors" />
 </a>
 
-<sub>Automatically generated from the [contributors graph](https://github.com/1270011/claude-buddy/graphs/contributors) via [contrib.rocks](https://contrib.rocks).</sub>
+<sub>Automatically generated from the [contributors graph](https://github.com/ramarivera/coding-buddy/graphs/contributors) via [contrib.rocks](https://contrib.rocks).</sub>
 
 <br>
 
-Want to help? New species, better reactions, bugfixes, wild new features — [PRs welcome](https://github.com/1270011/claude-buddy/pulls).
+Want to help? New species, better reactions, bugfixes, wild new features — [PRs welcome](https://github.com/ramarivera/coding-buddy/pulls).
 
 <br>
 

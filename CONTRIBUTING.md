@@ -8,7 +8,7 @@ you need: setup, DCO sign-off, tests, and what happens when you open a PR.
 ## Quick Setup
 
 ```bash
-git clone https://github.com/1270011/claude-buddy.git coding-buddy
+git clone https://github.com/ramarivera/coding-buddy.git coding-buddy
 cd coding-buddy
 bun install
 bun run install-buddy
