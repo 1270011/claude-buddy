@@ -42,9 +42,20 @@ export const STATE_DIR = buddyStateDir();
 const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
 const CONFIG_FILE = join(STATE_DIR, "config.json");
 
-// ─── Session ID (PR #6: tmux session isolation) ─────────────────────────────
+// ─── Session ID (Claude Code session isolation, tmux pane fallback) ─────────
+//
+// Precedence:
+//   1. $CLAUDE_CODE_SESSION_ID — Claude Code sets a UUID per session and
+//      propagates it to the MCP server, hooks, and statusline. Shortened
+//      to first 8 chars to keep filenames readable.
+//   2. $TMUX_PANE — legacy tmux-pane isolation kept as a fallback.
+//   3. "default" — single-session world.
+//
+// Must match the bash equivalent in scripts/paths.sh.
 
 function sessionId(): string {
+  const ccSid = process.env.CLAUDE_CODE_SESSION_ID;
+  if (ccSid && ccSid.length > 0) return ccSid.slice(0, 8);
   const pane = process.env.TMUX_PANE;
   if (!pane) return "default";
   return pane.replace(/^%/, "");
@@ -416,7 +427,7 @@ export function writeStatusState(
     eye: companion.bones.eye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
-    reaction: reaction ?? "",
+    reaction: "",
     muted: muted ?? false,
     achievement: achievement ?? "",
     frames,
@@ -426,6 +437,7 @@ export function writeStatusState(
     mood: moodStr,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
+  if (reaction) saveReaction(reaction, "mcp");
 }
 
 // ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────

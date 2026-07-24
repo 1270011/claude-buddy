@@ -9,9 +9,8 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
 
 STATE_DIR="$BUDDY_STATE_DIR"
-# Session ID: sanitized tmux pane number, or "default" outside tmux
-SID="${TMUX_PANE#%}"
-SID="${SID:-default}"
+# Per-session ID resolved by paths.sh (CLAUDE_CODE_SESSION_ID > TMUX_PANE > default)
+SID="$BUDDY_SID"
 STATUS_FILE="$STATE_DIR/status.json"
 COOLDOWN_FILE="$STATE_DIR/.last_comment.$SID"
 CONFIG_FILE="$STATE_DIR/config.json"
@@ -47,11 +46,7 @@ fi
 mkdir -p "$STATE_DIR"
 date +%s > "$COOLDOWN_FILE"
 
-# Update status.json with the reaction
-TMP=$(mktemp)
-jq --arg r "$COMMENT" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
-
-# Also write reaction file (use jq for safe JSON encoding)
+# Write reaction to per-session file (read by the statusline via $SID)
 jq -n --arg r "$COMMENT" --arg ts "$(date +%s)000" \
   '{reaction: $r, timestamp: ($ts | tonumber), reason: "turn"}' \
   > "$STATE_DIR/reaction.$SID.json"

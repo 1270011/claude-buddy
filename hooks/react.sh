@@ -4,9 +4,8 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
 
 STATE_DIR="$BUDDY_STATE_DIR"
-# Session ID: sanitized tmux pane number, or "default" outside tmux
-SID="${TMUX_PANE#%}"
-SID="${SID:-default}"
+# Per-session ID resolved by paths.sh (CLAUDE_CODE_SESSION_ID > TMUX_PANE > default)
+SID="$BUDDY_SID"
 REACTION_FILE="$STATE_DIR/reaction.$SID.json"
 STATUS_FILE="$STATE_DIR/status.json"
 COOLDOWN_FILE="$STATE_DIR/.last_reaction.$SID"
@@ -1309,9 +1308,6 @@ if [ -n "$REASON" ] && [ -n "$REACTION" ]; then
     jq -n --arg r "$REACTION" --arg ts "$(date +%s)000" --arg reason "$REASON" \
       '{reaction: $r, timestamp: ($ts | tonumber), reason: $reason}' \
       > "$REACTION_FILE"
-
-    TMP=$(mktemp)
-    jq --arg r "$REACTION" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
 
     if command -v jq >/dev/null 2>&1; then
         XP_EVENT=""

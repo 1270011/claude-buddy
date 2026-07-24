@@ -8,9 +8,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
 
 STATE_DIR="$BUDDY_STATE_DIR"
 STATUS_FILE="$STATE_DIR/status.json"
-# Session ID: sanitized tmux pane number, or "default" outside tmux
-SID="${TMUX_PANE#%}"
-SID="${SID:-default}"
+# Per-session ID resolved by paths.sh (CLAUDE_CODE_SESSION_ID > TMUX_PANE > default)
+SID="$BUDDY_SID"
 
 [ -f "$STATUS_FILE" ] || exit 0
 
