@@ -11,19 +11,17 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { join, resolve, dirname } from "path";
 
-import {
-  generateBones,
-  generatePersonality,
-  renderFace,
-  SPECIES,
-  RARITIES,
-  STAT_NAMES,
-  RARITY_STARS,
-  type Species,
-  type Rarity,
-  type StatName,
-  type Companion,
-} from "./engine";
+import { generateBones,
+generatePersonality,
+renderFace,
+SPECIES,
+RARITIES,
+STAT_NAMES,
+RARITY_STARS,
+type Species,
+type Rarity,
+type StatName,
+type Companion, } from "../core/engine.ts"
 import {
   loadCompanion,
   saveCompanion,
@@ -50,9 +48,7 @@ import {
   claudeConfigDir,
   claudeSettingsPath,
 } from "./path";
-import {
-  getReaction, generatePersonalityPrompt,
-} from "./reactions";
+import { getReaction, generatePersonalityPrompt, } from "../core/reactions.ts"
 import { renderCompanionCardMarkdown } from "./art";
 import {
   incrementEvent, checkAndAward, trackActiveDay,

@@ -12,5 +12,13 @@
     "moduleDetection": "force",
     "jsx": "react-jsx"
   },
-  "include": ["server/**/*.ts", "cli/**/*.ts", "cli/**/*.tsx"]
+  "include": [
+    "server/**/*.ts",
+    "cli/**/*.ts",
+    "cli/**/*.tsx",
+    "core/**/*.ts",
+    "adapters/**/*.ts",
+    ".pi/**/*.ts",
+    ".omp/**/*.ts"
+  ]
 }

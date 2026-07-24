@@ -9,7 +9,7 @@ import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
-import { SPECIES, type BuddyBones } from "./engine.ts";
+import { SPECIES, type BuddyBones } from "../core/engine.ts"
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {

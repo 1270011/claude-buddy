@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post-install check: verify bun is available.
- * bun is required to run TypeScript files in this package.
+ * Post-install check: warn if bun is unavailable.
+ * Installation must succeed for Node-only Pi/OMP consumers; Claude-only commands
+ * will diagnose bun at runtime.
  */
 
 const { spawn } = require("child_process");
@@ -39,6 +40,7 @@ function checkBun() {
 
 checkBun().then((ok) => {
   if (!ok) {
-    process.exit(1);
+    console.warn("Install completed, but bun is required to run Claude-only commands.");
   }
+  process.exit(0);
 });

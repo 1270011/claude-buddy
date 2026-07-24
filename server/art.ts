@@ -6,7 +6,7 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "./engine.ts";
+import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "../core/engine.ts"
 import { getRarityColor } from "./theme.ts";
 
 // ─── Species art: 3 frames × 5 lines each ──────────────────────────────────

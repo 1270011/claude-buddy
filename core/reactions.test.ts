@@ -3,6 +3,7 @@ import {
   getReaction,
   generateFallbackName,
   generatePersonalityPrompt,
+  isNameMentioned,
 } from "./reactions.ts";
 import { SPECIES, RARITIES, STAT_NAMES } from "./engine.ts";
 
@@ -350,5 +351,34 @@ describe("generatePersonalityPrompt", () => {
     for (const n of STAT_NAMES) {
       expect(prompt).toContain(`${n}:50`);
     }
+  });
+});
+
+describe("isNameMentioned", () => {
+  test("matches names delimited by punctuation, spaces, or string boundaries", () => {
+    expect(isNameMentioned("hello Ember!", "Ember")).toBe(true);
+    expect(isNameMentioned("Ember, can you help?", "Ember")).toBe(true);
+    expect(isNameMentioned("good to see you, Ember.", "Ember")).toBe(true);
+    expect(isNameMentioned("@Ember", "Ember")).toBe(true);
+    expect(isNameMentioned(" Ember ", "Ember")).toBe(true);
+  });
+
+  test("matches names ending in punctuation or emoji", () => {
+    expect(isNameMentioned("I love C++", "C++")).toBe(true);
+    expect(isNameMentioned("C++ is great", "C++")).toBe(true);
+    expect(isNameMentioned("hi C++, how are you?", "C++")).toBe(true);
+    expect(isNameMentioned("Blinky✨ did it", "Blinky✨")).toBe(true);
+    expect(isNameMentioned("Blinky✨", "Blinky✨")).toBe(true);
+  });
+
+  test("is case-insensitive", () => {
+    expect(isNameMentioned("Hello EMBER", "Ember")).toBe(true);
+    expect(isNameMentioned("ember", "Ember")).toBe(true);
+  });
+
+  test("does not match inside larger words or adjacent word chars", () => {
+    expect(isNameMentioned("Emberish", "Ember")).toBe(false);
+    expect(isNameMentioned("notEmber", "Ember")).toBe(false);
+    expect(isNameMentioned("Ember2", "Ember")).toBe(false);
   });
 });

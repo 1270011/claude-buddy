@@ -30,7 +30,7 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import type { Companion } from "./engine.ts";
+import type { Companion } from "../core/engine.ts"
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -105,7 +105,7 @@ export function slugify(name: string): string {
  */
 export function unusedName(): string {
   const { generateFallbackName } =
-    require("./reactions.ts") as typeof import("./reactions.ts");
+    require("../core/reactions.ts") as typeof import("../core/reactions.ts");
   const taken = new Set(Object.keys(loadManifest().companions));
   for (let i = 0; i < 50; i++) {
     const n = generateFallbackName();
@@ -386,7 +386,7 @@ export function writeStatusState(
 ): void {
   mkdirSync(STATE_DIR, { recursive: true });
   const { renderFace, RARITY_STARS } =
-    require("./engine.ts") as typeof import("./engine.ts");
+    require("../core/engine.ts") as typeof import("../core/engine.ts");
   const { getStatusFrames } =
     require("./art.ts") as typeof import("./art.ts");
   const { frames, frameSequence } = getStatusFrames(companion.bones);
