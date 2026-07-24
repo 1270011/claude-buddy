@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # buddy-comment Stop hook
-# Extracts hidden buddy comment from Claude's response.
-# Claude writes: <!-- buddy: *adjusts tophat* nice code -->
-# This hook extracts it and updates the status line bubble.
-# The HTML comment is invisible in rendered markdown output.
+# Extracts the buddy reaction from Claude's response and updates the status line.
+#
+# Primary path: Claude writes <!-- buddy: *winks* nice code --> and this hook
+# extracts it. This relies on HTML comments being invisible in rendered output.
+#
+# Fallback path: Claude Code v2.1.169+ renders HTML comments visibly. When no
+# comment is found, turn-reaction.ts generates a reaction from the turn pool so
+# the status line still updates without polluting the chat output.
 
 # shellcheck source=../scripts/paths.sh
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
@@ -35,6 +39,14 @@ MSG=$(echo "$INPUT" | jq -r '.last_assistant_message // ""' 2>/dev/null)
 
 # Extract <!-- buddy: ... --> comment (portable, no grep -P)
 COMMENT=$(echo "$MSG" | sed -n 's/.*<!-- *buddy: *\(.*[^ ]\) *-->.*/\1/p' | tail -1)
+
+# Fallback: generate a reaction via the hook when no comment is found.
+# Handles Claude Code v2.1.169+ which renders HTML comments visibly.
+if [ -z "$COMMENT" ] && [ -x "$(command -v bun)" ]; then
+    PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    COMMENT=$(bun run "$PLUGIN_ROOT/server/turn-reaction.ts" 2>/dev/null)
+fi
+
 [ -z "$COMMENT" ] && exit 0
 
 # Cooldown: configurable (default 30s)
