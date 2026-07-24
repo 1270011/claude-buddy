@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
@@ -257,5 +257,44 @@ describe("cross-process locking", () => {
     const identity = storage.ensureStableIdentity();
     expect(new Set(outputs).size).toBe(1);
     expect(outputs[0]).toBe(identity);
+  });
+  test("lock acquisition cleans up unique temp files after contention", async () => {
+    const parent = mkdtempSync(join(tmpdir(), "buddy-lock-cleanup-"));
+    temporaryDirectories.push(parent);
+    const stateDir = join(parent, "state");
+    mkdirSync(stateDir, { recursive: true });
+
+    const workerPath = join(parent, "cleanup-worker.ts");
+    const workerCode = `import { FileBuddyStorage } from "${join(import.meta.dir, "file-storage.ts")}";\n` +
+      "const stateDir = process.argv[2];\n" +
+      "const count = Number(process.argv[3]);\n" +
+      "const storage = new FileBuddyStorage(stateDir);\n" +
+      "for (let i = 0; i < count; i++) storage.increment(\"commands_run\");\n";
+    writeFileSync(workerPath, workerCode, "utf8");
+
+    const workers = 4;
+    const increments = 25;
+    const children: Promise<void>[] = [];
+    for (let i = 0; i < workers; i++) {
+      children.push(
+        new Promise<void>((resolve, reject) => {
+          const child = spawn("bun", ["run", workerPath, stateDir, String(increments)], {
+            stdio: "ignore",
+          });
+          child.on("exit", (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`Worker exited with code ${code}`));
+          });
+          child.on("error", reject);
+        }),
+      );
+    }
+    await Promise.all(children);
+
+    const storage = new FileBuddyStorage(stateDir);
+    expect(storage.loadCounters().commands_run).toBe(workers * increments);
+
+    const leftovers = readdirSync(stateDir).filter((name) => name.startsWith(".lock-"));
+    expect(leftovers).toEqual([]);
   });
 });

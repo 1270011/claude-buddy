@@ -407,4 +407,125 @@ describe("OMP turn-comment adaptation", () => {
     expect(first).toBe("*takes note* core/engine.ts got the attention this turn.");
     expect(second).toBe(first);
   });
+  test("logs only bounded previews and lengths for long conversation and tool fields", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OpenAI model fixture.");
+    const longAssistant = "a".repeat(5000);
+    const longTool = "b".repeat(5000);
+    const longUser = "c".repeat(5000);
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: OmpBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const context = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model,
+      modelRegistry: {
+        find() {
+          return model;
+        },
+        async getApiKey() {
+          return "secret-key";
+        },
+        getProviderHeaders() {
+          return {};
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [
+            {
+              type: "message",
+              message: {
+                role: "user",
+                content: [{ type: "text", text: longUser }],
+              },
+            },
+          ];
+        },
+      },
+    } as unknown as OmpBuddyContext;
+
+    const completeTurnComment: TurnCommentCompleter = async () => ({
+      role: "assistant",
+      content: [{ type: "text", text: "*nods* done." }],
+      api: model.api,
+      provider: model.provider,
+      model: model.id,
+      usage: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 0,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      stopReason: "stop",
+      timestamp: 0,
+    });
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 2,
+      message: assistantMessage(longAssistant),
+      toolResults: [
+        {
+          role: "toolResult",
+          toolCallId: "tool-1",
+          toolName: "bash",
+          content: [{ type: "text", text: longTool }],
+          isError: false,
+          details: { exitCode: 0 },
+          timestamp: 0,
+        },
+      ],
+    } satisfies TurnEndEvent;
+
+    await generateTurnComment(
+      context,
+      completionCompanion,
+      event,
+      logger,
+      completeTurnComment,
+    );
+
+    const attempt = logs.find((l) => l.event === "turn_comment_llm_attempt");
+    expect(attempt).toBeDefined();
+    expect(attempt!.data.assistantText).toBeUndefined();
+    expect(attempt!.data.toolResultsText).toBeUndefined();
+    expect(attempt!.data.userText).toBeUndefined();
+    expect(attempt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
+    expect(attempt!.data.toolPreview).toBe(longTool.slice(0, 200));
+    expect(attempt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(attempt!.data.assistantLength).toBe(longAssistant.length);
+    expect(attempt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
+    expect(attempt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
+
+    const prompt = logs.find((l) => l.event === "turn_comment_llm_prompt");
+    expect(prompt).toBeDefined();
+    expect(prompt!.data.assistantText).toBeUndefined();
+    expect(prompt!.data.toolResultsText).toBeUndefined();
+    expect(prompt!.data.userText).toBeUndefined();
+    expect(prompt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
+    expect(prompt!.data.toolPreview).toBe(longTool.slice(0, 200));
+    expect(prompt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(prompt!.data.assistantLength).toBe(longAssistant.length);
+    expect(prompt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
+    expect(prompt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
+    if (typeof prompt!.data.systemPromptPreview === "string") {
+      expect(prompt!.data.systemPromptPreview.length).toBeLessThanOrEqual(800);
+    }
+    if (typeof prompt!.data.promptPreview === "string") {
+      expect(prompt!.data.promptPreview.length).toBeLessThanOrEqual(1200);
+    }
+
+    const resultLog = logs.find((l) => l.event === "turn_comment_llm_result");
+    expect(resultLog).toBeDefined();
+    expect(resultLog!.data.normalized).toBe("*nods* done.");
+  });
 });

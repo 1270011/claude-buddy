@@ -5,6 +5,7 @@ import {
 } from "./engine.ts";
 import { ACHIEVEMENTS, getUnlockedAchievements, type Achievement } from "./achievements.ts";
 import { generateFallbackName, getReaction } from "./reactions.ts";
+import { slugifySlot } from "./slot-slug.ts";
 import type {
   BuddyConfig,
   ReactionState,
@@ -110,7 +111,7 @@ export class BuddyCommandService {
 
     const userId = this.getStableUserId();
     const companion = this.createCompanion(userId);
-    const slot = slugify(companion.name);
+    const slot = slugifySlot(companion.name);
     this.deps.buddies.saveSlot(slot, companion);
     this.deps.buddies.saveActiveSlot(slot);
     const achievements = this.unlockAchievements(slot);
@@ -159,7 +160,7 @@ export class BuddyCommandService {
   saveBuddy(slot?: string): SaveBuddyResult {
     const { companion, slot: activeSlot } = this.ensureCompanion();
     if (slot?.trim()) {
-      const targetSlot = slugify(slot.trim());
+      const targetSlot = slugifySlot(slot.trim());
       if (targetSlot !== activeSlot && this.deps.buddies.loadSlot(targetSlot)) {
         throw new Error(`Slot "${targetSlot}" already exists.`);
       }
@@ -177,7 +178,7 @@ export class BuddyCommandService {
   }
 
   summonBuddy(slot?: string): SummonBuddyResult | null {
-    const targetSlot = slot ? slugify(slot) : undefined;
+    const targetSlot = slot ? slugifySlot(slot) : undefined;
 
     if (!targetSlot) {
       const companions = this.deps.buddies.listSlots();
@@ -195,7 +196,7 @@ export class BuddyCommandService {
   }
 
   dismissBuddy(slot: string): SaveBuddyResult {
-    const targetSlot = slugify(slot);
+    const targetSlot = slugifySlot(slot);
     const activeSlot = this.getActiveSlot();
     if (targetSlot === activeSlot) {
       throw new Error("Cannot dismiss the active buddy.");
@@ -256,10 +257,10 @@ export class BuddyCommandService {
     const { companion, slot } = this.ensureCompanion();
     return this.saveCustomReaction(trimmed, reason, companion, slot, scope);
   }
-
   incrementCommandsRun(): Achievement[] {
-    this.deps.events.increment("commands_run", 1, this.getActiveSlotOrUndefined());
-    return this.unlockAchievements(this.getActiveSlotOrUndefined());
+    const slot = this.getActiveSlotOrUndefined();
+    this.deps.events.increment("commands_run", 1, slot);
+    return this.unlockAchievements(slot);
   }
 
   getAchievementProgress(slot?: string): {
@@ -314,7 +315,7 @@ export class BuddyCommandService {
     const taken = new Set(this.deps.buddies.listSlots().map(({ slot }) => slot));
     for (let i = 0; i < 50; i++) {
       const candidate = generateFallbackName();
-      if (!taken.has(slugify(candidate))) return candidate;
+      if (!taken.has(slugifySlot(candidate))) return candidate;
     }
 
     let suffix = 0;
@@ -378,15 +379,4 @@ export class BuddyCommandService {
 
     return newlyUnlocked;
   }
-}
-
-function slugify(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 14) || "buddy"
-  );
 }

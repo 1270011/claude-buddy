@@ -46,6 +46,7 @@ class FakeIdentity implements IdentityProvider {
 class FakeBuddies implements BuddyRepository {
   activeSlot: string | null = null;
   companions = new Map<string, Companion>();
+  loadActiveSlotCalls = 0;
 
   loadActive(): Companion | null {
     return this.activeSlot ? this.companions.get(this.activeSlot) ?? null : null;
@@ -74,6 +75,7 @@ class FakeBuddies implements BuddyRepository {
   }
 
   loadActiveSlot(): string | null {
+    this.loadActiveSlotCalls++;
     return this.activeSlot;
   }
 
@@ -281,5 +283,15 @@ describe("BuddyCommandService", () => {
 
     expect(dismissed.slot).toBe("backup");
     expect(buddies.loadSlot("backup")).toBeNull();
+  });
+  test("incrementCommandsRun caches the active slot once", () => {
+    const { service, buddies, events } = makeService();
+    service.ensureCompanion();
+    buddies.loadActiveSlotCalls = 0;
+
+    service.incrementCommandsRun();
+
+    expect(buddies.loadActiveSlotCalls).toBe(1);
+    expect(events.global.commands_run).toBe(1);
   });
 });

@@ -17,13 +17,18 @@ import { getNameReaction, getSuccessReaction, isNameMentioned } from "../../core
 import { PiBuddyStorage } from "./storage.ts";
 import { buildBuddyReactionPrompt, buildBuddyReactionSystemPrompt, normalizeBuddyComment, stripBuddyComments } from "./prompt.ts";
 import { PiBuddyUI } from "./ui.ts";
-import { PiBuddyLogger } from "./logger.ts";
 
+export interface PiBuddyLog {
+  info(event: string, data?: Record<string, unknown>): void;
+  warn(event: string, data?: Record<string, unknown>): void;
+  error(event: string, data?: Record<string, unknown>): void;
+  debug(event: string, data?: Record<string, unknown>): void;
+}
 interface RegisterBuddyEventsDeps {
   service: BuddyCommandService;
   storage: PiBuddyStorage;
   ui: PiBuddyUI;
-  logger: PiBuddyLogger;
+  logger: PiBuddyLog;
 }
 
 export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsDeps): void {
@@ -128,7 +133,14 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
       return;
     }
 
-    const generated = await generateTurnComment(ctx, progress.companion, event, deps.logger);
+    const generated = await generateTurnComment(
+      ctx,
+      progress.companion,
+      event,
+      deps.logger,
+      complete,
+      deps.storage.loadPiConfig().turnCommentModel,
+    );
     if (!generated.comment) {
       deps.logger.warn("turn_end_comment_missing", {
         assistantPreview: isAssistantMessage(event.message) ? getAssistantText(event.message).slice(0, 200) : "",
@@ -221,11 +233,18 @@ function getAssistantText(message: AssistantMessage): string {
     .join("\n");
 }
 
-async function generateTurnComment(
+type TurnCommentCompleter = (
+  model: Parameters<typeof complete>[0],
+  context: Parameters<typeof complete>[1],
+  options: Parameters<typeof complete>[2],
+) => Promise<AssistantMessage>;
+export async function generateTurnComment(
   ctx: ExtensionContext,
   companion: Companion,
   event: TurnEndEvent,
-  logger: PiBuddyLogger,
+  logger: PiBuddyLog,
+  completeTurnComment: TurnCommentCompleter = complete,
+  modelOverride?: BuddyTurnCommentModelConfig,
 ): Promise<{ comment: string | null; source: "llm" | "fallback" | "none" }> {
   const assistantText = isAssistantMessage(event.message) ? getAssistantText(event.message) : "";
   if (!assistantText.trim()) {
@@ -233,7 +252,7 @@ async function generateTurnComment(
     return { comment: null, source: "none" };
   }
 
-  const turnCommentModel = resolveTurnCommentModel(ctx, logger);
+  const turnCommentModel = resolveTurnCommentModel(ctx, logger, modelOverride);
   if (turnCommentModel) {
     const toolResultsText = getToolResultsText(event);
     const userText = getUserPromptText(ctx);
@@ -244,8 +263,10 @@ async function generateTurnComment(
       modelId: turnCommentModel.id,
       assistantPreview: assistantText.slice(0, 200),
       toolPreview: toolResultsText.slice(0, 200),
+      userTextPreview: userText.slice(0, 200),
       assistantLength: assistantText.length,
       toolLength: toolResultsText.length,
+      userTextLength: userText.length,
       promptLength: promptText.length,
       systemPromptLength: systemPrompt.length,
       toolResultCount: event.toolResults.length,
@@ -254,8 +275,11 @@ async function generateTurnComment(
       systemPromptPreview: systemPrompt.slice(0, 800),
       promptPreview: promptText.slice(0, 1200),
       userTextPreview: userText.slice(0, 200),
-      assistantText,
-      toolResultsText,
+      userTextLength: userText.length,
+      assistantPreview: assistantText.slice(0, 200),
+      assistantLength: assistantText.length,
+      toolPreview: toolResultsText.slice(0, 200),
+      toolLength: toolResultsText.length,
     });
     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(turnCommentModel);
     logger.debug("turn_comment_auth", {
@@ -271,7 +295,7 @@ async function generateTurnComment(
       };
 
       try {
-        const response = await complete(
+        const response = await completeTurnComment(
           turnCommentModel,
           {
             systemPrompt,
@@ -334,11 +358,10 @@ export interface PiTurnCommentModelContext {
 
 export function resolveTurnCommentModel(
   ctx: PiTurnCommentModelContext,
-  logger?: PiBuddyLogger,
+  logger?: PiBuddyLog,
   override?: BuddyTurnCommentModelConfig,
 ): NonNullable<PiTurnCommentModelContext["model"]> | null {
-  const configuredOverride = override ?? new PiBuddyStorage().loadPiConfig().turnCommentModel;
-  const activeOverride = configuredOverride;
+  const activeOverride = override;
   if (activeOverride?.provider && activeOverride.model) {
     const model = ctx.modelRegistry.find(activeOverride.provider, activeOverride.model);
     if (model) {

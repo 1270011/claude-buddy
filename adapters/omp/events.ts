@@ -265,8 +265,10 @@ export async function generateTurnComment(
       modelId: turnCommentModel.id,
       assistantPreview: assistantText.slice(0, 200),
       toolPreview: toolResultsText.slice(0, 200),
+      userTextPreview: userText.slice(0, 200),
       assistantLength: assistantText.length,
       toolLength: toolResultsText.length,
+      userTextLength: userText.length,
       promptLength: promptText.length,
       systemPromptLength: systemPrompt.length,
       toolResultCount: event.toolResults.length,
@@ -274,9 +276,12 @@ export async function generateTurnComment(
     logger.debug("turn_comment_llm_prompt", {
       systemPromptPreview: systemPrompt.slice(0, 800),
       promptPreview: promptText.slice(0, 1200),
-      userText,
-      assistantText,
-      toolResultsText,
+      userTextPreview: userText.slice(0, 200),
+      userTextLength: userText.length,
+      assistantPreview: assistantText.slice(0, 200),
+      assistantLength: assistantText.length,
+      toolPreview: toolResultsText.slice(0, 200),
+      toolLength: toolResultsText.length,
     });
     let apiKey: string | undefined;
     try {

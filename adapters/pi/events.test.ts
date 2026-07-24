@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   deriveTurnComment,
+  generateTurnComment,
   registerBuddyEvents,
   resolveTurnCommentModel,
+  type PiBuddyLog,
   type PiTurnCommentModelContext,
 } from "./events.ts";
 import { getNameReaction, getSuccessReaction } from "../../core/reactions.ts";
@@ -17,6 +19,7 @@ import type {
   InputEvent,
   SessionStartEvent,
   ToolResultEvent,
+  TurnEndEvent,
 } from "@mariozechner/pi-coding-agent";
 import { BuddyCommandService } from "../../core/command-service.ts";
 import { PiIdentityProvider } from "./identity.ts";
@@ -136,6 +139,159 @@ describe("resolveTurnCommentModel", () => {
       provider: "google",
       model: "does-not-exist",
     })).toMatchObject({ provider: sessionModel.provider, id: sessionModel.id });
+  });
+  test("uses configured model from a custom stateDir", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-model-config-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    storage.savePiConfig({ turnCommentModel: { provider: "openai", model: "custom-buddy-model" } });
+
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const ctx = {
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === "openai" && id === "custom-buddy-model" ? { ...model, id: "custom-buddy-model" } : undefined;
+        },
+      },
+    } as unknown as PiTurnCommentModelContext;
+
+    const configured = storage.loadPiConfig().turnCommentModel;
+    const result = resolveTurnCommentModel(ctx, undefined, configured);
+    expect(result).not.toBeNull();
+    expect(result).toMatchObject({ provider: "openai", id: "custom-buddy-model" });
+  });
+
+  test("explicit override takes precedence over session model", () => {
+    const sessionModel = getModels("openai-codex")[0];
+    const overrideModel = getModels("google")[0];
+    if (!sessionModel || !overrideModel) throw new Error("Expected Pi model fixtures.");
+    const ctx = {
+      model: sessionModel,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === overrideModel.provider && id === overrideModel.id ? overrideModel : undefined;
+        },
+      },
+    } satisfies PiTurnCommentModelContext;
+
+    expect(resolveTurnCommentModel(ctx, undefined, {
+      provider: overrideModel.provider,
+      model: overrideModel.id,
+    })).toMatchObject({ provider: overrideModel.provider, id: overrideModel.id });
+  });
+});
+describe("generateTurnComment", () => {
+  test("uses configured model override from custom stateDir and logs bounded previews", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-payload-config-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    storage.savePiConfig({ turnCommentModel: { provider: model.provider, model: model.id } });
+
+    const longAssistant = "a".repeat(5000);
+    const longTool = "b".repeat(5000);
+    const longUser = "c".repeat(5000);
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 1,
+      message: assistantMessage(longAssistant),
+      toolResults: [
+        {
+          role: "toolResult",
+          toolCallId: "tool-1",
+          toolName: "bash",
+          content: [{ type: "text", text: longTool }],
+          isError: false,
+          details: { exitCode: 0 },
+          timestamp: 0,
+        },
+      ],
+    } satisfies TurnEndEvent;
+
+    const branchEntry = {
+      type: "message",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: longUser }],
+      },
+    };
+
+    const ctx = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyAndHeaders() {
+          return { ok: true, apiKey: "secret-key", headers: {} };
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [branchEntry];
+        },
+      },
+    } as unknown as ExtensionContext;
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: PiBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const fakeComplete = async () => assistantMessage("*nods* done.");
+
+    const result = await generateTurnComment(
+      ctx,
+      companion,
+      event,
+      logger,
+      fakeComplete,
+      storage.loadPiConfig().turnCommentModel,
+    );
+
+    expect(result).toEqual({ comment: "*nods* done.", source: "llm" });
+
+    const attempt = logs.find((l) => l.event === "turn_comment_llm_attempt");
+    expect(attempt).toBeDefined();
+    expect(attempt!.data.assistantText).toBeUndefined();
+    expect(attempt!.data.toolResultsText).toBeUndefined();
+    expect(attempt!.data.userText).toBeUndefined();
+    expect(attempt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
+    expect(attempt!.data.toolPreview).toBe(longTool.slice(0, 200));
+    expect(attempt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(attempt!.data.assistantLength).toBe(longAssistant.length);
+    expect(attempt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
+    expect(attempt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
+
+    const prompt = logs.find((l) => l.event === "turn_comment_llm_prompt");
+    expect(prompt).toBeDefined();
+    expect(prompt!.data.assistantText).toBeUndefined();
+    expect(prompt!.data.toolResultsText).toBeUndefined();
+    expect(prompt!.data.userText).toBeUndefined();
+    expect(prompt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
+    expect(prompt!.data.toolPreview).toBe(longTool.slice(0, 200));
+    expect(prompt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(prompt!.data.assistantLength).toBe(longAssistant.length);
+    expect(prompt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
+    expect(prompt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
+    if (typeof prompt!.data.systemPromptPreview === "string") {
+      expect(prompt!.data.systemPromptPreview.length).toBeLessThanOrEqual(800);
+    }
+    if (typeof prompt!.data.promptPreview === "string") {
+      expect(prompt!.data.promptPreview.length).toBeLessThanOrEqual(1200);
+    }
+
+    const resultLog = logs.find((l) => l.event === "turn_comment_llm_result");
+    expect(resultLog).toBeDefined();
+    expect(resultLog!.data.normalized).toBe("*nods* done.");
   });
 });
 

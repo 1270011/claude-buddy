@@ -133,13 +133,7 @@ export class FileBuddyStorage
         } finally {
           closeSync(fd);
         }
-        try {
-          linkSync(uniqueFile, lockFile);
-        } finally {
-          try {
-            unlinkSync(uniqueFile);
-          } catch {}
-        }
+        linkSync(uniqueFile, lockFile);
         this.heldLock = { depth: 1, token };
         return;
       } catch (err) {
@@ -152,6 +146,12 @@ export class FileBuddyStorage
           continue;
         }
         throw err;
+      } finally {
+        if (uniqueFile) {
+          try {
+            unlinkSync(uniqueFile);
+          } catch {}
+        }
       }
     }
     throw new Error(`Could not acquire buddy lock for ${this.stateDir}`);
@@ -445,13 +445,4 @@ export class FileBuddyStorage
   }
 }
 
-export function slugifySlot(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 14) || "buddy"
-  );
-}
+export { slugifySlot } from "../../core/slot-slug.ts";
