@@ -1,7 +1,7 @@
 {
     "name": "coding-buddy",
     "owner": {
-        "name": "1270011"
+        "name": "ramarivera"
     },
     "metadata": {
         "description": "Persistent coding companion for Claude Code, Pi, and Oh My Pi (requires bun: https://bun.sh/install)",
@@ -14,10 +14,10 @@
             "description": "Persistent coding companion for Claude Code, Pi, and Oh My Pi. MCP-based terminal pet with ASCII art, stats, reactions, and personality. Requires bun runtime (https://bun.sh/install).",
             "version": "0.6.0",
             "author": {
-                "name": "1270011"
+                "name": "ramarivera"
             },
-            "homepage": "https://github.com/1270011/claude-buddy#readme",
-            "repository": "https://github.com/1270011/claude-buddy",
+            "homepage": "https://github.com/ramarivera/coding-buddy#readme",
+            "repository": "https://github.com/ramarivera/coding-buddy",
             "license": "MIT",
             "keywords": [
                 "coding-buddy",
