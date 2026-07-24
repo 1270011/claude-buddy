@@ -14,7 +14,7 @@
     ]
   },
   "bin": {
-    "coding-buddy": "./cli/index.ts"
+    "coding-buddy": "cli/index.ts"
   },
   "scripts": {
     "postinstall": "node scripts/postinstall.cjs",
@@ -66,7 +66,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/1270011/claude-buddy.git"
+    "url": "git+https://github.com/1270011/claude-buddy.git"
   },
   "homepage": "https://github.com/1270011/claude-buddy#readme",
   "license": "MIT",
@@ -103,9 +103,17 @@
     "@oh-my-pi/pi-coding-agent": "17.0.9"
   },
   "peerDependenciesMeta": {
-    "@mariozechner/pi-coding-agent": { "optional": true },
-    "@oh-my-pi/pi-agent-core": { "optional": true },
-    "@oh-my-pi/pi-ai": { "optional": true },
-    "@oh-my-pi/pi-coding-agent": { "optional": true }
+    "@mariozechner/pi-coding-agent": {
+      "optional": true
+    },
+    "@oh-my-pi/pi-agent-core": {
+      "optional": true
+    },
+    "@oh-my-pi/pi-ai": {
+      "optional": true
+    },
+    "@oh-my-pi/pi-coding-agent": {
+      "optional": true
+    }
   }
 }
