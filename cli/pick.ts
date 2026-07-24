@@ -353,7 +353,7 @@ async function runSearch(s: State): Promise<void> {
 
   // Scale attempt budget to rarity difficulty
   const maxAttempts =
-    wantRa === "legendary" ? 200_000_000 :
+    wantRa === "legendary" ? 10_000_000_000 :
     wantRa === "epic"      ?  50_000_000 :
     wantRa === "rare"      ?  20_000_000 : 10_000_000;
 

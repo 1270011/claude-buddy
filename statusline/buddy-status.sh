@@ -221,7 +221,13 @@ for line in "${ART_LINES[@]}"; do
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
 
-ART_W=14
+case "$SPECIES" in
+  axolotl|capybara|rabbit|mushroom|chonk) ART_W=10 ;;
+  duck|blob|cat|dragon|robot|wyvern)      ART_W=9  ;;
+  octopus|owl|turtle|snail|ghost|cactus)  ART_W=8  ;;
+  goose|penguin)                          ART_W=7  ;;
+  *)                                      ART_W=10 ;;
+esac
 ART_COUNT=${#ALL_LINES[@]}
 
 # ─── Speech bubble (left of art, word-wrapped) ──────────────────────────────
