@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Path resolvers for claude-buddy shell scripts.
+# Path resolvers for coding-buddy shell scripts.
 #
 # Must stay in sync with server/path.ts. Source this file early:
 #   source "$(dirname "$0")/../scripts/paths.sh"

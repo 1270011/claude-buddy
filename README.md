@@ -4,11 +4,10 @@
 <!-- LOGO / HERO                                                  -->
 <!-- Later replace with: docs/logo.png                            -->
 <!-- ============================================================ -->
-<img src="https://placehold.co/120x120/6366f1/ffffff?text=%F0%9F%A6%89" alt="claude-buddy logo" width="120" />
+<img src="https://placehold.co/120x120/6366f1/ffffff?text=%F0%9F%A6%89" alt="coding-buddy logo" width="120" />
 
-# Claude Code Buddy
-
-### Your Claude Code buddy — permanently. Survives every update.
+# Coding Buddy
+### Your persistent coding companion — for Claude Code, Pi, and Oh My Pi. Survives every update.
 
 <!-- ============================================================ -->
 <!-- BADGES                                                        -->
@@ -27,7 +26,7 @@
 
 <br>
 
-<img src="docs/hero.gif" alt="claude-buddy in action" width="800" />
+<img src="docs/hero.gif" alt="coding-buddy in action" width="800" />
 
 <br><br>
 
@@ -72,43 +71,77 @@
 <!-- QUICK START                                                  -->
 <!-- ============================================================ -->
 
+<!-- ============================================================ -->
+<!-- CONTINUITY / MIGRATION                                      -->
+<!-- ============================================================ -->
+
+## 📦 Continuity / Migration
+
+The `claude-buddy` package ended at **v0.5.2**.  
+**`@ramarivera/coding-buddy` begins at v0.6.0** and is its continuation.
+
+- Your existing buddy identity, menagerie, stats, and unlocks remain fully compatible.
+- Legacy state and config identifiers (for example `~/.claude-buddy/`, `mcpServers["claude-buddy"]`) are intentionally preserved so current installs keep working without reconfiguration.
+
+<!-- ============================================================ -->
 ## 📋 Requirements
 
-- **[bun](https://bun.sh/install)** on `PATH` — claude-buddy's MCP server runs on bun. Install once: `curl -fsSL https://bun.sh/install | bash`
-- **Claude Code v2.1.80+**
+- **[bun](https://bun.sh/install)** on `PATH` — the MCP server and extension runtime require Bun. Install once: `curl -fsSL https://bun.sh/install | bash`
 - **Linux or macOS** (Windows is experimental)
+
+| Host | Minimum version | Identity source |
+|---|---|---|
+| **Claude Code** | v2.1.80+ | `accountUuid` from `~/.claude.json` |
+| **Pi** | `mariozechner/pi-coding-agent` workspace | Stable random UUID persisted in `~/.pi/agent/buddy/identity.json` |
+| **Oh My Pi (OMP)** | OMP harness with `omp.extensions` support | Stable random UUID persisted in `~/.omp/agent/buddy/identity.json` |
 
 ## 🚀 Quick Start
 
+### Claude Code
+
 ```bash
-git clone https://github.com/1270011/claude-buddy
-cd claude-buddy
+npx -y @ramarivera/coding-buddy
+```
+
+This installs the MCP server, skill, hooks, and status line. Restart Claude Code and type `/buddy`.
+
+### Pi
+
+```bash
+pi install npm:@ramarivera/coding-buddy
+```
+
+Pi registers the package's native extension and stores companion state under `~/.pi/agent/buddy`.
+
+### Oh My Pi
+
+```bash
+omp plugin install @ramarivera/coding-buddy
+```
+
+OMP registers the package's native extension and stores companion state under `~/.omp/agent/buddy`.
+
+### From source
+
+```bash
+git clone https://github.com/1270011/claude-buddy coding-buddy
+cd coding-buddy
 bun install
 bun run install-buddy
 ```
 
-Then restart Claude Code and type `/buddy`. That's it.
-
-<sub>💡 Want a global `claude-buddy` command? → `bun link`</sub>
+<sub>💡 Want a global `coding-buddy` command? → `bun link`</sub>
 <br>
-<sub>💡 Need help? → `bun run help` or `claude-buddy help` (if linked) in terminal · `/buddy help` in Claude Code</sub>
+<sub>💡 Need help? → `bun run help`, `npx -y @ramarivera/coding-buddy help`, or `coding-buddy help` (if linked) · `/buddy help` in Claude Code</sub>
 
-### Pi and Oh My Pi extensions
-
-This package also ships native coding-agent extensions:
-
-- **Pi:** `pi.extensions` loads `./adapters/pi/index.ts`; the checkout-local shim is `.pi/extensions/coding-buddy.ts`.
-- **Oh My Pi (OMP):** preferred `omp.extensions` metadata loads `./adapters/omp/index.ts`; the checkout-local shim is `.omp/extensions/coding-buddy.ts`.
-
-Both expose `/buddy`, native lifecycle reactions, and status/widget rendering without installing Claude hooks, tmux helpers, or popup machinery. Pi stores its state under `~/.pi/agent/buddy`; OMP uses the separate `~/.omp/agent/buddy` root.
 
 ### Multiple Claude profiles?
 
 If you run Claude Code with `CLAUDE_CONFIG_DIR` set (e.g. separate work and personal accounts), pass the same env var to install so buddy lands in the active profile and gets its own menagerie:
 
 ```bash
-CLAUDE_CONFIG_DIR=~/.claude-personal bun run install-buddy
-CLAUDE_CONFIG_DIR=~/.claude-personal bun run uninstall
+CLAUDE_CONFIG_DIR=~/.claude-personal npx -y @ramarivera/coding-buddy install
+CLAUDE_CONFIG_DIR=~/.claude-personal npx -y @ramarivera/coding-buddy uninstall
 ```
 
 The installer prints `Target profile: <path>` at the top so you can see at a glance which profile you're targeting. Each profile gets its own MCP entry, skill, hooks, status line, and `$CLAUDE_CONFIG_DIR/buddy-state/` menagerie — installs in one profile don't touch another. With `CLAUDE_CONFIG_DIR` unset, behaviour is identical to single-profile (`~/.claude/`, `~/.claude-buddy/`).
@@ -126,7 +159,7 @@ The installer prints `Target profile: <path>` at the top so you can see at a gla
 
 <br>
 
-Every buddy is uniquely generated from your Claude Code account — same species, same stats, same personality every time. 19 species, each with 3 idle animation frames + a blink.
+Every buddy is uniquely generated — same species, same stats, same personality every time. On **Claude Code** the seed is derived from your `accountUuid` in `~/.claude.json`; on **Pi** and **Oh My Pi** a stable random UUID is generated once and persisted in `~/.pi/agent/buddy/identity.json` or `~/.omp/agent/buddy/identity.json` (deleting the file and letting it regenerate will change your buddy). 19 species, each with 3 idle animation frames + a blink.
 
 <!-- Later replace with: docs/species-grid.png -->
 <p align="center">
@@ -180,7 +213,7 @@ High SNARK buddies are sarcastic. High WISDOM ones are insightful. High CHAOS on
 
 <br>
 
-Five integration points, zero binary dependencies. When Claude Code updates, your buddy stays.
+Five integration points, zero binary dependencies. When Claude Code, Pi, or Oh My Pi updates, your buddy stays.
 
 ```
 ┌────────────── Claude Code (any version) ──────────────┐
@@ -190,7 +223,7 @@ Five integration points, zero binary dependencies. When Claude Code updates, you
 └───────────────────────┬────────────────────────────────┘
                         │ stable extension points
              ┌──────────┴──────────┐
-             │    claude-buddy     │
+             │    coding-buddy     │
              │                     │
              │  wyhash + mulberry32│
              │  18 species, 3 anim │
@@ -212,14 +245,14 @@ Five integration points, zero binary dependencies. When Claude Code updates, you
 |---|:---:|:---:|:---:|---|
 | Binary patching | ❌ | ❌ | ❌ | Breaks on update |
 | Pin old version | ❌ | ✅ | ✅ | No security fixes |
-| **claude-buddy** | **✅** | **✅** | **✅** | **None** |
+| **coding-buddy** | **✅** | **✅** | **✅** | **None** |
 
 MCP is an industry-standard protocol. Skills are Markdown files. Hooks and status line are shell scripts. Nothing depends on Claude Code's binary internals.
 
 ### Repository Layout
 
 ```
-claude-buddy/
+coding-buddy/
 ├── server/          # MCP server — tools, engine, art, reactions, state
 ├── skills/buddy/    # /buddy slash command
 ├── hooks/           # PostToolUse + Stop hooks (error & comment detection)
@@ -250,7 +283,7 @@ claude-buddy/
 | `/buddy save [slot]` | Save current buddy to a named slot |
 | `/buddy list` | List all saved buddies |
 | `/buddy dismiss <slot>` | Remove a saved buddy slot |
-| `/buddy pick` | Launch interactive TUI picker (`! bun run pick`) |
+| `/buddy pick` | Launch interactive TUI picker (`! npx -y @ramarivera/coding-buddy pick`) |
 | `/buddy frequency [seconds]` | Show or set comment cooldown |
 | `/buddy style [classic\|round]` | Bubble border style (tmux only) |
 | `/buddy position [top\|left]` | Bubble position (tmux only) |
@@ -263,10 +296,13 @@ claude-buddy/
 | `/buddy help` | Show all buddy commands |
 
 ### CLI
+You can run any command with `npx -y @ramarivera/coding-buddy <command>` from anywhere, or `bun run <script>` from a local clone.
+
 
 | Command | Description |
 |---|---|
 | `bun run install-buddy` | Automated setup |
+| `bun run upgrade` | Pull latest version and reinstall integrations |
 | `bun run show` | Show buddy in terminal |
 | `bun run pick` | Interactive TUI to find and save your dream buddy |
 | `bun run hunt` | Legacy search (use `pick` instead) |
@@ -277,16 +313,16 @@ claude-buddy/
 | `bun run disable` | Temporarily deactivate buddy |
 | `bun run enable` | Re-enable buddy |
 | `bun run help` | Full CLI reference |
-| `bun run cli/uninstall.ts` | Clean removal |
+| `bun run uninstall` | Clean removal |
 
-<sub>💡 Want a global `claude-buddy` command? → `cd claude-buddy && bun link`</sub>
+<sub>💡 Want a global `coding-buddy` command? → `cd coding-buddy && bun link`</sub>
 
 ### 🎯 Buddy Pick
 
 Want a specific species, rarity, or stat distribution?
 
 ```bash
-bun run pick
+npx -y @ramarivera/coding-buddy pick
 ```
 
 Interactive TUI with saved buddies, criteria search, vim keys, and two-pane preview. Uses the exact same `wyhash + mulberry32` algorithm as Claude Code.
@@ -300,7 +336,7 @@ Interactive TUI with saved buddies, criteria search, vim keys, and two-pane prev
 
 <br>
 
-claude-buddy ships with built-in diagnostics for debugging across terminals and platforms.
+coding-buddy ships with built-in diagnostics for debugging across terminals and platforms.
 
 ### `bun run doctor`
 Complete diagnostic — environment, terminal info, state, settings, padding test, live status line output. **Always run this first when filing a bug report.**
@@ -315,7 +351,7 @@ bun run test-statusline restore  # restore buddy
 ```
 
 ### `bun run backup`
-Snapshot all claude-buddy state to a timestamped backup. Use before experiments.
+Snapshot all coding-buddy state to a timestamped backup. Use before experiments.
 
 ```bash
 bun run backup              # create snapshot
@@ -342,7 +378,7 @@ bun run backup restore <ts> # restore specific
 
 ### Buddy comments not showing
 
-The buddy comment mechanism uses an MCP server `instructions` field that Claude only reads at **session start**. If you installed claude-buddy in an existing session, restart Claude Code.
+The buddy comment mechanism uses an MCP server `instructions` field that Claude only reads at **session start**. If you installed coding-buddy in an existing session, restart Claude Code.
 
 ```bash
 jq '.mcpServers["claude-buddy"]' ~/.claude.json
@@ -361,7 +397,7 @@ To help us fix it:
 
 ```bash
 bun run backup restore      # restore latest backup
-bun run cli/uninstall.ts    # full clean removal
+bun run uninstall           # full clean removal
 ```
 
 </details>
@@ -379,7 +415,7 @@ bun run cli/uninstall.ts    # full clean removal
 | **Claude Code** v2.1.80+ | Any version with MCP support |
 | **jq** | `apt install jq` / `brew install jq` / [`windows: download and add 'jq.exe' from jqlang/jq to path`](https://github.com/jqlang/jq/releases/latest)|
 
-> **Will I get the same buddy I had?** Yes. claude-buddy uses the exact same algorithm as the original (`wyhash + mulberry32`, same salt, same identity resolution). If your `~/.claude.json` still has your `accountUuid`, you'll get the identical species, rarity, stats, and cosmetics.
+> **Will I get the same buddy I had?** Yes. coding-buddy uses the exact same algorithm as the original (`wyhash + mulberry32`, same salt, same identity resolution). For Claude Code, if your `~/.claude.json` still has your `accountUuid`, you'll get the identical species, rarity, stats, and cosmetics. For Pi/OMP, keep `~/.pi/agent/buddy/identity.json` or `~/.omp/agent/buddy/identity.json`; the same stable UUID produces the same buddy. Resetting (deleting) that identity file generates a new random UUID and changes your buddy.
 
 </details>
 
@@ -397,7 +433,7 @@ bun run cli/uninstall.ts    # full clean removal
 - [x] **Achievement badges** — "1000 lines reviewed", "week streak", etc. 💜[ndcorder](https://github.com/ndcorder)💜
 - [ ] **Light theme colors** — auto-detect and match light theme RGB
 - [x] **New species + community art** — wyvern added 💜[@jpmalone0](https://github.com/jpmalone0)💜 (community contributions welcome)
-- [ ] **`npx claude-buddy`** — one-command install without cloning
+- [ ] **`npx -y @ramarivera/coding-buddy <command>`** — one-command usage without cloning
 
 <br>
 

@@ -16,7 +16,7 @@ const value = args[1];
 if (!key) {
   const cfg = loadConfig();
   console.log(`
-  claude-buddy settings
+  coding-buddy settings
   ─────────────────────
   Comment cooldown:  ${cfg.commentCooldown}s    (0 = no throttling, default 30)
   Reaction TTL:      ${cfg.reactionTTL}s    (0 = permanent, default 0)

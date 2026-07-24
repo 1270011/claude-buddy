@@ -1,5 +1,5 @@
 /**
- * claude-buddy verify — show what buddy a user ID produces
+ * coding-buddy verify — show what buddy a user ID produces
  */
 
 import { generateBones, renderBuddy, STAT_NAMES } from "../core/engine.ts"

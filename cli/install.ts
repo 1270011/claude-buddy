@@ -1,5 +1,5 @@
 /**
- * claude-buddy installer
+ * coding-buddy installer
  *
  * Registers: MCP server (in Claude's user config), skill, hooks, status line
  * (in settings.json). All paths resolve via server/paths.ts, so the installer
@@ -39,7 +39,7 @@ const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 function banner() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy${NC} — permanent coding companion              ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}coding-buddy${NC} — permanent coding companion              ${CYAN}║${NC}
 ${CYAN}║${NC}  ${DIM}MCP + Skill + StatusLine + Hooks${NC}                        ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
@@ -194,7 +194,7 @@ function installHooks(settings: Record<string, any>) {
   // plus file-type specific reactions on Write/Edit.
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
   settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
   );
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
@@ -208,7 +208,7 @@ function installHooks(settings: Record<string, any>) {
   // Stop: extract <!-- buddy: --> comment from Claude's response
   if (!settings.hooks.Stop) settings.hooks.Stop = [];
   settings.hooks.Stop = settings.hooks.Stop.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
   );
   settings.hooks.Stop.push({
     hooks: [{ type: "command", command: toUnixPath(commentHook) }],
@@ -221,7 +221,7 @@ function installHooks(settings: Record<string, any>) {
   // reaction, plus mood-react based on prompt content.
   if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
   settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
   );
   settings.hooks.UserPromptSubmit.push({
     hooks: [{ type: "command", command: toUnixPath(nameHook) }],
@@ -292,7 +292,7 @@ if (!preflight()) {
 }
 
 console.log("");
-info("Installing claude-buddy...\n");
+info("Installing coding-buddy...\n");
 
 const settings = loadSettings();
 

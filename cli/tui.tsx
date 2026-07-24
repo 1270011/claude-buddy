@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * cli/tui.tsx — fullscreen 3-pane dashboard for claude-buddy (Ink/React)
+ * cli/tui.tsx — fullscreen 3-pane dashboard for coding-buddy (Ink/React)
  *
  * Layout: persistent sidebar | content list | detail preview
  * The sidebar is always visible. Selecting a section opens the
@@ -139,7 +139,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     key: "backup", icon: "💾", label: "Backup",
     description: [
       "Create and browse snapshots of your",
-      "claude-buddy state — settings, hooks,",
+      "coding-buddy state — settings, hooks,",
       "skill, menagerie, status, and config.",
       "",
       "Restore is currently manual (copy from",
@@ -149,7 +149,7 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   {
     key: "system", icon: "🚨", label: "System",
     description: [
-      "Manage claude-buddy's installation:",
+      "Manage coding-buddy's installation:",
       "",
       "• Re-Enable — runs install-buddy",
       "• Disable  — keeps data, removes MCP",
@@ -167,7 +167,7 @@ function Sidebar({ cursor, section, focus }: {
   const isFocused = focus === "sidebar";
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Text bold color="cyan">{" 🐢 claude-buddy"}</Text>
+      <Text bold color="cyan">{" 🐢 coding-buddy"}</Text>
       <Text>{""}</Text>
       {SIDEBAR_ITEMS.map((item, i) => {
         const isActive = item.key === section && focus !== "sidebar";
@@ -784,7 +784,7 @@ function BackupDetailPane({ backups, cursor }: {
         <Text bold color="cyan">➕ Create Backup</Text>
         <Text>{""}</Text>
         <Text dimColor>Creates a snapshot of all</Text>
-        <Text dimColor>claude-buddy state files:</Text>
+        <Text dimColor>coding-buddy state files:</Text>
         <Text>{""}</Text>
         <Text>{" "}• settings.json</Text>
         <Text>{" "}• MCP server config</Text>
@@ -946,7 +946,7 @@ function EnableDetailPane({ result, running }: {
   return (
     <Box flexDirection="column" paddingLeft={1}>
       <Text>{""}</Text>
-      <Text bold color="green">🔄 Re-Enable claude-buddy</Text>
+      <Text bold color="green">🔄 Re-Enable coding-buddy</Text>
       <Text>{""}</Text>
       <Text dimColor>This will register:</Text>
       <Text>{"  "}• MCP server in {CLAUDE_JSON}</Text>
@@ -1002,7 +1002,7 @@ function UninstallDetailPane({ stage, typed, result, keepState }: {
   return (
     <Box flexDirection="column" paddingLeft={1}>
       <Text>{""}</Text>
-      <Text bold color="red">💥 Uninstall claude-buddy</Text>
+      <Text bold color="red">💥 Uninstall coding-buddy</Text>
       <Text>{""}</Text>
       <Text color="yellow">⚠  This will remove:</Text>
       <Text>{"  "}• MCP server registration</Text>
@@ -1045,7 +1045,7 @@ function DisableConfirmPane({ result, confirming }: {
   return (
     <Box flexDirection="column" paddingLeft={1}>
       <Text>{""}</Text>
-      <Text bold color="red">☠ Disable claude-buddy</Text>
+      <Text bold color="red">☠ Disable coding-buddy</Text>
       <Text>{""}</Text>
       <Text dimColor>This will remove:</Text>
       <Text>{"  "}• MCP server from {CLAUDE_JSON}</Text>
@@ -1107,7 +1107,7 @@ function disableBuddy(): DisableResult {
         if (settings.hooks[hookType]) {
           const before = settings.hooks[hookType].length;
           settings.hooks[hookType] = settings.hooks[hookType].filter(
-            (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+            (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
           );
           if (settings.hooks[hookType].length < before) changed = true;
           if (settings.hooks[hookType].length === 0) delete settings.hooks[hookType];
@@ -2294,7 +2294,7 @@ function App() {
   return (
     <Box flexDirection="column" height={rows}>
       <Box>
-        <Text color="cyan" bold>{"─ claude-buddy "}{"─".repeat(Math.max(0, cols - 17))}</Text>
+        <Text color="cyan" bold>{"─ coding-buddy "}{"─".repeat(Math.max(0, cols - 17))}</Text>
       </Box>
       <Box flexGrow={1}>
         <Box width={sidebarWidth} flexDirection="column" borderStyle="single" borderColor={focus === "sidebar" ? "cyan" : "gray"}>
@@ -2326,7 +2326,7 @@ function App() {
 // ─── Entry ──────────────────────────────────────────────────────────────────
 
 if (!process.stdin.isTTY) {
-  console.error("claude-buddy tui requires an interactive terminal (TTY)");
+  console.error("coding-buddy tui requires an interactive terminal (TTY)");
   process.exit(1);
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# claude-buddy status line — animated, right-aligned multi-line companion
+# coding-buddy status line — animated, right-aligned multi-line companion
 #
 # Art rendering: the server (writeStatusState in server/state.ts) pre-bakes
 # every frame with eye, hat overlay, and blink resolved, and writes them into

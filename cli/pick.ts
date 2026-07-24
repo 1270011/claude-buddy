@@ -296,7 +296,7 @@ function drawScreen(s: State): void {
   let out = "\x1b[2J\x1b[H"; // clear + home
 
   // Title bar
-  const title    = ` claude-buddy pick `;
+  const title    = ` coding-buddy pick `;
   const fill     = "─".repeat(Math.max(0, cols - title.length - 2));
   out += `${CY}─${B}${title}${N}${CY}${fill}─${N}\n`;
 
