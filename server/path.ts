@@ -4,7 +4,7 @@
 //   1. Path normalization (Windows compat) — toUnixPath().
 //   2. Resolution of Claude Code config / state paths — claudeConfigDir,
 //      claudeSettingsPath, claudeSkillDir, claudeUserConfigPath, buddyStateDir.
-//      These honor CLAUDE_CONFIG_DIR so claude-buddy works with Claude Code's
+//      These honor CLAUDE_CONFIG_DIR so coding-buddy works with Claude Code's
 //      multi-account layout (one CLAUDE_CONFIG_DIR per profile).
 //
 // The shell counterpart of (2) lives in scripts/paths.sh and MUST stay in sync.

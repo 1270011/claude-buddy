@@ -1,5 +1,5 @@
 /**
- * claude-buddy engine — deterministic companion generation
+ * coding-buddy engine — deterministic companion generation
  * Matches Claude Code's exact algorithm: wyhash → mulberry32 → species/stats
  */
 

@@ -40,7 +40,7 @@ function getCurrentVersion(): string {
 function banner() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy upgrade${NC}                                    ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}coding-buddy upgrade${NC}                                    ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
 }
@@ -48,7 +48,7 @@ ${CYAN}╚═══════════════════════�
 function checkGitRepo(): boolean {
   const isRepo = tryExec("git rev-parse --is-inside-work-tree 2>/dev/null");
   if (isRepo !== "true") {
-    err("Not inside a git repository. Upgrade requires a git clone of claude-buddy.");
+    err("Not inside a git repository. Upgrade requires a git clone of coding-buddy.");
     return false;
   }
   return true;

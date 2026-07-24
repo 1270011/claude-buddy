@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# claude-buddy Stop hook — proactive suggestion detection
+# coding-buddy Stop hook — proactive suggestion detection
 # Detects coding patterns and offers suggestions when relevant.
 #
 # Combined with buddy-comment.sh to avoid running two separate Stop hooks.
