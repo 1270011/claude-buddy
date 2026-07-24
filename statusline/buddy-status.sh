@@ -38,7 +38,33 @@ ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 
-cat > /dev/null  # drain stdin
+INPUT=$(cat)  # capture Claude Code status JSON from stdin
+
+# ─── Token usage from transcript ─────────────────────────────────────────────
+TOKEN_LINE=""
+if [ -n "$INPUT" ]; then
+    TRANSCRIPT=$(printf '%s' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null)
+    MODEL_ID=$(printf '%s' "$INPUT" | jq -r '.model.id // ""' 2>/dev/null)
+    if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
+        # Last line of JSONL with a usage block — sum input + cache tokens = context size
+        USAGE=$(tac "$TRANSCRIPT" 2>/dev/null | grep -m1 '"usage"' || tail -r "$TRANSCRIPT" 2>/dev/null | grep -m1 '"usage"')
+        if [ -n "$USAGE" ]; then
+            IN=$(printf '%s' "$USAGE" | jq -r '..|.usage?|select(.)|.input_tokens // 0' 2>/dev/null | head -1)
+            CR=$(printf '%s' "$USAGE" | jq -r '..|.usage?|select(.)|.cache_read_input_tokens // 0' 2>/dev/null | head -1)
+            CC=$(printf '%s' "$USAGE" | jq -r '..|.usage?|select(.)|.cache_creation_input_tokens // 0' 2>/dev/null | head -1)
+            TOTAL=$(( ${IN:-0} + ${CR:-0} + ${CC:-0} ))
+            case "$MODEL_ID" in
+                *1m*|*"[1m]"*) LIMIT=1000000 ;;
+                *)             LIMIT=200000  ;;
+            esac
+            if [ "$TOTAL" -gt 0 ]; then
+                PCT=$(( TOTAL * 100 / LIMIT ))
+                DISPLAY=$(awk -v t="$TOTAL" 'BEGIN{ if(t>=1000) printf "%.1fk", t/1000; else printf "%d", t }')
+                TOKEN_LINE="${DISPLAY} ${PCT}%"
+            fi
+        fi
+    fi
+fi
 
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
@@ -220,6 +246,14 @@ for line in "${ART_LINES[@]}"; do
     _arc=$(( _arc + 1 ))
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
+
+if [ -n "$TOKEN_LINE" ]; then
+    TOKEN_LEN=${#TOKEN_LINE}
+    TOKEN_PAD=$(( ART_CENTER - TOKEN_LEN / 2 ))
+    [ "$TOKEN_PAD" -lt 0 ] && TOKEN_PAD=0
+    TOKEN_RENDER="$(printf '%*s%s' "$TOKEN_PAD" '' "$TOKEN_LINE")"
+    ALL_LINES+=("$TOKEN_RENDER"); ALL_COLORS+=("$DIM")
+fi
 
 ART_W=14
 ART_COUNT=${#ALL_LINES[@]}

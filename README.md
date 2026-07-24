@@ -235,7 +235,7 @@ Five integration points, zero binary dependencies. When Claude Code, Pi, or Oh M
 
 - **MCP Server** — companion tools + system prompt that instructs Claude to write buddy comments
 - **Skill** — routes `/buddy`, `/buddy pet`, `/buddy stats`, `/buddy off`, `/buddy rename`
-- **Status Line** — animated ASCII art, right-aligned, with rarity color and speech bubble
+- **Status Line** — animated ASCII art, right-aligned, with rarity color, speech bubble, and a context-token readout (e.g. `77.3k 7%`) below the name
 - **PostToolUse Hook** — detects errors, test failures, large diffs in Bash output
 - **Stop Hook** — extracts invisible `<!-- buddy: ... -->` comments from Claude's responses
 
