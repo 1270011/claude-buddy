@@ -1,9 +1,17 @@
+export function mergeAchievements(first: Achievement[], second: Achievement[]): Achievement[] {
+  const merged = new Map<string, Achievement>();
+  for (const achievement of [...first, ...second]) {
+    merged.set(achievement.id, achievement);
+  }
+  return [...merged.values()];
+}
+
 import {
   generateBones,
   RARITY_STARS,
   type Companion,
 } from "./engine.ts";
-import { ACHIEVEMENTS, getUnlockedAchievements, type Achievement } from "./achievements.ts";
+import { ACHIEVEMENTS, getCreationAchievements, getUnlockedAchievements, type Achievement } from "./achievements.ts";
 import { generateFallbackName, getReaction } from "./reactions.ts";
 import { slugifySlot } from "./slot-slug.ts";
 import type {
@@ -87,49 +95,24 @@ export class BuddyCommandService {
   }
 
   ensureCompanion(): EnsureCompanionResult {
-    const active = this.deps.buddies.loadActive();
-    if (active) {
-      return {
-        companion: active,
-        slot: this.getActiveSlot(),
-        created: false,
-        achievements: [],
-      };
-    }
-
-    const saved = this.deps.buddies.listSlots();
-    if (saved.length > 0) {
-      const rescued = saved[0];
-      this.deps.buddies.saveActiveSlot(rescued.slot);
-      return {
-        companion: rescued.companion,
-        slot: rescued.slot,
-        created: false,
-        achievements: [],
-      };
-    }
-
     const userId = this.getStableUserId();
-    const companion = this.createCompanion(userId);
-    const slot = slugifySlot(companion.name);
-    this.deps.buddies.saveSlot(slot, companion);
-    this.deps.buddies.saveActiveSlot(slot);
-    const achievements = this.unlockAchievements(slot);
-
-    return { companion, slot, created: true, achievements };
+    const { companion, slot, created } = this.deps.buddies.ensureCompanion(
+      userId,
+      (existingSlots) => this.createCompanion(userId, existingSlots),
+    );
+    const achievements = created
+      ? this.deps.events.unlockAchievements(slot, getCreationAchievements)
+      : [];
+    return { companion, slot, created, achievements };
   }
+
   startSession(): EnsureCompanionResult {
     const result = this.ensureCompanion();
     this.deps.events.trackActiveDay();
     this.deps.events.increment("sessions", 1);
-    const sessionAchievements = this.unlockAchievements(result.slot);
+    const sessionAchievements = this.unlockNewAchievements(result.slot);
 
-    const merged = new Map<string, Achievement>();
-    for (const achievement of [...result.achievements, ...sessionAchievements]) {
-      merged.set(achievement.id, achievement);
-    }
-
-    return { ...result, achievements: [...merged.values()] };
+    return { ...result, achievements: mergeAchievements(result.achievements, sessionAchievements) };
   }
 
 
@@ -142,19 +125,21 @@ export class BuddyCommandService {
   renameBuddy(name: string): Companion {
     const trimmed = name.trim();
     if (!trimmed) throw new Error("Buddy name cannot be empty.");
-    const { companion } = this.ensureCompanion();
-    const updated: Companion = { ...companion, name: trimmed.slice(0, 14) };
-    this.deps.buddies.saveActive(updated);
-    return updated;
+    this.ensureCompanion();
+    return this.deps.buddies.updateActive((companion) => ({
+      ...companion,
+      name: trimmed.slice(0, 14),
+    }));
   }
 
   setPersonality(personality: string): Companion {
     const trimmed = personality.trim();
     if (!trimmed) throw new Error("Buddy personality cannot be empty.");
-    const { companion } = this.ensureCompanion();
-    const updated: Companion = { ...companion, personality: trimmed };
-    this.deps.buddies.saveActive(updated);
-    return updated;
+    this.ensureCompanion();
+    return this.deps.buddies.updateActive((companion) => ({
+      ...companion,
+      personality: trimmed,
+    }));
   }
 
   saveBuddy(slot?: string): SaveBuddyResult {
@@ -233,6 +218,23 @@ export class BuddyCommandService {
     this.deps.events.increment("large_diffs", 1);
     return this.saveReaction("large-diff", companion, slot, scope, { lines });
   }
+  trackToolError(scope?: string, line?: number): Achievement[] {
+    const { slot } = this.ensureCompanion();
+    this.deps.events.increment("errors_seen", 1, slot);
+    return this.unlockNewAchievements(slot);
+  }
+
+  trackTestFailure(scope?: string, count?: number): Achievement[] {
+    const { slot } = this.ensureCompanion();
+    this.deps.events.increment("tests_failed", 1, slot);
+    return this.unlockNewAchievements(slot);
+  }
+
+  trackLargeDiff(lines: number, scope?: string): Achievement[] {
+    const { slot } = this.ensureCompanion();
+    this.deps.events.increment("large_diffs", 1, slot);
+    return this.unlockNewAchievements(slot);
+  }
 
   recordTurn(scope?: string): ReactionResult {
     const { companion, slot } = this.ensureCompanion();
@@ -243,7 +245,7 @@ export class BuddyCommandService {
   recordTurnOnly(): ProgressResult {
     const { companion, slot } = this.ensureCompanion();
     this.deps.events.increment("turns", 1);
-    const achievements = this.unlockAchievements(slot);
+    const achievements = this.unlockNewAchievements(slot);
     return { companion, slot, achievements };
   }
 
@@ -260,7 +262,7 @@ export class BuddyCommandService {
   incrementCommandsRun(): Achievement[] {
     const slot = this.getActiveSlotOrUndefined();
     this.deps.events.increment("commands_run", 1, slot);
-    return this.unlockAchievements(slot);
+    return this.unlockNewAchievements(slot);
   }
 
   getAchievementProgress(slot?: string): {
@@ -299,20 +301,27 @@ export class BuddyCommandService {
     return slot || undefined;
   }
 
-  private createCompanion(userId: string): Companion {
+  private createCompanion(
+    userId: string,
+    existingSlots: string[],
+  ): { companion: Companion; slot: string } {
     const bones = generateBones(userId);
-    const name = this.generateUnusedName();
+    const name = this.generateUnusedName(existingSlots);
+    const slot = slugifySlot(name);
     return {
-      bones,
-      name,
-      personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
-      hatchedAt: Date.now(),
-      userId,
+      companion: {
+        bones,
+        name,
+        personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
+        hatchedAt: Date.now(),
+        userId,
+      },
+      slot,
     };
   }
 
-  private generateUnusedName(): string {
-    const taken = new Set(this.deps.buddies.listSlots().map(({ slot }) => slot));
+  private generateUnusedName(existingSlots: string[]): string {
+    const taken = new Set(existingSlots);
     for (let i = 0; i < 50; i++) {
       const candidate = generateFallbackName();
       if (!taken.has(slugifySlot(candidate))) return candidate;
@@ -354,29 +363,12 @@ export class BuddyCommandService {
     };
     this.deps.reactions.saveLatest(state, scope);
     this.deps.events.increment("reactions_given", 1, slot);
-    const achievements = this.unlockAchievements(slot);
+    const achievements = this.unlockNewAchievements(slot);
     return { companion, slot, reaction, state, achievements };
   }
 
-  private unlockAchievements(slot?: string): Achievement[] {
-    const unlocked = this.deps.events.loadUnlocked();
-    const unlockedIds = new Set(unlocked.map((entry) => entry.id));
-    const newlyUnlocked = getUnlockedAchievements(
-      this.deps.events.loadCounters(slot),
-      unlockedIds,
-    );
-
-    if (newlyUnlocked.length === 0) return [];
-
-    this.deps.events.saveUnlocked([
-      ...unlocked,
-      ...newlyUnlocked.map((achievement) => ({
-        id: achievement.id,
-        unlockedAt: Date.now(),
-        slot,
-      })),
-    ]);
-
-    return newlyUnlocked;
+  private unlockNewAchievements(slot?: string): Achievement[] {
+    return this.deps.events.unlockAchievements(slot, getUnlockedAchievements);
   }
+
 }

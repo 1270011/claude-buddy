@@ -5,6 +5,7 @@ import type {
   ReactionState,
   UnlockedAchievement,
 } from "./model.ts";
+import type { Achievement } from "./achievements.ts";
 
 export interface IdentityProvider {
   getStableUserId(): string;
@@ -13,12 +14,17 @@ export interface IdentityProvider {
 export interface BuddyRepository {
   loadActive(): Companion | null;
   saveActive(companion: Companion): void;
+  updateActive(transform: (companion: Companion) => Companion): Companion;
   loadSlot(slot: string): Companion | null;
   saveSlot(slot: string, companion: Companion): void;
   deleteSlot(slot: string): void;
   listSlots(): Array<{ slot: string; companion: Companion }>;
   loadActiveSlot(): string | null;
   saveActiveSlot(slot: string): void;
+  ensureCompanion(
+    userId: string,
+    create: (existingSlots: string[]) => { companion: Companion; slot: string },
+  ): { companion: Companion; slot: string; created: boolean };
 }
 
 export interface ReactionRepository {
@@ -37,4 +43,8 @@ export interface BuddyEventRepository {
   loadUnlocked(): UnlockedAchievement[];
   saveUnlocked(unlocked: UnlockedAchievement[]): void;
   trackActiveDay(): void;
+  unlockAchievements(
+    slot: string | undefined,
+    evaluate: (counters: EventCounters, unlockedIds: Set<string>) => Achievement[],
+  ): Achievement[];
 }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { BuddyCommandService } from "./command-service.ts";
-import { ACHIEVEMENTS } from "./achievements.ts";
+import { ACHIEVEMENTS, type Achievement } from "./achievements.ts";
+import { BuddyCommandService, mergeAchievements } from "./command-service.ts";
 import type {
   BuddyConfig,
   Companion,
@@ -66,6 +66,15 @@ class FakeBuddies implements BuddyRepository {
     this.companions.set(slot, companion);
   }
 
+  updateActive(transform: (companion: Companion) => Companion): Companion {
+    if (!this.activeSlot) throw new Error("No active slot");
+    const companion = this.companions.get(this.activeSlot);
+    if (!companion) throw new Error("No active companion");
+    const updated = transform(companion);
+    this.companions.set(this.activeSlot, updated);
+    return updated;
+  }
+
   deleteSlot(slot: string): void {
     this.companions.delete(slot);
   }
@@ -81,6 +90,26 @@ class FakeBuddies implements BuddyRepository {
 
   saveActiveSlot(slot: string): void {
     this.activeSlot = slot;
+  }
+
+  ensureCompanion(
+    _userId: string,
+    create: (existingSlots: string[]) => { companion: Companion; slot: string },
+  ): { companion: Companion; slot: string; created: boolean } {
+    const active = this.activeSlot ? this.companions.get(this.activeSlot) ?? null : null;
+    if (active && this.activeSlot) {
+      return { companion: active, slot: this.activeSlot, created: false };
+    }
+    const saved = this.listSlots();
+    if (saved.length > 0) {
+      const rescued = saved[0];
+      this.activeSlot = rescued.slot;
+      return { companion: rescued.companion, slot: rescued.slot, created: false };
+    }
+    const { companion, slot } = create([...this.companions.keys()]);
+    this.companions.set(slot, companion);
+    this.activeSlot = slot;
+    return { companion, slot, created: true };
   }
 }
 
@@ -144,6 +173,26 @@ class FakeEvents implements BuddyEventRepository {
   trackActiveDay(): void {
     this.activeDaysTracked += 1;
     this.global.days_active = this.activeDaysTracked;
+  }
+
+  unlockAchievements(
+    slot: string | undefined,
+    evaluate: (counters: EventCounters, unlockedIds: Set<string>) => Achievement[],
+  ): Achievement[] {
+    const counters = this.loadCounters(slot);
+    const unlockedIds = new Set(this.unlocked.map((entry) => entry.id));
+    const newlyUnlocked = evaluate(counters, unlockedIds);
+    if (newlyUnlocked.length > 0) {
+      this.unlocked = [
+        ...this.unlocked,
+        ...newlyUnlocked.map((achievement) => ({
+          id: achievement.id,
+          unlockedAt: Date.now(),
+          slot,
+        })),
+      ];
+    }
+    return newlyUnlocked;
   }
 }
 
@@ -284,14 +333,35 @@ describe("BuddyCommandService", () => {
     expect(dismissed.slot).toBe("backup");
     expect(buddies.loadSlot("backup")).toBeNull();
   });
-  test("incrementCommandsRun caches the active slot once", () => {
-    const { service, buddies, events } = makeService();
+  test("mergeAchievements deduplicates by id while preserving the latest entry", () => {
+    const first: Achievement = { id: "first_steps", name: "First", description: "first", icon: "🌟", check: () => true, secret: false };
+    const second: Achievement = { id: "power_user", name: "Power", description: "power", icon: "⚡", check: () => false, secret: false };
+    const updated: Achievement = { id: "first_steps", name: "First Updated", description: "first", icon: "🌟", check: () => true, secret: false };
+
+    const merged = mergeAchievements([first, second], [updated]);
+    expect(merged.map((a) => a.id)).toEqual(["first_steps", "power_user"]);
+    expect(merged.find((a) => a.id === "first_steps")?.name).toBe("First Updated");
+  });
+
+  test("incrementCommandsRun returns newly unlocked achievements", () => {
+    const { service, events } = makeService();
     service.ensureCompanion();
-    buddies.loadActiveSlotCalls = 0;
+    events.global.commands_run = 49;
 
-    service.incrementCommandsRun();
+    const result = service.incrementCommandsRun();
 
-    expect(buddies.loadActiveSlotCalls).toBe(1);
-    expect(events.global.commands_run).toBe(1);
+    expect(events.global.commands_run).toBe(50);
+    expect(result.some((a) => a.id === "power_user")).toBe(true);
+  });
+
+  test("startSession merges creation and session achievements", () => {
+    const { service, events } = makeService();
+    events.global.commands_run = 50;
+
+    const result = service.startSession();
+
+    expect(result.created).toBe(true);
+    expect(result.achievements.some((a) => a.id === "first_steps")).toBe(true);
+    expect(result.achievements.some((a) => a.id === "power_user")).toBe(true);
   });
 });

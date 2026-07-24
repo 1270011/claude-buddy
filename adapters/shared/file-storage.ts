@@ -1,11 +1,22 @@
 import { randomUUID } from "node:crypto";
-import { closeSync, existsSync, fsyncSync, linkSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, type Stats, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmdirSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   EMPTY_GLOBAL,
   EMPTY_SLOT,
   GLOBAL_KEYS,
   SLOT_KEYS,
+  type Achievement,
   type GlobalCounters,
   type SlotCounters,
 } from "../../core/achievements.ts";
@@ -69,6 +80,13 @@ function sleepMs(ms: number): void {
 }
 const LOCK_STALE_MS = 3000;
 
+class LockOwnershipError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LockOwnershipError";
+  }
+}
+
 function parseOwner(content: string): { pid?: number; token?: string } {
   const raw = content.trim();
   if (!raw) return {};
@@ -87,16 +105,16 @@ function parseOwner(content: string): { pid?: number; token?: string } {
   return Number.isFinite(pid) ? { pid } : {};
 }
 
-
 export class FileBuddyStorage
   implements BuddyRepository, ReactionRepository, BuddyConfigRepository, BuddyEventRepository
 {
-  private heldLock: { depth: number; token: string } | null = null;
-
   constructor(
     readonly stateDir: string,
     private readonly defaultConfig: FileBuddyConfig = DEFAULT_FILE_BUDDY_CONFIG,
   ) {}
+
+  private currentLockToken: string | null = null;
+
 
   private path(name: string): string {
     return join(this.stateDir, name);
@@ -110,138 +128,136 @@ export class FileBuddyStorage
     this.ensureDir();
     const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
     writeFileSync(temporaryPath, value, "utf8");
-    renameSync(temporaryPath, path);
-  }
-
-  private acquireLock(): void {
-    if (this.heldLock) {
-      this.heldLock.depth++;
-      return;
-    }
-    this.ensureDir();
-    const lockFile = this.path(".lock");
-    const start = Date.now();
-    while (Date.now() - start < 5000) {
-      const token = randomUUID();
-      const uniqueFile = this.path(`.lock-${process.pid}-${token}`);
-      try {
-        const owner = JSON.stringify({ pid: process.pid, token });
-        writeFileSync(uniqueFile, owner, { mode: 0o600, encoding: "utf8" });
-        const fd = openSync(uniqueFile, "r");
-        try {
-          fsyncSync(fd);
-        } finally {
-          closeSync(fd);
-        }
-        linkSync(uniqueFile, lockFile);
-        this.heldLock = { depth: 1, token };
-        return;
-      } catch (err) {
-        if (!isNodeError(err)) throw err;
-        if (err.code === "EEXIST" || err.code === "ENOTEMPTY" || err.code === "EISDIR" || err.code === "EPERM") {
-          if (this.isLockStale(lockFile)) {
-            this.removeLock(lockFile);
-          }
-          sleepMs(5);
-          continue;
-        }
-        throw err;
-      } finally {
-        if (uniqueFile) {
-          try {
-            unlinkSync(uniqueFile);
-          } catch {}
-        }
-      }
-    }
-    throw new Error(`Could not acquire buddy lock for ${this.stateDir}`);
-  }
-
-  private isLockStale(lockPath: string): boolean {
-    let info: Stats;
     try {
-      info = statSync(lockPath);
-    } catch {
-      return false;
+      if (this.currentLockToken) {
+        this.assertLockOwner();
+      }
+      renameSync(temporaryPath, path);
+    } catch (error) {
+      try {
+        rmSync(temporaryPath, { force: true });
+      } catch {
+        // Ignore cleanup failure.
+      }
+      throw error;
     }
-    const ownerPath = info.isDirectory() ? join(lockPath, "owner") : lockPath;
+  }
+
+  private lockDir(): string {
+    return this.path(".lock");
+  }
+
+  private assertLockOwner(): void {
+    const token = this.currentLockToken;
+    if (!token) {
+      throw new LockOwnershipError("No active lock for atomic commit.");
+    }
+    const ownerPath = join(this.lockDir(), "owner");
     let raw = "";
     try {
       raw = readFileSync(ownerPath, "utf8");
-    } catch (err) {
-      if (!isNodeError(err) || err.code !== "ENOENT") return false;
-      let mtime: Date;
-      try {
-        mtime = statSync(ownerPath).mtime;
-      } catch {
-        try {
-          mtime = info.mtime;
-        } catch {
-          return false;
-        }
-      }
-      return Date.now() - mtime.getTime() > LOCK_STALE_MS;
+    } catch {
+      throw new LockOwnershipError("Lock owner file missing during commit.");
     }
     const owner = parseOwner(raw);
-    const pid = owner.pid;
-    if (typeof pid !== "number" || pid <= 1 || !Number.isFinite(pid)) {
-      let mtime: Date;
+    if (owner.token !== token) {
+      throw new LockOwnershipError("Lock token mismatch during commit.");
+    }
+  }
+
+  private releaseLockIfOwner(): void {
+    const token = this.currentLockToken;
+    this.currentLockToken = null;
+    if (!token) return;
+    const lockDir = this.lockDir();
+    const ownerPath = join(lockDir, "owner");
+    try {
+      const owner = parseOwner(readFileSync(ownerPath, "utf8"));
+      if (owner.token !== token) {
+        return;
+      }
+      unlinkSync(ownerPath);
+      rmdirSync(lockDir);
+    } catch {
+      // Lock was already released or stolen; never remove someone else's lock.
+    }
+  }
+
+  private tryAcquireLock(): boolean {
+    const lockDir = this.lockDir();
+    const token = randomUUID();
+    try {
+      mkdirSync(lockDir, { mode: 0o700 });
+      writeFileSync(
+        join(lockDir, "owner"),
+        JSON.stringify({ pid: process.pid, token }),
+        { mode: 0o600 },
+      );
+      this.currentLockToken = token;
+      return true;
+    } catch (err) {
+      if (!isNodeError(err) || err.code !== "EEXIST") {
+        throw err;
+      }
+
+      let info;
       try {
-        mtime = statSync(ownerPath).mtime;
+        info = statSync(lockDir);
       } catch {
         return false;
       }
-      return Date.now() - mtime.getTime() > LOCK_STALE_MS;
-    }
-    try {
-      process.kill(pid, 0);
+
+      if (Date.now() - info.mtime.getTime() <= LOCK_STALE_MS) {
+        return false;
+      }
+
+      // The lock directory is stale. Try to atomically rename it into a unique
+      // quarantine path. Only one contender can win the rename; the rest see
+      // ENOENT and retry mkdir on the now-empty path.
+      const quarantine = `${lockDir}.quarantine-${process.pid}-${randomUUID()}`;
+      try {
+        renameSync(lockDir, quarantine);
+      } catch (renameErr) {
+        if (isNodeError(renameErr) && renameErr.code === "ENOENT") {
+          return false;
+        }
+        return false;
+      }
+
+      // We won the rename. The quarantine must be our stale lock; remove it
+      // and let the outer loop retry mkdir on the vacated lock path.
+      try {
+        rmSync(quarantine, { recursive: true, force: true });
+      } catch {
+        // Quarantine may contain leftover files; ignore cleanup failures.
+      }
       return false;
-    } catch (err) {
-      if (isNodeError(err) && err.code === "EPERM") return false;
-      return true;
     }
-  }
-
-  private removeLock(lockPath: string): void {
-    try {
-      const info = statSync(lockPath);
-      if (info.isDirectory()) {
-        rmSync(lockPath, { recursive: true, force: true });
-      } else {
-        unlinkSync(lockPath);
-      }
-    } catch {}
-  }
-
-  private releaseLock(): void {
-    if (!this.heldLock) return;
-    if (--this.heldLock.depth > 0) return;
-    const { token } = this.heldLock;
-    this.heldLock = null;
-    const lockFile = this.path(".lock");
-    let ownerPath = lockFile;
-    try {
-      const info = statSync(lockFile);
-      if (info.isDirectory()) {
-        ownerPath = join(lockFile, "owner");
-      }
-    } catch {
-      // Lock is already gone; nothing to release.
-      return;
-    }
-    try {
-      const owner = parseOwner(readFileSync(ownerPath, "utf8"));
-      if (owner.token && owner.token !== token) return;
-    } catch {
-      // Owner missing or unreadable; do not risk removing someone else's lock.
-      return;
-    }
-    this.removeLock(lockFile);
   }
 
   private withLock<T>(operation: () => T): T {
-    this.acquireLock();
-    try { return operation(); } finally { this.releaseLock(); }
+    this.ensureDir();
+    const start = Date.now();
+    let lastError: Error | undefined;
+
+    while (Date.now() - start < 5000) {
+      if (this.tryAcquireLock()) {
+        try {
+          return operation();
+        } catch (error) {
+          if (error instanceof LockOwnershipError) {
+            lastError = error;
+            continue;
+          }
+          throw error;
+        } finally {
+          this.releaseLockIfOwner();
+        }
+      }
+      sleepMs(5);
+    }
+
+    throw lastError ?? new Error(`Could not acquire buddy lock for ${this.stateDir}`);
   }
 
   private readJson<T extends object>(path: string, fallback: T): T {
@@ -281,6 +297,18 @@ export class FileBuddyStorage
       const manifest = this.loadManifest();
       manifest.companions[manifest.active] = companion;
       this.saveManifest(manifest);
+    });
+  }
+
+  updateActive(transform: (companion: Companion) => Companion): Companion {
+    return this.withLock(() => {
+      const manifest = this.loadManifest();
+      const active = manifest.companions[manifest.active];
+      if (!active) throw new Error("No active companion.");
+      const updated = transform(active);
+      manifest.companions[manifest.active] = updated;
+      this.saveManifest(manifest);
+      return updated;
     });
   }
 
@@ -326,6 +354,34 @@ export class FileBuddyStorage
       const manifest = this.loadManifest();
       manifest.active = slot;
       this.saveManifest(manifest);
+    });
+  }
+
+  ensureCompanion(
+    userId: string,
+    create: (existingSlots: string[]) => { companion: Companion; slot: string },
+  ): { companion: Companion; slot: string; created: boolean } {
+    return this.withLock(() => {
+      const manifest = this.loadManifest();
+      const active = manifest.companions[manifest.active];
+      if (active) {
+        return { companion: active, slot: manifest.active, created: false };
+      }
+
+      const slots = Object.entries(manifest.companions);
+      if (slots.length > 0) {
+        const [slot, companion] = slots[0];
+        manifest.active = slot;
+        this.saveManifest(manifest);
+        return { companion, slot, created: false };
+      }
+
+      const existingSlots = Object.keys(manifest.companions);
+      const { companion, slot } = create(existingSlots);
+      manifest.companions[slot] = companion;
+      manifest.active = slot;
+      this.saveManifest(manifest);
+      return { companion, slot, created: true };
     });
   }
 
@@ -406,6 +462,28 @@ export class FileBuddyStorage
 
   saveUnlocked(unlocked: UnlockedAchievement[]): void {
     this.atomicWrite(this.path("unlocked.json"), JSON.stringify(unlocked, null, 2));
+  }
+
+  unlockAchievements(
+    slot: string | undefined,
+    evaluate: (counters: EventCounters, unlockedIds: Set<string>) => Achievement[],
+  ): Achievement[] {
+    return this.withLock(() => {
+      const counters = this.loadCounters(slot);
+      const unlocked = this.loadUnlocked();
+      const unlockedIds = new Set(unlocked.map((entry) => entry.id));
+      const newlyUnlocked = evaluate(counters, unlockedIds);
+      if (newlyUnlocked.length === 0) return [];
+      this.saveUnlocked([
+        ...unlocked,
+        ...newlyUnlocked.map((achievement) => ({
+          id: achievement.id,
+          unlockedAt: Date.now(),
+          slot,
+        })),
+      ]);
+      return newlyUnlocked;
+    });
   }
 
   trackActiveDay(): void {

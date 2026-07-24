@@ -33,6 +33,7 @@ describe("Pi extension registration", () => {
     expect(commands).toEqual(["buddy"]);
     expect(events.sort()).toEqual([
       "input",
+      "session_shutdown",
       "session_start",
       "tool_result",
       "turn_end",

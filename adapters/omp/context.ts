@@ -8,6 +8,8 @@ export interface OmpBuddyUi {
 
 export interface OmpBuddyUiContext {
   ui: OmpBuddyUi;
+  setTimeout?: (callback: () => void, ms?: number) => Timer;
+  clearTimer?: (timer: Timer) => void;
 }
 
 export interface OmpBuddyContext extends OmpBuddyUiContext {

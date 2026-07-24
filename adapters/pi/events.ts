@@ -10,7 +10,7 @@ import type {
 import { isBashToolResult } from "@mariozechner/pi-coding-agent";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { complete, type AssistantMessage, type TextContent, type UserMessage } from "@mariozechner/pi-ai";
-import { BuddyCommandService } from "../../core/command-service.ts";
+import { BuddyCommandService, type ReactionResult } from "../../core/command-service.ts";
 import type { Achievement } from "../../core/achievements.ts";
 import type { BuddyTurnCommentModelConfig, Companion } from "../../core/model.ts";
 import { getNameReaction, getSuccessReaction, isNameMentioned } from "../../core/reactions.ts";
@@ -42,8 +42,8 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
     deps.ui.refresh(ctx, result.companion, deps.storage.loadLatest(), result.achievements);
     if (result.created) {
       ctx.ui.notify(`A new buddy hatched: ${result.companion.name}`, "info");
-      deps.ui.notifyAchievements(ctx, result.achievements);
     }
+    deps.ui.notifyAchievements(ctx, result.achievements);
   });
 
   pi.on("input", async (event: InputEvent, ctx: ExtensionContext): Promise<InputEventResult> => {
@@ -63,7 +63,7 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
     deps.logger.info("name_mention_detected", {
       companion: companion.name,
       species: companion.bones.species,
-      textPreview: event.text.slice(0, 160),
+      textLength: event.text.length,
     });
 
     const reaction = getNameReaction(companion.bones.species);
@@ -78,48 +78,68 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
       deps.logger.debug("tool_result_skipped", { reason: "muted" });
       return;
     }
-    if (!shouldEmitPassiveReaction(deps.storage)) {
-      deps.logger.debug("tool_result_skipped", { reason: "cooldown" });
-      return;
-    }
 
     const text = extractToolText(event);
-    let result:
-      | ReturnType<BuddyCommandService["recordToolError"]>
-      | ReturnType<BuddyCommandService["recordTestFailure"]>
-      | ReturnType<BuddyCommandService["recordLargeDiff"]>
-      | ReturnType<BuddyCommandService["recordComment"]>
-      | undefined;
-
+    const canEmit = shouldEmitPassiveReaction(deps.storage);
+    let result: ReactionResult | undefined;
     const companion = deps.service.ensureCompanion().companion;
     if (isBashToolResult(event)) {
       if (looksLikeTestFailure(text)) {
-        result = deps.service.recordTestFailure(undefined, extractFailureCount(text));
+        const count = extractFailureCount(text);
+        if (canEmit) {
+          result = deps.service.recordTestFailure(undefined, count);
+        } else {
+          const achievements = deps.service.trackTestFailure(undefined, count);
+          if (achievements.length > 0) { deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), achievements); }
+        }
       } else if (event.isError) {
-        result = deps.service.recordToolError(undefined, firstLineNumber(text));
+        const line = firstLineNumber(text);
+        if (canEmit) {
+          result = deps.service.recordToolError(undefined, line);
+        } else {
+          const achievements = deps.service.trackToolError(undefined, line);
+          if (achievements.length > 0) { deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), achievements); }
+        }
       } else {
         const diffLines = extractLargeDiffLines(text);
         if (diffLines >= 80) {
-          result = deps.service.recordLargeDiff(diffLines);
-        } else if (looksLikeSuccess(text)) {
+          if (canEmit) {
+            result = deps.service.recordLargeDiff(diffLines);
+          } else {
+            const achievements = deps.service.trackLargeDiff(diffLines);
+            if (achievements.length > 0) { deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), achievements); }
+          }
+        } else if (canEmit && looksLikeSuccess(text)) {
           result = deps.service.recordComment(getSuccessReaction(companion.bones.species), "turn");
         }
       }
     } else if (event.isError) {
-      result = deps.service.recordToolError(undefined, firstLineNumber(text));
+      const line = firstLineNumber(text);
+      if (canEmit) {
+        result = deps.service.recordToolError(undefined, line);
+      } else {
+        const achievements = deps.service.trackToolError(undefined, line);
+        if (achievements.length > 0) { deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), achievements); }
+      }
+    }
+
+    if (!canEmit) {
+      deps.logger.debug("tool_result_skipped", { reason: "cooldown" });
+      return;
     }
 
     if (!result) {
-      deps.logger.debug("tool_result_ignored", {
-        isError: event.isError,
-        textPreview: text.slice(0, 200),
-      });
+      const ignoredData: Record<string, unknown> = { isError: event.isError, textLength: text.length };
+      if (diagnosticPreviewsEnabled()) {
+        ignoredData.textPreview = text.slice(0, 200);
+      }
+      deps.logger.debug("tool_result_ignored", ignoredData);
       return;
     }
     deps.logger.info("tool_result_reaction", {
       reason: result.state.reason,
-      reaction: result.state.reaction,
-      textPreview: text.slice(0, 200),
+      reactionLength: result.state.reaction.length,
+      textLength: text.length,
     });
     deps.ui.refresh(ctx, result.companion, result.state, result.achievements);
     deps.ui.notifyAchievements(ctx, result.achievements);
@@ -142,16 +162,15 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
       deps.storage.loadPiConfig().turnCommentModel,
     );
     if (!generated.comment) {
-      deps.logger.warn("turn_end_comment_missing", {
-        assistantPreview: isAssistantMessage(event.message) ? getAssistantText(event.message).slice(0, 200) : "",
-      });
+      const assistantLength = isAssistantMessage(event.message) ? getAssistantText(event.message).length : 0;
+      deps.logger.warn("turn_end_comment_missing", { assistantLength });
       deps.ui.refresh(ctx, progress.companion, deps.storage.loadLatest(), progress.achievements);
       return;
     }
 
     deps.logger.info("turn_end_reaction", {
       source: generated.source,
-      reaction: generated.comment,
+      reactionLength: generated.comment.length,
     });
 
     const reaction = deps.service.recordComment(generated.comment, "turn");
@@ -159,6 +178,13 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
     deps.ui.refresh(ctx, reaction.companion, reaction.state, achievements);
     deps.ui.notifyAchievements(ctx, achievements);
   });
+  pi.on("session_shutdown", () => {
+    deps.ui.cancelTimers();
+  });
+}
+function diagnosticPreviewsEnabled(): boolean {
+  const value = process.env.BUDDY_DIAGNOSTIC_PREVIEWS;
+  return value === "1" || value === "true";
 }
 
 function shouldEmitPassiveReaction(storage: PiBuddyStorage): boolean {
@@ -182,8 +208,33 @@ function extractToolText(event: ToolResultEvent): string {
   return "";
 }
 
-function looksLikeTestFailure(text: string): boolean {
-  return /\b(?:[1-9][0-9]*\s+)?(?:tests?|specs?)\s+(?:failed|failing|did\s+not\s+pass)\b|(?:^|[\r\n])\s*FAIL(?:\s|$)|\bnot\s+ok\b|✗|✘/i.test(text);
+const EXPLICIT_FAILURE_PATTERN = /\b(?:[1-9][0-9]*\s+)?(?:tests?|specs?)\s+(?:failed|failing|did\s+not\s+pass)\b/i;
+
+function hasTestContext(line: string): boolean {
+  return /\b(?:bun\s+test|npm\s+test|yarn\s+test|pnpm\s+test|vitest|jest|mocha|ava|tap|pytest|cargo\s+test|go\s+test|dotnet\s+test|phpunit|rspec|test\s+suite|test\s+runner|tests?\s+(?:passed|failed|ok)|TAP\s*version|1\.\.\d+|#\s+(?:tests|pass|fail|todo|skip|ok))\b/i.test(line);
+}
+
+function isGenericFailureMarker(line: string): boolean {
+  return /^\s*(?:FAIL|not\s+ok|[✗✘×])\s*$/i.test(line) ||
+    /\b[✗✘×]\b/.test(line) ||
+    /(?:^|[\r\n])\s*FAIL(?:\s|$)/i.test(line) ||
+    /\bnot\s+ok\b/i.test(line);
+}
+
+export function looksLikeTestFailure(text: string): boolean {
+  if (EXPLICIT_FAILURE_PATTERN.test(text)) return true;
+
+  const lines = text.split(/\r?\n/);
+  const contextWindow: string[] = [];
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    contextWindow.push(line);
+    if (contextWindow.length > 3) contextWindow.shift();
+    if (isGenericFailureMarker(line) && contextWindow.some((contextLine) => hasTestContext(contextLine))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function looksLikeSuccess(text: string): boolean {
@@ -212,7 +263,6 @@ function firstLineNumber(text: string): number | undefined {
   const match = text.match(/line\s+(\d+)/i);
   return match ? Number(match[1]) : undefined;
 }
-
 
 function mergeAchievements(first: Achievement[], second: Achievement[]): Achievement[] {
   const merged = new Map<string, Achievement>();
@@ -261,9 +311,6 @@ export async function generateTurnComment(
     logger.info("turn_comment_llm_attempt", {
       modelProvider: turnCommentModel.provider,
       modelId: turnCommentModel.id,
-      assistantPreview: assistantText.slice(0, 200),
-      toolPreview: toolResultsText.slice(0, 200),
-      userTextPreview: userText.slice(0, 200),
       assistantLength: assistantText.length,
       toolLength: toolResultsText.length,
       userTextLength: userText.length,
@@ -271,16 +318,19 @@ export async function generateTurnComment(
       systemPromptLength: systemPrompt.length,
       toolResultCount: event.toolResults.length,
     });
-    logger.debug("turn_comment_llm_prompt", {
-      systemPromptPreview: systemPrompt.slice(0, 800),
-      promptPreview: promptText.slice(0, 1200),
-      userTextPreview: userText.slice(0, 200),
-      userTextLength: userText.length,
-      assistantPreview: assistantText.slice(0, 200),
+    const promptDebugData: Record<string, unknown> = {
       assistantLength: assistantText.length,
-      toolPreview: toolResultsText.slice(0, 200),
       toolLength: toolResultsText.length,
-    });
+      userTextLength: userText.length,
+    };
+    if (diagnosticPreviewsEnabled()) {
+      promptDebugData.systemPromptPreview = systemPrompt.slice(0, 800);
+      promptDebugData.promptPreview = promptText.slice(0, 1200);
+      promptDebugData.userTextPreview = userText.slice(0, 200);
+      promptDebugData.assistantPreview = assistantText.slice(0, 200);
+      promptDebugData.toolPreview = toolResultsText.slice(0, 200);
+    }
+    logger.debug("turn_comment_llm_prompt", promptDebugData);
     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(turnCommentModel);
     logger.debug("turn_comment_auth", {
       ok: auth.ok,
@@ -318,14 +368,11 @@ export async function generateTurnComment(
             errorMessage: "errorMessage" in response ? (response as { errorMessage?: string }).errorMessage : undefined,
             contentTypes: response.content.map((block) => block.type),
             contentCount: response.content.length,
-            rawPreview: text.slice(0, 200),
             rawLength: text.length,
-            normalized,
+            normalizedLength: normalized.length,
           });
           if (normalized) return { comment: normalized, source: "llm" };
-          logger.warn("turn_comment_llm_empty", {
-            rawPreview: text.slice(0, 200),
-          });
+          logger.warn("turn_comment_llm_empty", { rawLength: text.length });
         }
       } catch (error) {
         logger.error("turn_comment_llm_error", {
@@ -345,8 +392,8 @@ export async function generateTurnComment(
 
   const fallback = deriveTurnComment(companion, event.message);
   logger.warn("turn_comment_fallback", {
-    fallback,
-    assistantPreview: assistantText.slice(0, 200),
+    fallbackLength: fallback?.length ?? 0,
+    assistantLength: assistantText.length,
   });
   return { comment: fallback, source: fallback ? "fallback" : "none" };
 }

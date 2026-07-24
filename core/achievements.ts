@@ -171,10 +171,20 @@ export function getUnlockedAchievements(
 ): Achievement[] {
   const newlyUnlocked: Achievement[] = [];
   for (const ach of ACHIEVEMENTS) {
+    if (ach.id === "first_steps") continue;
     if (unlockedIds.has(ach.id)) continue;
     if (ach.check(events)) newlyUnlocked.push(ach);
   }
   return newlyUnlocked;
+}
+
+export function getCreationAchievements(
+  _events: EventCounters,
+  unlockedIds: Set<string>,
+): Achievement[] {
+  if (unlockedIds.has("first_steps")) return [];
+  const first = ACHIEVEMENTS.find((ach) => ach.id === "first_steps");
+  return first ? [first] : [];
 }
 
 export function isAchievementUnlocked(

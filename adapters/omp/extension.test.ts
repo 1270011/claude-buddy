@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type {
   BashToolResultEvent,
   ExtensionAPI,
+  SessionStartEvent,
   ToolResultEvent,
   TurnEndEvent,
 } from "@oh-my-pi/pi-coding-agent";
@@ -16,12 +17,12 @@ import {
   deriveTurnComment,
   generateTurnComment,
   isOmpBashToolResult,
+  looksLikeTestFailure,
   type OmpBuddyLog,
   type TurnCommentCompleter,
 } from "./events.ts";
-import type { OmpBuddyContext, OmpBuddyUiContext } from "./context.ts";
 import { OmpBuddyStorage } from "./storage.ts";
-
+import type { OmpBuddyContext, OmpBuddyUiContext } from "./context.ts";
 const temporaryDirectories: string[] = [];
 
 afterEach(() => {
@@ -127,6 +128,7 @@ describe("OMP extension behavior", () => {
     expect([...harness.commands.keys()]).toEqual(["buddy"]);
     expect([...harness.handlers.keys()].sort()).toEqual([
       "input",
+      "session_shutdown",
       "session_start",
       "tool_result",
       "turn_end",
@@ -291,6 +293,32 @@ describe("OMP extension behavior", () => {
     expect(storage.loadCounters().errors_seen).toBe(1);
     expect(storage.loadCounters().tests_failed).toBe(0);
   });
+  test("still updates counters on cooldown without saving a passive reaction", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-cooldown-counters-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new OmpBuddyStorage(stateDir);
+    storage.saveConfig({ commentCooldown: 60 });
+    storage.saveLatest({ reaction: "*stays quiet*", reason: "turn", timestamp: Date.now() });
+    const harness = createHarness(stateDir);
+
+    await emit(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, harness.context);
+
+    const bashResult: BashToolResultEvent = {
+      type: "tool_result",
+      toolCallId: "tool-cooldown",
+      toolName: "bash",
+      input: { command: "bun test" },
+      content: [{ type: "text", text: "2 tests failed" }],
+      isError: true,
+      details: { exitCode: 1 },
+    };
+    await emit(harness.handlers, "tool_result", bashResult, harness.context);
+    expect(storage.loadCounters().tests_failed).toBe(1);
+    expect(storage.loadLatest()?.reason).toBe("turn");
+
+    await emit(harness.handlers, "tool_result", bashResult, harness.context);
+    expect(storage.loadCounters().tests_failed).toBe(2);
+  });
 });
 
 const completionCompanion: Companion = {
@@ -407,125 +435,220 @@ describe("OMP turn-comment adaptation", () => {
     expect(first).toBe("*takes note* core/engine.ts got the attention this turn.");
     expect(second).toBe(first);
   });
-  test("logs only bounded previews and lengths for long conversation and tool fields", async () => {
-    const model = getBundledModels("openai")[0];
-    if (!model) throw new Error("Expected an OpenAI model fixture.");
-    const longAssistant = "a".repeat(5000);
-    const longTool = "b".repeat(5000);
-    const longUser = "c".repeat(5000);
+  async function runWithDiagnostic(diagnostic: boolean) {
+    const previous = process.env.BUDDY_DIAGNOSTIC_PREVIEWS;
+    if (diagnostic) {
+      process.env.BUDDY_DIAGNOSTIC_PREVIEWS = "1";
+    } else {
+      delete process.env.BUDDY_DIAGNOSTIC_PREVIEWS;
+    }
+    try {
+      const longAssistant = "a".repeat(5000);
+      const longTool = "b".repeat(5000);
+      const longUser = "c".repeat(5000);
+      const model = getBundledModels("openai")[0];
+      if (!model) throw new Error("Expected an OpenAI model fixture.");
 
-    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
-    const logger: OmpBuddyLog = {
-      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
-      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
-      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
-      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
-    };
+      const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+      const logger: OmpBuddyLog = {
+        info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+        warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+        error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+        debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+      };
 
-    const context = {
-      ui: { notify() {}, setStatus() {}, setWidget() {} },
-      model,
-      modelRegistry: {
-        find() {
-          return model;
+      const context = {
+        ui: { notify() {}, setStatus() {}, setWidget() {} },
+        model,
+        modelRegistry: {
+          find() {
+            return model;
+          },
+          async getApiKey() {
+            return "secret-key";
+          },
+          getProviderHeaders() {
+            return {};
+          },
         },
-        async getApiKey() {
-          return "secret-key";
-        },
-        getProviderHeaders() {
-          return {};
-        },
-      },
-      sessionManager: {
-        getBranch() {
-          return [
-            {
-              type: "message",
-              message: {
-                role: "user",
-                content: [{ type: "text", text: longUser }],
+        sessionManager: {
+          getBranch() {
+            return [
+              {
+                type: "message",
+                message: {
+                  role: "user",
+                  content: [{ type: "text", text: longUser }],
+                },
               },
-            },
-          ];
+            ];
+          },
         },
-      },
-    } as unknown as OmpBuddyContext;
+      } as unknown as OmpBuddyContext;
 
-    const completeTurnComment: TurnCommentCompleter = async () => ({
-      role: "assistant",
-      content: [{ type: "text", text: "*nods* done." }],
-      api: model.api,
-      provider: model.provider,
-      model: model.id,
-      usage: {
-        input: 0,
-        output: 0,
-        cacheRead: 0,
-        cacheWrite: 0,
-        totalTokens: 0,
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
-      },
-      stopReason: "stop",
-      timestamp: 0,
-    });
-
-    const event = {
-      type: "turn_end",
-      turnIndex: 2,
-      message: assistantMessage(longAssistant),
-      toolResults: [
-        {
-          role: "toolResult",
-          toolCallId: "tool-1",
-          toolName: "bash",
-          content: [{ type: "text", text: longTool }],
-          isError: false,
-          details: { exitCode: 0 },
-          timestamp: 0,
+      const completeTurnComment: TurnCommentCompleter = async () => ({
+        role: "assistant",
+        content: [{ type: "text", text: "*nods* done." }],
+        api: model.api,
+        provider: model.provider,
+        model: model.id,
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
         },
-      ],
-    } satisfies TurnEndEvent;
+        stopReason: "stop",
+        timestamp: 0,
+      });
 
-    await generateTurnComment(
-      context,
-      completionCompanion,
-      event,
-      logger,
-      completeTurnComment,
-    );
+      const event = {
+        type: "turn_end",
+        turnIndex: 2,
+        message: assistantMessage(longAssistant),
+        toolResults: [
+          {
+            role: "toolResult",
+            toolCallId: "tool-1",
+            toolName: "bash",
+            content: [{ type: "text", text: longTool }],
+            isError: false,
+            details: { exitCode: 0 },
+            timestamp: 0,
+          },
+        ],
+      } satisfies TurnEndEvent;
+
+      const result = await generateTurnComment(
+        context,
+        completionCompanion,
+        event,
+        logger,
+        completeTurnComment,
+      );
+
+      return { result, logs, longAssistant, longTool, longUser };
+    } finally {
+      if (previous === undefined) {
+        delete process.env.BUDDY_DIAGNOSTIC_PREVIEWS;
+      } else {
+        process.env.BUDDY_DIAGNOSTIC_PREVIEWS = previous;
+      }
+    }
+  }
+
+  test("logs only lengths and metadata at info; omits content previews by default", async () => {
+    const { result, logs, longAssistant, longTool, longUser } = await runWithDiagnostic(false);
+
+    expect(result).toEqual({ comment: "*nods* done.", source: "llm" });
 
     const attempt = logs.find((l) => l.event === "turn_comment_llm_attempt");
     expect(attempt).toBeDefined();
-    expect(attempt!.data.assistantText).toBeUndefined();
-    expect(attempt!.data.toolResultsText).toBeUndefined();
-    expect(attempt!.data.userText).toBeUndefined();
-    expect(attempt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
-    expect(attempt!.data.toolPreview).toBe(longTool.slice(0, 200));
-    expect(attempt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(attempt!.data.assistantPreview).toBeUndefined();
+    expect(attempt!.data.toolPreview).toBeUndefined();
+    expect(attempt!.data.userTextPreview).toBeUndefined();
     expect(attempt!.data.assistantLength).toBe(longAssistant.length);
     expect(attempt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
     expect(attempt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
 
     const prompt = logs.find((l) => l.event === "turn_comment_llm_prompt");
     expect(prompt).toBeDefined();
-    expect(prompt!.data.assistantText).toBeUndefined();
-    expect(prompt!.data.toolResultsText).toBeUndefined();
-    expect(prompt!.data.userText).toBeUndefined();
-    expect(prompt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
-    expect(prompt!.data.toolPreview).toBe(longTool.slice(0, 200));
-    expect(prompt!.data.userTextPreview).toBe(longUser.slice(0, 200));
+    expect(prompt!.data.assistantPreview).toBeUndefined();
+    expect(prompt!.data.toolPreview).toBeUndefined();
+    expect(prompt!.data.userTextPreview).toBeUndefined();
+    expect(prompt!.data.systemPromptPreview).toBeUndefined();
+    expect(prompt!.data.promptPreview).toBeUndefined();
     expect(prompt!.data.assistantLength).toBe(longAssistant.length);
     expect(prompt!.data.toolLength).toBe(Math.min(longTool.length, 4000));
     expect(prompt!.data.userTextLength).toBe(Math.min(longUser.length, 4000));
+
+    const resultLog = logs.find((l) => l.event === "turn_comment_llm_result");
+    expect(resultLog).toBeDefined();
+    expect(resultLog!.data.normalized).toBeUndefined();
+    expect(resultLog!.data.rawPreview).toBeUndefined();
+    expect(resultLog!.data.rawLength).toBe(12);
+    expect(resultLog!.data.normalizedLength).toBe(12);
+  });
+
+  test("includes bounded previews in debug logs when diagnostic opt-in is enabled", async () => {
+    const { result, logs, longAssistant, longTool, longUser } = await runWithDiagnostic(true);
+
+    expect(result).toEqual({ comment: "*nods* done.", source: "llm" });
+
+    const attempt = logs.find((l) => l.event === "turn_comment_llm_attempt");
+    expect(attempt).toBeDefined();
+    expect(attempt!.data.assistantPreview).toBeUndefined();
+
+    const prompt = logs.find((l) => l.event === "turn_comment_llm_prompt");
+    expect(prompt).toBeDefined();
+    expect(prompt!.data.assistantPreview).toBe(longAssistant.slice(0, 200));
+    expect(prompt!.data.toolPreview).toBe(longTool.slice(0, 200));
+    expect(prompt!.data.userTextPreview).toBe(longUser.slice(0, 200));
     if (typeof prompt!.data.systemPromptPreview === "string") {
       expect(prompt!.data.systemPromptPreview.length).toBeLessThanOrEqual(800);
     }
     if (typeof prompt!.data.promptPreview === "string") {
       expect(prompt!.data.promptPreview.length).toBeLessThanOrEqual(1200);
     }
+  });
+});
+describe("OMP looksLikeTestFailure", () => {
+  test("detects explicit failure counts", () => {
+    expect(looksLikeTestFailure("2 tests failed")).toBe(true);
+    expect(looksLikeTestFailure("1 spec failing")).toBe(true);
+  });
 
-    const resultLog = logs.find((l) => l.event === "turn_comment_llm_result");
-    expect(resultLog).toBeDefined();
-    expect(resultLog!.data.normalized).toBe("*nods* done.");
+  test("ignores generic failure glyphs without test runner context", () => {
+    expect(looksLikeTestFailure("random ✗ marker")).toBe(false);
+    expect(looksLikeTestFailure("FAIL")).toBe(false);
+    expect(looksLikeTestFailure("not ok")).toBe(false);
+  });
+
+  test("detects generic failure markers when test runner context is nearby", () => {
+    expect(looksLikeTestFailure("bun test\nFAIL")).toBe(true);
+    expect(looksLikeTestFailure("npm test\n✗")).toBe(true);
+    expect(looksLikeTestFailure("pytest\nnot ok")).toBe(true);
+  });
+});
+
+describe("OMP session_start notifications", () => {
+  test("notifies achievements on every session start while hatch notice is creation-only", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-session-notify-"));
+    temporaryDirectories.push(stateDir);
+    const harness = createHarness(stateDir);
+    const storage = new OmpBuddyStorage(stateDir);
+    storage.saveOmpConfig({ commentCooldown: 0 });
+
+    await emit(harness.handlers, "session_start", { type: "session_start" }, harness.context);
+    expect(harness.notifications.some((n) => n.message.includes("hatched"))).toBe(true);
+    expect(harness.notifications.some((n) => n.message.includes("Unlocked:"))).toBe(true);
+
+    harness.notifications.length = 0;
+    storage.increment("commands_run", 50);
+
+    await emit(harness.handlers, "session_start", { type: "session_start" }, harness.context);
+    expect(harness.notifications.some((n) => n.message.includes("hatched"))).toBe(false);
+    expect(harness.notifications.some((n) => n.message.includes("Power User"))).toBe(true);
+  });
+});
+
+describe("OMP buddy command achievements", () => {
+  test("show command merges achievements from incrementCommandsRun into notifications", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-command-merge-"));
+    temporaryDirectories.push(stateDir);
+    const harness = createHarness(stateDir);
+    const storage = new OmpBuddyStorage(stateDir);
+    storage.saveOmpConfig({ commentCooldown: 0 });
+    storage.increment("commands_run", 49);
+
+    const handler = harness.commands.get("buddy");
+    expect(handler).toBeDefined();
+    await handler!("show", harness.context);
+
+    expect(storage.loadCounters().commands_run).toBe(50);
+    expect(harness.notifications.some((n) => n.message.includes("Power User"))).toBe(true);
+    expect(harness.notifications.some((n) => n.message.includes(storage.loadActive()?.name ?? ""))).toBe(true);
   });
 });
