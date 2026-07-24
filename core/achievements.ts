@@ -1,24 +1,6 @@
-import type { UnlockedAchievement } from "./model.ts";
+import type { UnlockedAchievement, GlobalCounters, SlotCounters, EventCounters } from "./model.ts";
+export type { GlobalCounters, SlotCounters, EventCounters };
 
-export interface GlobalCounters {
-  errors_seen: number;
-  tests_failed: number;
-  large_diffs: number;
-  sessions: number;
-  commands_run: number;
-  days_active: number;
-  turns: number;
-}
-
-export interface SlotCounters {
-  pets: number;
-  reactions_given: number;
-}
-
-export interface EventCounters extends GlobalCounters {
-  pets: number;
-  reactions_given: number;
-}
 
 export const GLOBAL_KEYS: (keyof GlobalCounters)[] = [
   "errors_seen", "tests_failed", "large_diffs",

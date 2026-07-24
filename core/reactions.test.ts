@@ -4,34 +4,18 @@ import {
   generateFallbackName,
   generatePersonalityPrompt,
   isNameMentioned,
+  REACTIONS,
+  type ReactionReason,
 } from "./reactions.ts";
 import { SPECIES, RARITIES, STAT_NAMES } from "./engine.ts";
 
-const REASONS = [
-  "hatch", "pet", "error", "test-fail", "large-diff", "turn", "idle",
-  "commit", "push", "merge-conflict", "branch", "rebase", "stash", "tag",
-  "late-night", "early-morning", "long-session", "marathon", "friday", "weekend", "monday",
-  "lint-fail", "type-error", "build-fail", "security-warning", "deprecation",
-  "frustrated", "happy", "stuck", "sarcastic",
-  "many-edits", "delete-file", "large-file", "create-file",
-  "all-green", "deploy", "release", "coverage",
-  "debug-loop", "write-spree", "search-heavy",
-  "recovery-from-error", "recovery-from-test-fail",
-  "recovery-from-build-fail", "recovery-from-merge-conflict",
-  "late-night-error", "late-night-commit", "friday-push",
-  "marathon-error", "weekend-conflict", "build-after-push", "marathon-test-fail",
-  "lang-python", "lang-typescript", "lang-rust", "lang-go",
-  "lang-java", "lang-ruby", "lang-php", "lang-c",
-  "lang-cpp", "lang-haskell", "lang-swift", "lang-elixir",
-  "lang-zig", "lang-kotlin",
-  "streak-3", "streak-5", "streak-10", "streak-20",
-  "new-year", "valentines", "pi-day", "april-fools",
-  "halloween", "christmas", "new-years-eve", "spooky-season",
-  "success",
-  "regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file",
-  "env-file", "test-file", "doc-file", "config-file", "binary-file", "gitignore",
-  "makefile", "readme", "package-file", "proto-file",
-] as const;
+const INTENTIONALLY_EMPTY_REACTIONS: ReactionReason[] = [
+  "snark", "chaos", "patience", "debugging", "wisdom",
+];
+
+const REASONS = (Object.keys(REACTIONS) as ReactionReason[]).filter(
+  (reason) => !INTENTIONALLY_EMPTY_REACTIONS.includes(reason),
+);
 
 describe("getReaction", () => {
   test("returns a non-empty string for every (reason, species, rarity) combo", () => {

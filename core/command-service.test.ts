@@ -248,13 +248,34 @@ describe("BuddyCommandService", () => {
     expect(summoned?.slot).toBe("backup");
     expect(buddies.loadActiveSlot()).toBe("backup");
   });
+  test("saveBuddy with no slot updates the active companion", () => {
+    const { service, buddies } = makeService();
+    const { slot: initialSlot } = service.ensureCompanion();
+
+    service.renameBuddy("Pixel");
+    const saved = service.saveBuddy();
+
+    expect(saved.slot).toBe(initialSlot);
+    expect(buddies.listSlots().length).toBe(1);
+    expect(buddies.loadSlot(initialSlot)?.name).toBe("Pixel");
+  });
+
+  test("saveBuddy rejects collision for explicit non-active slot", () => {
+    const { service, buddies } = makeService();
+    const { slot: initialSlot } = service.ensureCompanion();
+
+    service.saveBuddy("backup");
+    buddies.saveActiveSlot(initialSlot);
+
+    expect(() => service.saveBuddy("backup")).toThrow(/already exists/);
+  });
 
   test("dismissBuddy removes a non-active slot", () => {
     const { service, buddies } = makeService();
-    service.ensureCompanion();
+    const { slot: initialSlot } = service.ensureCompanion();
+
     service.saveBuddy("backup");
-    service.summonBuddy();
-    buddies.saveActiveSlot("buddy");
+    buddies.saveActiveSlot(initialSlot);
 
     const dismissed = service.dismissBuddy("backup");
 

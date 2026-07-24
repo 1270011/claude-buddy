@@ -157,11 +157,23 @@ export class BuddyCommandService {
   }
 
   saveBuddy(slot?: string): SaveBuddyResult {
-    const { companion } = this.ensureCompanion();
-    const targetSlot = slugify(slot?.trim() || companion.name);
-    this.deps.buddies.saveSlot(targetSlot, companion);
-    this.deps.buddies.saveActiveSlot(targetSlot);
-    return { companion, slot: targetSlot };
+    const { companion, slot: activeSlot } = this.ensureCompanion();
+    if (slot?.trim()) {
+      const targetSlot = slugify(slot.trim());
+      if (targetSlot !== activeSlot && this.deps.buddies.loadSlot(targetSlot)) {
+        throw new Error(`Slot "${targetSlot}" already exists.`);
+      }
+      if (targetSlot === activeSlot) {
+        this.deps.buddies.saveActive(companion);
+      } else {
+        this.deps.buddies.saveSlot(targetSlot, companion);
+      }
+      this.deps.buddies.saveActiveSlot(targetSlot);
+      return { companion, slot: targetSlot };
+    }
+
+    this.deps.buddies.saveActive(companion);
+    return { companion, slot: activeSlot };
   }
 
   summonBuddy(slot?: string): SummonBuddyResult | null {

@@ -7,7 +7,9 @@
  */
 
 import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "../core/engine.ts"
+import { HAT_ART } from "../core/art-data.ts";
 import { getRarityColor } from "./theme.ts";
+export { HAT_ART };
 
 // ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
 
@@ -129,18 +131,6 @@ export const SPECIES_ART: Record<Species, string[][]> = {
   ],
 };
 
-// ─── Hat art ────────────────────────────────────────────────────────────────
-
-export const HAT_ART: Record<Hat, string> = {
-  none:      "",
-  crown:     "   \\^^^/    ",
-  tophat:    "   [___]    ",
-  propeller: "    -+-     ",
-  halo:      "   (   )    ",
-  wizard:    "    /^\\     ",
-  beanie:    "   (___)    ",
-  tinyduck:  "    ,>      ",
-};
 
 // Wyvern line 0 is `}       {` (7 inner chars between horns).
 // These replace that line so the hat sits between the horns.

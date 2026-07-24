@@ -92,6 +92,7 @@ Then restart Claude Code and type `/buddy`. That's it.
 <sub>💡 Want a global `claude-buddy` command? → `bun link`</sub>
 <br>
 <sub>💡 Need help? → `bun run help` or `claude-buddy help` (if linked) in terminal · `/buddy help` in Claude Code</sub>
+
 ### Pi and Oh My Pi extensions
 
 This package also ships native coding-agent extensions:
@@ -100,7 +101,6 @@ This package also ships native coding-agent extensions:
 - **Oh My Pi (OMP):** preferred `omp.extensions` metadata loads `./adapters/omp/index.ts`; the checkout-local shim is `.omp/extensions/coding-buddy.ts`.
 
 Both expose `/buddy`, native lifecycle reactions, and status/widget rendering without installing Claude hooks, tmux helpers, or popup machinery. Pi stores its state under `~/.pi/agent/buddy`; OMP uses the separate `~/.omp/agent/buddy` root.
-
 
 ### Multiple Claude profiles?
 

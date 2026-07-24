@@ -277,9 +277,11 @@ export class FileBuddyStorage
   }
 
   saveActive(companion: Companion): void {
-    const manifest = this.loadManifest();
-    manifest.companions[manifest.active] = companion;
-    this.saveManifest(manifest);
+    this.withLock(() => {
+      const manifest = this.loadManifest();
+      manifest.companions[manifest.active] = companion;
+      this.saveManifest(manifest);
+    });
   }
 
   loadSlot(slot: string): Companion | null {
@@ -287,19 +289,23 @@ export class FileBuddyStorage
   }
 
   saveSlot(slot: string, companion: Companion): void {
-    const manifest = this.loadManifest();
-    if (manifest.companions[slot]) throw new Error(`Slot \"${slot}\" already exists.`);
-    manifest.companions[slot] = companion;
-    this.saveManifest(manifest);
+    this.withLock(() => {
+      const manifest = this.loadManifest();
+      if (manifest.companions[slot]) throw new Error(`Slot "${slot}" already exists.`);
+      manifest.companions[slot] = companion;
+      this.saveManifest(manifest);
+    });
   }
 
   deleteSlot(slot: string): void {
-    const manifest = this.loadManifest();
-    delete manifest.companions[slot];
-    if (manifest.active === slot) {
-      manifest.active = Object.keys(manifest.companions)[0] ?? "buddy";
-    }
-    this.saveManifest(manifest);
+    this.withLock(() => {
+      const manifest = this.loadManifest();
+      delete manifest.companions[slot];
+      if (manifest.active === slot) {
+        manifest.active = Object.keys(manifest.companions)[0] ?? "buddy";
+      }
+      this.saveManifest(manifest);
+    });
   }
 
   listSlots(): Array<{ slot: string; companion: Companion }> {
@@ -316,9 +322,11 @@ export class FileBuddyStorage
   }
 
   saveActiveSlot(slot: string): void {
-    const manifest = this.loadManifest();
-    manifest.active = slot;
-    this.saveManifest(manifest);
+    this.withLock(() => {
+      const manifest = this.loadManifest();
+      manifest.active = slot;
+      this.saveManifest(manifest);
+    });
   }
 
   loadLatest(): ReactionState | null {
@@ -419,19 +427,21 @@ export class FileBuddyStorage
   }
 
   ensureStableIdentity(): string {
-    this.ensureDir();
-    try {
-      const parsed = JSON.parse(readFileSync(this.path("identity.json"), "utf8")) as {
-        userId?: string;
-      };
-      if (parsed.userId) return parsed.userId;
-    } catch {
-      // Create a stable identity below.
-    }
+    return this.withLock(() => {
+      this.ensureDir();
+      try {
+        const parsed = JSON.parse(readFileSync(this.path("identity.json"), "utf8")) as {
+          userId?: string;
+        };
+        if (parsed.userId) return parsed.userId;
+      } catch {
+        // Create a stable identity below.
+      }
 
-    const userId = randomUUID();
-    this.atomicWrite(this.path("identity.json"), JSON.stringify({ userId }, null, 2));
-    return userId;
+      const userId = randomUUID();
+      this.atomicWrite(this.path("identity.json"), JSON.stringify({ userId }, null, 2));
+      return userId;
+    });
   }
 }
 

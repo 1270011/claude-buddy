@@ -19,19 +19,15 @@ function checkBun() {
         console.log(`✓ bun ${output.trim()} detected`);
         resolve(true);
       } else {
-        console.error(
-          "✗ bun is not installed. This package requires bun to run.\n" +
-            "  Install: https://bun.sh\n" +
-            "  Or use:  npm install -g bun"
+        console.warn(
+          "Bun is required only for Claude-only commands; install it from https://bun.sh or run `npm install -g bun`."
         );
         resolve(false);
       }
     });
     proc.on("error", () => {
-      console.error(
-        "✗ bun is not installed. This package requires bun to run.\n" +
-          "  Install: https://bun.sh\n" +
-          "  Or use:  npm install -g bun"
+      console.warn(
+        "Bun is required only for Claude-only commands; install it from https://bun.sh or run `npm install -g bun`."
       );
       resolve(false);
     });

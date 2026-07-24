@@ -82,7 +82,7 @@ const SUCCESS_REACTIONS: Partial<Record<Species, string[]>> = {
 
 const DEFAULT_SUCCESS_REACTIONS = ["*nods*", "nice.", "*quiet approval*", "clean."];
 
-const REACTIONS: Record<ReactionReason, string[]> = {
+export const REACTIONS: Record<ReactionReason, string[]> = {
   hatch: ["*blinks* ...where am I?", "*stretches* hello, world!", "*looks around curiously* nice terminal you got here.", "*yawns* ok I'm ready. show me the code."],
   pet: ["*purrs contentedly*", "*happy noises*", "*nuzzles your cursor*", "*wiggles*", "again! again!", "*closes eyes peacefully*"],
   error: ["*head tilts* ...that doesn't look right.", "saw that one coming.", "*adjusts glasses* line {line}, maybe?", "*slow blink* the stack trace told you everything.", "have you tried reading the error message?", "*winces*"],

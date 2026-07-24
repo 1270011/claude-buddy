@@ -253,7 +253,7 @@ async function generateTurnComment(
     logger.debug("turn_comment_llm_prompt", {
       systemPromptPreview: systemPrompt.slice(0, 800),
       promptPreview: promptText.slice(0, 1200),
-      userText,
+      userTextPreview: userText.slice(0, 200),
       assistantText,
       toolResultsText,
     });
