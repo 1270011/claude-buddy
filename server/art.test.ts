@@ -9,7 +9,8 @@ import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
-import { SPECIES, type BuddyBones } from "./engine.ts";
+import { SPECIES_ART as CORE_SPECIES_ART } from "../core/art-data.ts";
+import { SPECIES, type BuddyBones } from "../core/engine.ts"
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -149,5 +150,17 @@ describe("statusline/emoji-widths.data", () => {
       if (re.test(String.fromCodePoint(cp))) expected.push(cp);
     }
     expect(fileList).toEqual(expected);
+  });
+});
+describe("core wyvern art", () => {
+  test("has exactly three plain-text frames of five lines", () => {
+    const wyvern = CORE_SPECIES_ART.wyvern;
+    expect(wyvern.length).toBe(3);
+    for (const frame of wyvern) {
+      expect(frame.length).toBe(5);
+      for (const line of frame) {
+        expect(line).not.toContain("\x1b[");
+      }
+    }
   });
 });

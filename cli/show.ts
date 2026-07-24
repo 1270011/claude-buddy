@@ -2,7 +2,7 @@
  * claude-buddy show — display current companion in terminal
  */
 
-import { renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
+import { renderBuddy, renderFace, RARITY_STARS } from "../core/engine.ts"
 import { loadCompanion, loadReaction } from "../server/state.ts";
 
 const BOLD = "\x1b[1m";

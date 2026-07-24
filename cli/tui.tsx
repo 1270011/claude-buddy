@@ -35,7 +35,7 @@ import {
   RARITY_STARS, STAT_NAMES, SPECIES, RARITIES, generateBones, searchBuddy,
   type Companion, type StatName, type Species, type Rarity,
   type SearchCriteria, type SearchResult, type BuddyBones,
-} from "../server/engine.ts";
+} from "../core/engine.ts";
 import { getArtFrame, HAT_ART } from "../server/art.ts";
 import {
   ACHIEVEMENTS, loadUnlocked, loadEvents,

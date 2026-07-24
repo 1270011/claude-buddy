@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Post-install check: verify bun is available.
- * bun is required to run TypeScript files in this package.
+ * Post-install check: warn if bun is unavailable.
+ * Installation must succeed for Node-only Pi/OMP consumers; Claude-only commands
+ * will diagnose bun at runtime.
  */
 
 const { spawn } = require("child_process");
@@ -18,19 +19,15 @@ function checkBun() {
         console.log(`✓ bun ${output.trim()} detected`);
         resolve(true);
       } else {
-        console.error(
-          "✗ bun is not installed. This package requires bun to run.\n" +
-            "  Install: https://bun.sh\n" +
-            "  Or use:  npm install -g bun"
+        console.warn(
+          "Bun is required only for Claude-only commands; install it from https://bun.sh or run `npm install -g bun`."
         );
         resolve(false);
       }
     });
     proc.on("error", () => {
-      console.error(
-        "✗ bun is not installed. This package requires bun to run.\n" +
-          "  Install: https://bun.sh\n" +
-          "  Or use:  npm install -g bun"
+      console.warn(
+        "Bun is required only for Claude-only commands; install it from https://bun.sh or run `npm install -g bun`."
       );
       resolve(false);
     });
@@ -39,6 +36,7 @@ function checkBun() {
 
 checkBun().then((ok) => {
   if (!ok) {
-    process.exit(1);
+    console.warn("Install completed, but bun is required to run Claude-only commands.");
   }
+  process.exit(0);
 });

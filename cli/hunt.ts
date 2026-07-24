@@ -7,10 +7,8 @@
  *   - Appends to the manifest — never overwrites an existing slot
  */
 
-import {
-  searchBuddy, renderBuddy, SPECIES, RARITIES, STAT_NAMES,
-  type Species, type Rarity, type StatName, type SearchCriteria,
-} from "../server/engine.ts";
+import { searchBuddy, renderBuddy, SPECIES, RARITIES, STAT_NAMES,
+type Species, type Rarity, type StatName, type SearchCriteria, } from "../core/engine.ts"
 import {
   saveCompanionSlot, saveActiveSlot, writeStatusState,
   slugify, unusedName, listCompanionSlots,

@@ -14,7 +14,7 @@ import {
   saveCompanion,
   loadActiveSlot,
 } from "./state";
-import type { Species, Rarity } from "./engine";
+import type { Species, Rarity } from "../core/engine.ts"
 
 // ─── XP event types ───────────────────────────────────────────────────────────
 

@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, dirname, join } from "path";
 
-import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
+import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../core/engine.ts"
 import {
   claudeConfigDir,
   claudeSettingsPath,
@@ -20,7 +20,7 @@ import {
   toUnixPath,
 } from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
-import { generateFallbackName } from "../server/reactions.ts";
+import { generateFallbackName } from "../core/reactions.ts"
 
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";

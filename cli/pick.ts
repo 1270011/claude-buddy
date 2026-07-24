@@ -19,11 +19,9 @@ import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
   loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
-import {
-  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
-  type Species, type Rarity, type StatName, type Eye, type Hat,
-  type BuddyBones, type Companion,
-} from "../server/engine.ts";
+import { generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+type Species, type Rarity, type StatName, type Eye, type Hat,
+type BuddyBones, type Companion, } from "../core/engine.ts"
 import { renderCompanionCard } from "../server/art.ts";
 import { randomBytes } from "crypto";
 
