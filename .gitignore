@@ -32,6 +32,9 @@ Thumbs.db
 coverage/
 .nyc_output/
 
+# Worktrees
+.worktrees/
+
 # Local / Python dev
 .envrc
 .python-version
