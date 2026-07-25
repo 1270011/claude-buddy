@@ -103,7 +103,7 @@ The `claude-buddy` package ended at **v0.5.2**.
 npx -y @ramarivera/coding-buddy
 ```
 
-This installs the MCP server, skill, hooks, and status line. Restart Claude Code and type `/buddy`.
+This installs the MCP server, skill, hooks, and status line. Claude Code hooks are registered as thin bash wrappers with 15s timeouts; the wrappers locate Bun in bare hook environments and delegate behavior to TypeScript or the phase-2 legacy bash bridge. Restart Claude Code and type `/buddy`.
 
 ### Pi
 
@@ -255,7 +255,8 @@ MCP is an industry-standard protocol. Skills are Markdown files. Hooks and statu
 coding-buddy/
 ├── server/          # MCP server — tools, engine, art, reactions, state
 ├── skills/buddy/    # /buddy slash command
-├── hooks/           # PostToolUse + Stop hooks (error & comment detection)
+├── hooks/           # Thin Claude Code hook wrappers and phase-2 legacy bash hooks
+├── server/hooks/    # Hook behavior implemented in TypeScript
 ├── statusline/      # Animated right-aligned buddy display
 └── cli/             # install, show, hunt, verify, doctor, backup, uninstall
 ```
