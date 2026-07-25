@@ -1,7 +1,7 @@
 import type { ExtensionContext } from "@mariozechner/pi-coding-agent";
 import type { Achievement } from "../../core/achievements.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
-import { renderAchievementsSummary, renderBuddyStatus, renderBuddyWidget } from "./renderers.ts";
+import { renderAchievementsSummary, renderBuddyWidget } from "./renderers.ts";
 import { PiBuddyStorage } from "./storage.ts";
 
 type PiBuddyUiContext = ExtensionContext & {
@@ -32,8 +32,7 @@ export class PiBuddyUI {
   ): void {
     const currentReaction = reaction ?? null;
     const muted = this.storage.isMuted();
-    const status = renderBuddyStatus(companion, muted ? null : currentReaction);
-    ctx.ui.setStatus("buddy", muted ? `${status} [muted]` : status);
+    ctx.ui.setStatus("buddy", undefined);
     ctx.ui.setWidget(
       "buddy",
       renderBuddyWidget(companion, muted ? null : currentReaction, achievements),

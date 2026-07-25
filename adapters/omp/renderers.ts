@@ -3,85 +3,23 @@ import { getArtFrame, HAT_ART } from "../../core/render-model.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
 import type { Achievement } from "../../core/achievements.ts";
 import { getRarityColor } from "../../server/theme.ts";
+import {
+  composeDetailsAndArt,
+  displayWidth,
+  getDetailsWidth,
+  getWidgetWidth,
+  stripAnsi,
+  WIDGET_MAX_LINES,
+  wrapReaction,
+} from "../shared/widget-layout.ts";
 
-export const OMP_WIDGET_MAX_LINES = 10;
-
-const ANSI_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const RESET = "\x1b[0m";
 const DIM_ITALIC = "\x1b[2;3m";
-const ART_GAP = "  ";
-const DEFAULT_WIDGET_WIDTH = 78;
 
-function stripAnsi(text: string): string {
-  return text.replace(ANSI_PATTERN, "");
-}
-
-function characterWidth(character: string, next?: string): number {
-  if (character === "\u200d" || /[\uFE00-\uFE0F]/u.test(character)) return 0;
-  if (next === "\uFE0F" && /\p{Emoji}/u.test(character)) return 2;
-  return /\p{Emoji_Presentation}/u.test(character) ? 2 : 1;
-}
-
-export function displayWidth(text: string): number {
-  const characters = [...stripAnsi(text)];
-  let width = 0;
-  for (let index = 0; index < characters.length; index += 1) {
-    width += characterWidth(characters[index]!, characters[index + 1]);
-  }
-  return width;
-}
+export { displayWidth, WIDGET_MAX_LINES as OMP_WIDGET_MAX_LINES };
 
 function trimArt(line: string): string {
   return line.replace(/\s+$/g, "");
-}
-
-function truncateToWidth(text: string, width: number): string {
-  if (width <= 0) return "";
-  let result = "";
-  let currentWidth = 0;
-  for (const character of [...stripAnsi(text)]) {
-    const nextWidth = characterWidth(character);
-    if (currentWidth + nextWidth > width) break;
-    result += character;
-    currentWidth += nextWidth;
-  }
-  return result;
-}
-
-function wrapReaction(reaction: string, width: number, maxLines: number): string[] {
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of `💬 ${reaction.trim()}`.split(/\s+/)) {
-    if (!word) continue;
-    if (displayWidth(word) > width) {
-      if (current) lines.push(current);
-      lines.push(`${truncateToWidth(word, Math.max(1, width - 1))}…`);
-      current = "";
-      continue;
-    }
-
-    const candidate = current ? `${current} ${word}` : word;
-    if (displayWidth(candidate) > width) {
-      if (current) lines.push(current);
-      current = word;
-    } else {
-      current = candidate;
-    }
-  }
-
-  if (current) lines.push(current);
-  if (lines.length <= maxLines) return lines;
-
-  const bounded = lines.slice(0, maxLines);
-  const last = bounded[maxLines - 1] ?? "";
-  bounded[maxLines - 1] = `${truncateToWidth(last, Math.max(1, width - 1))}…`;
-  return bounded;
-}
-
-function getWidgetWidth(): number {
-  const columns = process.stdout.columns;
-  return columns && columns > 0 ? Math.max(24, columns - 2) : DEFAULT_WIDGET_WIDTH;
 }
 
 function getFullArtFrame(companion: Companion, frame: number): string[] {
@@ -107,12 +45,12 @@ function renderDetails(
   ];
 
   if (reaction?.reaction) {
-    const remainingLines = Math.max(1, OMP_WIDGET_MAX_LINES - lines.length);
+    const remainingLines = Math.max(1, WIDGET_MAX_LINES - lines.length);
     lines.push(...wrapReaction(reaction.reaction, sideWidth, remainingLines).map((line) => `${DIM_ITALIC}${line}${RESET}`));
   }
 
   for (const achievement of achievements) {
-    if (lines.length >= OMP_WIDGET_MAX_LINES) break;
+    if (lines.length >= WIDGET_MAX_LINES) break;
     lines.push(`🏆 ${achievement.name}`);
   }
 
@@ -126,17 +64,9 @@ export function renderBuddyWidget(
   width: number = getWidgetWidth(),
 ): string[] {
   const art = getFullArtFrame(companion, Math.floor(Date.now() / 700));
-  const artWidth = Math.max(...art.map(displayWidth), 0);
-  const widgetWidth = Math.max(24, width);
-  const sideWidth = Math.max(8, widgetWidth - artWidth - ART_GAP.length);
+  const sideWidth = getDetailsWidth(art, width);
   const details = renderDetails(companion, reaction, achievements, sideWidth);
-  const rows = Math.max(art.length, details.length);
-
-  return Array.from({ length: Math.min(OMP_WIDGET_MAX_LINES, rows) }, (_, index) => {
-    const artLine = art[index] ?? "";
-    const detailLine = details[index] ?? "";
-    return `${detailLine}${" ".repeat(Math.max(0, sideWidth - displayWidth(detailLine)))}${ART_GAP}${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}`;
-  });
+  return composeDetailsAndArt(details, art, width, WIDGET_MAX_LINES);
 }
 
 export function renderBuddyStats(companion: Companion): string[] {
