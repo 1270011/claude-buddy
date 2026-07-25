@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { Achievement } from "../../core/achievements.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
 import { displayWidth } from "../shared/widget-layout.ts";
 import { PI_WIDGET_MAX_LINES, renderBuddyWidget } from "./renderers.ts";
@@ -24,6 +25,15 @@ const reaction: ReactionState = {
   reaction: "*watching closely*",
   reason: "turn",
   timestamp: Date.now(),
+};
+
+const achievement: Achievement = {
+  id: "test-achievement",
+  name: "Long Night Debugger",
+  description: "test",
+  icon: "🏆",
+  check: () => true,
+  secret: false,
 };
 
 describe("Pi buddy renderers", () => {
@@ -66,5 +76,21 @@ describe("Pi buddy renderers", () => {
     expect(rendered).toContain("Ember");
     expect(rendered).toContain("★★★★★");
     expect(rendered).toContain("|\\^```^/|");
+  });
+
+  test("keeps long detail labels within the width contract", () => {
+    const lines = renderBuddyWidget({ ...companion, name: "N".repeat(100) }, null, [], 64);
+
+    expect(lines).toHaveLength(5);
+    expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
+    expect(lines.join("\n")).toMatch(/\.-{2,6}\./);
+  });
+
+  test("renders achievements in the shared details column", () => {
+    const plain = renderBuddyWidget(companion, null, [achievement], 64)
+      .join("\n")
+      .replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+
+    expect(plain).toContain("🏆 Long Night Debugger");
   });
 });

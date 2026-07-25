@@ -8,6 +8,7 @@ import {
   displayWidth,
   getDetailsWidth,
   getWidgetWidth,
+  stripAnsi,
   WIDGET_MAX_LINES,
   wrapReaction,
 } from "../shared/widget-layout.ts";
@@ -23,7 +24,7 @@ function trimArt(line: string): string {
 
 function getFullArtFrame(companion: Companion, frame: number): string[] {
   const art = getArtFrame(companion.bones.species, companion.bones.eye, frame);
-  if (companion.bones.hat !== "none" && !(art[0] ?? "").trim()) {
+  if (companion.bones.hat !== "none" && !stripAnsi(art[0] ?? "").trim()) {
     art[0] = HAT_ART[companion.bones.hat];
   }
   return art.map(trimArt);

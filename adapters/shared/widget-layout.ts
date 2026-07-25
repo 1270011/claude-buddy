@@ -4,7 +4,7 @@ const DEFAULT_WIDGET_WIDTH = 78;
 
 export const WIDGET_MAX_LINES = 10;
 
-function stripAnsi(text: string): string {
+export function stripAnsi(text: string): string {
   return text.replace(ANSI_PATTERN, "");
 }
 
@@ -90,6 +90,7 @@ export function composeDetailsAndArt(
   return Array.from({ length: Math.min(maxLines, rows) }, (_, index) => {
     const artLine = art[index] ?? "";
     const detailLine = details[index] ?? "";
-    return `${detailLine}${" ".repeat(Math.max(0, sideWidth - displayWidth(detailLine)))}${ART_GAP}${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}`;
+    const boundedDetailLine = displayWidth(detailLine) > sideWidth ? truncateToWidth(detailLine, sideWidth) : detailLine;
+    return `${boundedDetailLine}${" ".repeat(Math.max(0, sideWidth - displayWidth(boundedDetailLine)))}${ART_GAP}${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}`;
   });
 }
