@@ -19,7 +19,12 @@ jobs:
       - name: Golden check (text assertions)
         run: bash scripts/ci/check-statusline.sh
 
-      - name: Install vhs
+      - name: Preinstall vhs dependencies
+        continue-on-error: true
+        run: sudo apt-get install -y -qq ffmpeg ttyd
+
+      - name: Render with vhs (non-blocking visual artifact)
+        continue-on-error: true
         uses: charmbracelet/vhs-action@v2
         with:
           path: scripts/ci/statusline.tape
