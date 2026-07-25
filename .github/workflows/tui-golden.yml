@@ -1,0 +1,35 @@
+name: TUI Golden
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  statusline:
+    name: Statusline golden render
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install jq
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
+
+      - name: Golden check (text assertions)
+        run: bash scripts/ci/check-statusline.sh
+
+      - name: Install vhs
+        uses: charmbracelet/vhs-action@v2
+        with:
+          path: scripts/ci/statusline.tape
+
+      - name: Upload render artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: statusline-render
+          path: |
+            scripts/ci/statusline.png
+            scripts/ci/statusline.gif
+          if-no-files-found: warn
