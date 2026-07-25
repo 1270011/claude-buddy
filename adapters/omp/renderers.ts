@@ -1,61 +1,14 @@
-import { RARITY_STARS } from "../../core/engine.ts";
-import { getArtFrame, HAT_ART } from "../../core/render-model.ts";
-import type { Companion, ReactionState } from "../../core/model.ts";
 import type { Achievement } from "../../core/achievements.ts";
-import { getRarityColor } from "../../server/theme.ts";
+import type { Companion, ReactionState } from "../../core/model.ts";
 import {
-  composeDetailsAndArt,
   displayWidth,
-  getDetailsWidth,
   getWidgetWidth,
+  renderCompanionWidget,
   stripAnsi,
   WIDGET_MAX_LINES,
-  wrapReaction,
 } from "../shared/widget-layout.ts";
 
-const RESET = "\x1b[0m";
-const DIM_ITALIC = "\x1b[2;3m";
-
-export { displayWidth, WIDGET_MAX_LINES as OMP_WIDGET_MAX_LINES };
-
-function trimArt(line: string): string {
-  return line.replace(/\s+$/g, "");
-}
-
-function getFullArtFrame(companion: Companion, frame: number): string[] {
-  const art = getArtFrame(companion.bones.species, companion.bones.eye, frame);
-  if (companion.bones.hat !== "none" && !stripAnsi(art[0] ?? "").trim()) {
-    art[0] = HAT_ART[companion.bones.hat];
-  }
-  return art.map(trimArt);
-}
-
-function renderDetails(
-  companion: Companion,
-  reaction: ReactionState | null | undefined,
-  achievements: Achievement[],
-  sideWidth: number,
-): string[] {
-  const color = getRarityColor(companion.bones.rarity);
-  const stars = RARITY_STARS[companion.bones.rarity];
-  const shiny = companion.bones.shiny ? " ✨" : "";
-  const lines = [
-    `${color}${companion.name} ${stars}${shiny}${RESET}`,
-    `${companion.bones.rarity} ${companion.bones.species}`,
-  ];
-
-  if (reaction?.reaction) {
-    const remainingLines = Math.max(1, WIDGET_MAX_LINES - lines.length);
-    lines.push(...wrapReaction(reaction.reaction, sideWidth, remainingLines).map((line) => `${DIM_ITALIC}${line}${RESET}`));
-  }
-
-  for (const achievement of achievements) {
-    if (lines.length >= WIDGET_MAX_LINES) break;
-    lines.push(`🏆 ${achievement.name}`);
-  }
-
-  return lines;
-}
+export { displayWidth, stripAnsi, WIDGET_MAX_LINES as OMP_WIDGET_MAX_LINES };
 
 export function renderBuddyWidget(
   companion: Companion,
@@ -63,10 +16,7 @@ export function renderBuddyWidget(
   achievements: Achievement[] = [],
   width: number = getWidgetWidth(),
 ): string[] {
-  const art = getFullArtFrame(companion, Math.floor(Date.now() / 700));
-  const sideWidth = getDetailsWidth(art, width);
-  const details = renderDetails(companion, reaction, achievements, sideWidth);
-  return composeDetailsAndArt(details, art, width, WIDGET_MAX_LINES);
+  return renderCompanionWidget(companion, reaction, achievements, width);
 }
 
 export function renderBuddyStats(companion: Companion): string[] {

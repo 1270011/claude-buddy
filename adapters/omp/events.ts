@@ -192,7 +192,7 @@ export function registerOmpBuddyEvents(pi: ExtensionAPI, deps: RegisterOmpBuddyE
     deps.ui.notifyAchievements(ctx, achievements);
   });
   pi.on("session_shutdown", () => {
-    deps.ui.cancelTimers();
+    deps.ui.dispose();
   });
 
 }

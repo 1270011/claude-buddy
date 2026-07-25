@@ -37,7 +37,7 @@ function createStatuslineFixture(config: Record<string, unknown>) {
   return { configDir, stateDir };
 }
 
-function runStatusline(configDir: string, input = "{}\n") {
+function runStatusline(configDir: string, input = "{}\n", columns = "80") {
   return spawnSync("bash", [statuslineScript], {
     env: {
       ...process.env,
@@ -45,7 +45,7 @@ function runStatusline(configDir: string, input = "{}\n") {
       CLAUDE_CODE_SESSION_ID: "",
       TMUX_PANE: "",
       BUDDY_FAKE_NOW: "0",
-      COLUMNS: "80",
+      COLUMNS: columns,
       BUDDY_SHELL: "",
     },
     input,
@@ -70,7 +70,7 @@ afterEach(() => {
 });
 
 describe("buddy statusline colors", () => {
-  test("uses rarity color for the name and stars, not the art", () => {
+  test("uses rarity color for the name, stars, and sprite", () => {
     const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-statusline-"));
     temporaryDirectories.push(configDir);
     const stateDir = join(configDir, "buddy-state");
@@ -107,10 +107,55 @@ describe("buddy statusline colors", () => {
     const greenLines = output.split("\n").filter((line) => line.includes(green));
 
     expect(result.exitCode).toBe(0);
-    expect(greenLines).toHaveLength(1);
-    expect(greenLines[0]).toContain("Nimbus ★★");
-    expect(output).not.toContain(`${green}  art`);
-    expect(output).not.toContain(`${green} (°°)`);
+    expect(greenLines.length).toBeGreaterThanOrEqual(2);
+    expect(greenLines.some((line) => line.includes("Nimbus ★★"))).toBe(true);
+    expect(greenLines.some((line) => line.includes("(°°)"))).toBe(true);
+  });
+
+  test.each([40, 60, 80, 120])("keeps the shared card inside %i columns", (columns) => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "uncommon",
+      stars: "★★",
+      shiny: false,
+      reaction: "",
+      achievement: "",
+      level: 1,
+      mood: "focused",
+      frames: [" .----.\n(°  °)\n(    )\n `----'"],
+      frameSequence: [0],
+    }));
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "hello from buddy",
+      timestamp: 0,
+    }));
+
+    const result = runStatusline(configDir, "{}\n", String(columns));
+    const plain = result.stdout.toString().replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+    const lines = plain.split("\n").filter(Boolean);
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => line.length <= columns)).toBe(true);
+    expect(lines.some((line) => /\|.*\|-- /.test(line))).toBe(true);
+    expect(plain).toContain("Nimbus ★★");
+  });
+
+  test("drops the shell bubble and tail when the panel is narrow", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "hello from buddy",
+      timestamp: 0,
+    }));
+
+    const result = runStatusline(configDir, "{}\n", "24");
+    const plain = result.stdout.toString().replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+    const lines = plain.split("\n").filter(Boolean);
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => line.length <= 24)).toBe(true);
+    expect(lines.some((line) => /\|.*\|-- /.test(line))).toBe(false);
+    expect(plain).not.toMatch(/^ *\.[-]{12,}\.$/m);
   });
 });
 

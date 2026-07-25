@@ -31,7 +31,9 @@ else
   CLAUDE_USER_CONFIG="$HOME/.claude.json"
 fi
 
-if [[ -n "${CLAUDE_CONFIG_DIR:-}" ]]; then
+if [[ -n "${CODING_BUDDY_USER_ID:-}" ]]; then
+  BUDDY_STATE_DIR="${CODING_BUDDY_STATE_DIR:-$HOME/.coding-buddy/shared}"
+elif [[ -n "${CLAUDE_CONFIG_DIR:-}" ]]; then
   BUDDY_STATE_DIR="$CLAUDE_CONFIG_DIR/buddy-state"
 else
   BUDDY_STATE_DIR="$HOME/.claude-buddy"

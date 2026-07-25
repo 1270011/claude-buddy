@@ -127,7 +127,7 @@ for _ in 1 2 3 4 5; do
     PTY=$(readlink "/proc/${PID}/fd/0" 2>/dev/null)
     if [ -c "$PTY" ] 2>/dev/null; then
         COLS=$(stty size < "$PTY" 2>/dev/null | awk '{print $2}')
-        [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+        [ "${COLS:-0}" -gt 0 ] 2>/dev/null && break
     fi
 
     # macOS: /proc doesn't exist — get TTY name from process table
@@ -136,17 +136,17 @@ for _ in 1 2 3 4 5; do
         TTY_DEV="/dev/$TTY_NAME"
         if [ -c "$TTY_DEV" ] 2>/dev/null; then
             COLS=$(stty size < "$TTY_DEV" 2>/dev/null | awk '{print $2}')
-            [ "${COLS:-0}" -gt 40 ] 2>/dev/null && break
+            [ "${COLS:-0}" -gt 0 ] 2>/dev/null && break
         fi
     fi
 done
-[ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=${COLUMNS:-0}
+[ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=${COLUMNS:-0}
 # Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
-if [ "${COLS:-0}" -lt 40 ] 2>/dev/null; then
+if [ "${COLS:-0}" -lt 1 ] 2>/dev/null; then
     _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
     case "$_ps_cols" in ''|*[!0-9]*) ;; *) [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$_ps_cols ;; esac
 fi
-[ "${COLS:-0}" -lt 40 ] 2>/dev/null && COLS=125
+[ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=125
 
 # ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
@@ -218,7 +218,7 @@ for line in "${ART_LINES[@]}"; do
     if [ "$SHINY" = "true" ]; then
         ALL_COLORS+=("${RAINBOW[$(( (_arc + RAINBOW_OFFSET) % RAINBOW_LEN ))]}")
     else
-        ALL_COLORS+=("$NEUTRAL")
+        ALL_COLORS+=("$C")
     fi
     _arc=$(( _arc + 1 ))
 done
@@ -280,6 +280,28 @@ dwidth() {
     } }
     END { print w+0 }'
 }
+
+# Keep the label inside the same sprite column as the art. The exact Unicode
+# width rules live in dwidth(), so the shell and TS renderers agree on bounds.
+LABEL_W=$(dwidth "$NAME_WITH_LEVEL")
+if [ "$LABEL_W" -gt "$ART_W" ] 2>/dev/null; then
+    ART_W="$LABEL_W"
+    NAME_PAD=$(( (ART_W - LABEL_W) / 2 ))
+    NAME_LINE="$(printf '%*s%s' "$NAME_PAD" '' "$NAME_WITH_LEVEL")"
+    ALL_LINES[$(( ART_COUNT - 1 ))]="$NAME_LINE"
+fi
+
+# The bubble, tail, and sprite are one unit. At narrow widths, drop the
+# bubble rather than allowing a partial border or tail to escape the panel.
+MIN_BUBBLE_INNER=12
+TAIL_W=3
+MAX_INNER=$(( COLS - ART_W - TAIL_W - 4 - MARGIN ))
+if [ -n "$BUBBLE" ] && [ "$MAX_INNER" -ge "$MIN_BUBBLE_INNER" ] 2>/dev/null; then
+    [ "$INNER_W" -gt "$MAX_INNER" ] && INNER_W="$MAX_INNER"
+else
+    BUBBLE=""
+    BUBBLE_TEXT=""
+fi
 
 # ─── Word-wrap bubble text ────────────────────────────────────────────────────
 TEXT_LINES=()

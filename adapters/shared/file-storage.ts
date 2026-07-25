@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { configuredSharedUserId } from "../../core/identity.ts";
 import {
   EMPTY_GLOBAL,
   EMPTY_SLOT,
@@ -506,6 +507,9 @@ export class FileBuddyStorage
   }
 
   ensureStableIdentity(): string {
+    const sharedUserId = configuredSharedUserId();
+    if (sharedUserId) return sharedUserId;
+
     return this.withLock(() => {
       this.ensureDir();
       try {

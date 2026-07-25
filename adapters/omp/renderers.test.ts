@@ -26,18 +26,18 @@ const reaction: ReactionState = {
 };
 
 describe("OMP buddy renderers", () => {
-  test("composes details left and intact art right within the SDK height budget", () => {
+  test("composes the shared hero card within the SDK height budget", () => {
     const lines = renderBuddyWidget(companion, reaction, [], 64);
     const plain = lines.join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-    const artLine = plain.split("\n").find((line) => /\.-{2,6}\./.test(line)) ?? "";
+    const artLine = plain.split("\n").find((line) => /\|--/.test(line)) ?? "";
 
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(6);
     expect(lines.length).toBeLessThanOrEqual(OMP_WIDGET_MAX_LINES);
-    expect(plain).toMatch(/\.-{2,6}\./);
+    expect(plain).toMatch(/^ *\.[-]+\.\s*$/m);
     expect(plain).toContain("Nimbus ★★");
     expect(plain).toContain("💬 *watching closely*");
-    expect(artLine).toMatch(/\.-{2,6}\./);
-    expect(artLine.indexOf("uncommon")).toBeLessThan(artLine.indexOf(".-"));
+    expect(artLine).toContain("--");
+    expect(artLine).toMatch(/\|--\s+\S/);
     expect(displayWidth(artLine)).toBe(64);
     expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
   });
@@ -50,8 +50,7 @@ describe("OMP buddy renderers", () => {
 
     expect(plain.match(/💬/g)).toHaveLength(1);
     expect(plain.match(/PiBuddyStorage\(\)/g)).toHaveLength(1);
-    expect(rendered).not.toContain("╭");
-    expect(rendered).not.toContain("╰");
+    expect(plain).toMatch(/^ *\.[-]+\.\s*$/m);
     expect(lines.length).toBeLessThanOrEqual(OMP_WIDGET_MAX_LINES);
   });
 

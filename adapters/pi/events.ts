@@ -183,7 +183,7 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
     deps.ui.notifyAchievements(ctx, achievements);
   });
   pi.on("session_shutdown", () => {
-    deps.ui.cancelTimers();
+    deps.ui.dispose();
   });
 }
 function diagnosticPreviewsEnabled(): boolean {

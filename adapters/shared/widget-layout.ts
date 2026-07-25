@@ -1,6 +1,16 @@
+import { RARITY_STARS } from "../../core/engine.ts";
+import type { Achievement } from "../../core/achievements.ts";
+import { getArtFrame, HAT_ART } from "../../core/render-model.ts";
+import type { Companion, ReactionState } from "../../core/model.ts";
+import { getRarityColor } from "../../server/theme.ts";
+
 const ANSI_PATTERN = /\x1b\[[0-?]*[ -/]*[@-~]/g;
 const ART_GAP = "  ";
 const DEFAULT_WIDGET_WIDTH = 78;
+const RESET = "\x1b[0m";
+const DIM_ITALIC = "\x1b[2;3m";
+const resizeSubscribers = new Set<() => void>();
+let resizeDispatcher: (() => void) | null = null;
 
 export const WIDGET_MAX_LINES = 10;
 
@@ -69,7 +79,26 @@ export function wrapReaction(reaction: string, width: number, maxLines: number):
 
 export function getWidgetWidth(): number {
   const columns = process.stdout.columns;
-  return columns && columns > 0 ? Math.max(24, columns - 2) : DEFAULT_WIDGET_WIDTH;
+  return columns && columns > 0 ? Math.max(1, columns - 2) : DEFAULT_WIDGET_WIDTH;
+}
+
+/** Share one host resize listener across all adapter UI instances. */
+export function subscribeToWidgetResize(callback: () => void): () => void {
+  resizeSubscribers.add(callback);
+  if (!resizeDispatcher) {
+    resizeDispatcher = () => {
+      for (const subscriber of resizeSubscribers) subscriber();
+    };
+    process.stdout.on("resize", resizeDispatcher);
+  }
+
+  return () => {
+    resizeSubscribers.delete(callback);
+    if (resizeSubscribers.size === 0 && resizeDispatcher) {
+      process.stdout.removeListener("resize", resizeDispatcher);
+      resizeDispatcher = null;
+    }
+  };
 }
 
 export function getDetailsWidth(art: string[], width: number = getWidgetWidth()): number {
@@ -92,5 +121,85 @@ export function composeDetailsAndArt(
     const detailLine = details[index] ?? "";
     const boundedDetailLine = displayWidth(detailLine) > sideWidth ? truncateToWidth(detailLine, sideWidth) : detailLine;
     return `${boundedDetailLine}${" ".repeat(Math.max(0, sideWidth - displayWidth(boundedDetailLine)))}${ART_GAP}${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}`;
+  });
+}
+
+function trimArt(line: string): string {
+  return line.replace(/\s+$/g, "");
+}
+
+function centerToWidth(text: string, width: number): string {
+  const bounded = truncateToWidth(text, width);
+  const remaining = Math.max(0, width - displayWidth(bounded));
+  const left = Math.floor(remaining / 2);
+  return `${" ".repeat(left)}${bounded}${" ".repeat(remaining - left)}`;
+}
+
+function padLine(line: string, width: number): string {
+  const bounded = displayWidth(line) > width ? truncateToWidth(line, width) : line;
+  return `${bounded}${" ".repeat(Math.max(0, width - displayWidth(bounded)))}`;
+}
+
+function frameReaction(reaction: string, achievements: Achievement[], innerWidth: number): string[] {
+  const reactionLines = wrapReaction(reaction, innerWidth, 2);
+  const achievementLine = achievements[0] ? `🏆 ${achievements[0].name}` : "";
+  const content = [...reactionLines, ...(achievementLine ? [achievementLine] : [])]
+    .slice(0, 3)
+    .map((line) => `${DIM_ITALIC}${line}${RESET}`);
+  const top = `.${"-".repeat(innerWidth + 2)}.`;
+  return [
+    top,
+    ...content.map((line) => `| ${padLine(line, innerWidth)} |`),
+    `\`${"-".repeat(innerWidth + 2)}'`,
+  ];
+}
+
+/**
+ * Render the hero card shared by the OMP, Pi, and Claude Code surfaces.
+ * The bubble is deliberately dropped as a unit when the sprite cannot fit.
+ */
+export function renderCompanionWidget(
+  companion: Companion,
+  reaction: ReactionState | null | undefined,
+  achievements: Achievement[] = [],
+  width: number = getWidgetWidth(),
+  frame: number = Math.floor(Date.now() / 700),
+): string[] {
+  const safeWidth = Math.max(1, Math.floor(width));
+  const art = getArtFrame(companion.bones.species, companion.bones.eye, frame).map(trimArt);
+  if (companion.bones.hat !== "none" && !art[0]?.trim()) art[0] = HAT_ART[companion.bones.hat];
+
+  const color = getRarityColor(companion.bones.rarity);
+  const label = `${companion.name} ${RARITY_STARS[companion.bones.rarity]}${companion.bones.shiny ? " ✨" : ""}`;
+  const artWidth = Math.max(...art.map(displayWidth), 0);
+  const labelWidth = displayWidth(label);
+  const spriteWidth = Math.min(safeWidth, Math.max(artWidth, labelWidth));
+  const clippedArt = art.map((line) => `${color}${padLine(line, spriteWidth)}${RESET}`);
+  const clippedLabel = `${color}${centerToWidth(label, spriteWidth)}${RESET}`;
+
+  const minBubbleInner = 12;
+  const tailWidth = 3;
+  const maxBubbleInner = safeWidth - spriteWidth - tailWidth - 4;
+  const hasContent = Boolean(reaction?.reaction?.trim()) || achievements.length > 0;
+  const canFrame = hasContent && maxBubbleInner >= minBubbleInner;
+  const bubbleInner = canFrame ? Math.min(44, maxBubbleInner) : 0;
+  const bubble = canFrame ? frameReaction(reaction?.reaction ?? "", achievements, bubbleInner) : [];
+  const bubbleWidth = bubbleInner + 4;
+  const cardWidth = canFrame ? bubbleWidth + tailWidth + spriteWidth : spriteWidth;
+  const height = Math.max(clippedArt.length + 1, bubble.length);
+  const connectorRow = canFrame ? Math.min(bubble.length - 2, Math.max(1, Math.floor(bubble.length / 2))) : -1;
+
+  return Array.from({ length: Math.min(WIDGET_MAX_LINES, height) }, (_, index) => {
+    const artLine = index < clippedArt.length ? clippedArt[index]! : index === clippedArt.length ? clippedLabel : "";
+    const sprite = padLine(artLine, spriteWidth);
+    let body: string;
+    if (canFrame) {
+      const bubbleLine = bubble[index] ?? " ".repeat(bubbleWidth);
+      const tail = index === connectorRow ? "-- " : "   ";
+      body = `${bubbleLine}${tail}${sprite}`;
+    } else {
+      body = sprite;
+    }
+    return `${" ".repeat(Math.max(0, safeWidth - cardWidth))}${body}`;
   });
 }

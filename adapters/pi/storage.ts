@@ -1,5 +1,6 @@
 import { getAgentDir } from "@mariozechner/pi-coding-agent";
 import { join } from "node:path";
+import { sharedStateDir } from "../../core/identity.ts";
 import {
   FileBuddyStorage,
   slugifySlot,
@@ -8,8 +9,12 @@ import {
 
 export const DEFAULT_PI_BUDDY_STATE_DIR = join(getAgentDir(), "buddy");
 
+function defaultPiBuddyStateDir(): string {
+  return sharedStateDir() ?? DEFAULT_PI_BUDDY_STATE_DIR;
+}
+
 export class PiBuddyStorage extends FileBuddyStorage {
-  constructor(stateDir = DEFAULT_PI_BUDDY_STATE_DIR) {
+  constructor(stateDir = defaultPiBuddyStateDir()) {
     super(stateDir);
   }
 

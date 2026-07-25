@@ -37,17 +37,18 @@ const achievement: Achievement = {
 };
 
 describe("Pi buddy renderers", () => {
-  test("composes details left and intact art right within Pi's widget budget", () => {
+  test("composes the shared hero card within Pi's widget budget", () => {
     const lines = renderBuddyWidget(companion, reaction, [], 64);
     const plain = lines.join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
-    const artLine = plain.split("\n").find((line) => /\.-{2,6}\./.test(line)) ?? "";
+    const artLine = plain.split("\n").find((line) => /\|--/.test(line)) ?? "";
 
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(6);
     expect(lines.length).toBeLessThanOrEqual(PI_WIDGET_MAX_LINES);
     expect(plain).toContain("Nimbus ★★");
     expect(plain).toContain("💬 *watching closely*");
-    expect(artLine).toMatch(/\.-{2,6}\./);
-    expect(artLine.indexOf("uncommon")).toBeLessThan(artLine.indexOf(".-"));
+    expect(plain).toMatch(/^ *\.[-]+\.\s*$/m);
+    expect(artLine).toContain("--");
+    expect(artLine).toMatch(/\|--\s+\S/);
     expect(displayWidth(artLine)).toBe(64);
     expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
   });
@@ -81,9 +82,9 @@ describe("Pi buddy renderers", () => {
   test("keeps long detail labels within the width contract", () => {
     const lines = renderBuddyWidget({ ...companion, name: "N".repeat(100) }, null, [], 64);
 
-    expect(lines).toHaveLength(5);
+    expect(lines).toHaveLength(6);
     expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
-    expect(lines.join("\n")).toMatch(/\.-{2,6}\./);
+    expect(lines.join("\n")).not.toMatch(/^ *\.[-]+\.\s*$/m);
   });
 
   test("renders achievements in the shared details column", () => {

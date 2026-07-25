@@ -33,6 +33,7 @@ import { join } from "path";
 import type { Companion } from "../core/engine.ts"
 import type * as CoreEngine from "../core/engine.ts";
 import type * as Art from "./art.ts";
+import { configuredSharedUserId } from "../core/identity.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -332,6 +333,8 @@ export function saveReaction(
 // ─── Identity resolution ─────────────────────────────────────────────────────
 
 export function resolveUserId(): string {
+  const sharedUserId = configuredSharedUserId();
+  if (sharedUserId) return sharedUserId;
   try {
     const claudeJson = JSON.parse(readFileSync(claudeUserConfigPath(), "utf8"));
     return claudeJson.oauthAccount?.accountUuid ?? claudeJson.userID ?? "anon";

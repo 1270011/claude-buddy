@@ -95,6 +95,8 @@ The `claude-buddy` package ended at **v0.5.2**.
 | **Pi** | `mariozechner/pi-coding-agent` workspace | Stable random UUID persisted in `~/.pi/agent/buddy/identity.json` |
 | **Oh My Pi (OMP)** | OMP harness with `omp.extensions` support | Stable random UUID persisted in `~/.omp/agent/buddy/identity.json` |
 
+All three surfaces use the same hero composition: the dashed speech bubble is on the left, its `--` tail points toward the rarity-colored sprite on the right, and the companion name is centered underneath the sprite. The card recomputes against the current terminal width on every render.
+
 ## 🚀 Quick Start
 
 ### Claude Code
@@ -135,6 +137,8 @@ bun run install-buddy
 <sub>💡 Need help? → `bun run help`, `npx -y @ramarivera/coding-buddy help`, or `coding-buddy help` (if linked) · `/buddy help` in Claude Code</sub>
 
 
+
+
 ### Multiple Claude profiles?
 
 If you run Claude Code with `CLAUDE_CONFIG_DIR` set (e.g. separate work and personal accounts), pass the same env var to install so buddy lands in the active profile and gets its own menagerie:
@@ -145,6 +149,16 @@ CLAUDE_CONFIG_DIR=~/.claude-personal npx -y @ramarivera/coding-buddy uninstall
 ```
 
 The installer prints `Target profile: <path>` at the top so you can see at a glance which profile you're targeting. Each profile gets its own MCP entry, skill, hooks, status line, and `$CLAUDE_CONFIG_DIR/buddy-state/` menagerie — installs in one profile don't touch another. With `CLAUDE_CONFIG_DIR` unset, behaviour is identical to single-profile (`~/.claude/`, `~/.claude-buddy/`).
+
+### One companion across harnesses
+
+To opt into one identity and one menagerie across Claude Code, Pi, and OMP, set the same variable before launching each harness:
+
+```bash
+export CODING_BUDDY_USER_ID="ramiro"
+```
+
+This opt-in uses `~/.coding-buddy/shared` for the companion, XP, achievements, and reaction state. Set `CODING_BUDDY_STATE_DIR` when you need a different shared root. Sharing the state directory is intentional: it makes the companion actually follow you, at the cost of giving up separate per-harness progress. Without `CODING_BUDDY_USER_ID`, the existing Claude account identity and Pi/OMP per-harness `identity.json` behavior remain unchanged.
 
 <br>
 
@@ -159,7 +173,7 @@ The installer prints `Target profile: <path>` at the top so you can see at a gla
 
 <br>
 
-Every buddy is uniquely generated — same species, same stats, same personality every time. On **Claude Code** the seed is derived from your `accountUuid` in `~/.claude.json`; on **Pi** and **Oh My Pi** a stable random UUID is generated once and persisted in `~/.pi/agent/buddy/identity.json` or `~/.omp/agent/buddy/identity.json` (deleting the file and letting it regenerate will change your buddy). 19 species, each with 3 idle animation frames + a blink.
+Every buddy is uniquely generated — same species, same stats, same personality every time. On **Claude Code** the seed is derived from your `accountUuid` in `~/.claude.json`; on **Pi** and **Oh My Pi** a stable random UUID is generated once and persisted in `~/.pi/agent/buddy/identity.json` or `~/.omp/agent/buddy/identity.json` (unless `CODING_BUDDY_USER_ID` is set). 19 species, each with 3 idle animation frames + a blink.
 
 <!-- Later replace with: docs/species-grid.png -->
 <p align="center">
