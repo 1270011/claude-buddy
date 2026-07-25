@@ -325,6 +325,7 @@ export interface BuddyConfig {
   bubbleMargin: number;
   useCombinedStatus: boolean;
   subStatusCommand?: string;
+  subStatusRefreshSeconds: number;
   rainbowColors?: string[];
   theme: "dark" | "light" | "auto";
   moodEnabled: boolean;
@@ -343,6 +344,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   bubbleWidth: 28,
   bubbleMargin: 8,
   useCombinedStatus: false,
+  subStatusRefreshSeconds: 15,
   theme: "auto",
   moodEnabled: true,
   memoryEnabled: true,
@@ -357,6 +359,9 @@ export function normalizeConfig(data: unknown): BuddyConfig {
   const config = { ...DEFAULT_CONFIG, ...values } as BuddyConfig;
   if (typeof config.subStatusCommand !== "string" || config.subStatusCommand.trim() === "") {
     delete config.subStatusCommand;
+  }
+  if (!Number.isInteger(config.subStatusRefreshSeconds) || config.subStatusRefreshSeconds <= 0) {
+    config.subStatusRefreshSeconds = DEFAULT_CONFIG.subStatusRefreshSeconds;
   }
   return config;
 }
