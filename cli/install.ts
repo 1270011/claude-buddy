@@ -35,6 +35,7 @@ const SETTINGS_FILE = claudeSettingsPath();
 const BUDDY_DIR = claudeSkillDir("buddy");
 const CLAUDE_JSON_PATH = claudeUserConfigPath();
 const PROJECT_ROOT = resolve(dirname(import.meta.dir));
+const HOOK_TIMEOUT_SECONDS = 15;
 
 function banner() {
   console.log(`
@@ -187,6 +188,11 @@ function installHooks(settings: Record<string, any>) {
   const suggestHook   = join(PROJECT_ROOT, "hooks", "suggest.sh");
   const nameHook      = join(PROJECT_ROOT, "hooks", "name-react.sh");
   const moodHook      = join(PROJECT_ROOT, "hooks", "mood-react.sh");
+  const commandHook = (command: string) => ({
+    type: "command",
+    command: toUnixPath(command),
+    timeout: HOOK_TIMEOUT_SECONDS,
+  });
 
   if (!settings.hooks) settings.hooks = {};
 
@@ -198,11 +204,11 @@ function installHooks(settings: Record<string, any>) {
   );
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
-    hooks: [{ type: "command", command: toUnixPath(reactHook) }],
+    hooks: [commandHook(reactHook)],
   });
   settings.hooks.PostToolUse.push({
     matcher: "Write|Edit",
-    hooks: [{ type: "command", command: toUnixPath(fileTypeHook) }],
+    hooks: [commandHook(fileTypeHook)],
   });
 
   // Stop: extract <!-- buddy: --> comment from Claude's response
@@ -211,10 +217,10 @@ function installHooks(settings: Record<string, any>) {
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
   );
   settings.hooks.Stop.push({
-    hooks: [{ type: "command", command: toUnixPath(commentHook) }],
+    hooks: [commandHook(commentHook)],
   });
   settings.hooks.Stop.push({
-    hooks: [{ type: "command", command: toUnixPath(suggestHook) }],
+    hooks: [commandHook(suggestHook)],
   });
 
   // UserPromptSubmit: detect buddy's name in user message → instant status line
@@ -224,10 +230,10 @@ function installHooks(settings: Record<string, any>) {
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
   );
   settings.hooks.UserPromptSubmit.push({
-    hooks: [{ type: "command", command: toUnixPath(nameHook) }],
+    hooks: [commandHook(nameHook)],
   });
   settings.hooks.UserPromptSubmit.push({
-    hooks: [{ type: "command", command: toUnixPath(moodHook) }],
+    hooks: [commandHook(moodHook)],
   });
 
   ok("Hooks registered: PostToolUse (Bash + Write/Edit) + Stop (comment + suggest) + UserPromptSubmit (name + mood)");
