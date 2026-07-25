@@ -8,4 +8,4 @@ BUN="$(command -v bun 2>/dev/null || true)"
 [ -x "$BUN" ] || BUN="/opt/homebrew/bin/bun"
 [ -x "$BUN" ] || BUN="/usr/local/bin/bun"
 [ -x "$BUN" ] || exit 0
-exec "$BUN" run "$ROOT/server/hooks/legacy-bash.ts" mood-react.sh || exit 0
+exec "$BUN" run "$ROOT/server/hooks/mood-react.ts" || exit 0

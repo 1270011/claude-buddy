@@ -6,11 +6,21 @@ import { buddyStateDir } from "../path.ts";
 export type JsonObject = Record<string, unknown>;
 
 export interface HookRuntime {
+  clock?: () => HookClock;
   now?: () => number;
   packageRoot?: string;
+  random?: () => number;
   sessionId?: string;
   spawnDetached?: (script: string, args: string[]) => void;
   stateDir?: string;
+}
+
+export interface HookClock {
+  day: number;
+  dayOfWeek: number;
+  hour: number;
+  month: number;
+  nowSeconds: number;
 }
 
 export function parseHookInput(raw: string): JsonObject | null {
@@ -54,6 +64,29 @@ export function nonNegativeInteger(value: unknown, fallback: number): number {
   if (Number.isInteger(value) && Number(value) >= 0) return Number(value);
   if (typeof value === "string" && /^[0-9]+$/.test(value)) return Number(value);
   return fallback;
+}
+
+export function randomIndex(length: number, runtime: HookRuntime = {}): number {
+  return Math.floor((runtime.random?.() ?? Math.random()) * length);
+}
+
+export function pickRandom<T>(values: readonly T[], runtime: HookRuntime = {}): T | undefined {
+  if (values.length === 0) return undefined;
+  return values[randomIndex(values.length, runtime)];
+}
+
+export function hookClock(runtime: HookRuntime = {}): HookClock {
+  if (runtime.clock) return runtime.clock();
+  const nowMs = runtime.now?.() ?? Date.now();
+  const date = new Date(nowMs);
+  const jsDay = date.getDay();
+  return {
+    day: date.getDate(),
+    dayOfWeek: jsDay === 0 ? 7 : jsDay,
+    hour: date.getHours(),
+    month: date.getMonth() + 1,
+    nowSeconds: Math.floor(nowMs / 1000),
+  };
 }
 
 export function isOnCooldown(path: string, cooldownSeconds: number, nowMs: number): boolean {
