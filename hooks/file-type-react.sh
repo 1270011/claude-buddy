@@ -8,4 +8,4 @@ BUN="$(command -v bun 2>/dev/null || true)"
 [ -x "$BUN" ] || BUN="/opt/homebrew/bin/bun"
 [ -x "$BUN" ] || BUN="/usr/local/bin/bun"
 [ -x "$BUN" ] || exit 0
-exec "$BUN" run "$ROOT/server/hooks/legacy-bash.ts" file-type-react.sh || exit 0
+exec "$BUN" run "$ROOT/server/hooks/file-type-react.ts" || exit 0
