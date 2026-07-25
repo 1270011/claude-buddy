@@ -7,11 +7,68 @@ function trimArt(line: string): string {
   return line.replace(/\s+$/g, "");
 }
 
-export function renderBuddyStatus(companion: Companion, reaction?: ReactionState | null): string {
+const REACTION_WIDTH = 44;
+
+function displayWidth(text: string): number {
+  let width = 0;
+  for (const character of text) {
+    width += /\p{Emoji_Presentation}/u.test(character) ? 2 : 1;
+  }
+  return width;
+}
+
+function truncateToWidth(text: string, width: number): string {
+  let result = "";
+  let currentWidth = 0;
+  for (const character of text) {
+    const characterWidth = /\p{Emoji_Presentation}/u.test(character) ? 2 : 1;
+    if (currentWidth + characterWidth > width) break;
+    result += character;
+    currentWidth += characterWidth;
+  }
+  return result;
+}
+
+function wrapReaction(reaction: string): string[] {
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of reaction.trim().split(/\s+/)) {
+    if (!word) continue;
+    if (displayWidth(word) > REACTION_WIDTH) {
+      if (current) lines.push(current);
+      lines.push(`${truncateToWidth(word, REACTION_WIDTH - 1)}…`);
+      current = "";
+      continue;
+    }
+
+    const candidate = current ? `${current} ${word}` : word;
+    if (displayWidth(candidate) > REACTION_WIDTH) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+
+  if (current) lines.push(current);
+  return lines;
+}
+
+function renderReactionBubble(reaction: string): string[] {
+  const lines = wrapReaction(`💬 ${reaction}`);
+  const border = `╭${"─".repeat(REACTION_WIDTH + 2)}╮`;
+  return [
+    border,
+    ...lines.map((line) => `│ ${line}${" ".repeat(Math.max(0, REACTION_WIDTH - displayWidth(line)))} │`),
+    `╰${"─".repeat(REACTION_WIDTH + 2)}╯`,
+  ];
+}
+
+export function renderBuddyStatus(companion: Companion): string {
   const shiny = companion.bones.shiny ? " ✨" : "";
   const stars = RARITY_STARS[companion.bones.rarity];
-  const suffix = reaction?.reaction ? ` — ${reaction.reaction}` : "";
-  return `${trimArt(getArtFrame(companion.bones.species, companion.bones.eye, Date.now())[0])} ${companion.name} ${stars}${shiny}${suffix}`;
+  return `${trimArt(getArtFrame(companion.bones.species, companion.bones.eye, Date.now())[0])} ${companion.name} ${stars}${shiny}`;
 }
 
 export function renderBuddyWidget(
@@ -33,7 +90,7 @@ export function renderBuddyWidget(
   ];
 
   if (reaction?.reaction) {
-    lines.push("", `“${reaction.reaction}”`);
+    lines.push("", ...renderReactionBubble(reaction.reaction));
   }
 
   if (achievements.length > 0) {

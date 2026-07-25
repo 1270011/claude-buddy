@@ -27,7 +27,7 @@ export class OmpBuddyUI {
   ): void {
     const currentReaction = reaction ?? null;
     const muted = this.storage.isMuted();
-    const status = renderBuddyStatus(companion, muted ? null : currentReaction);
+    const status = renderBuddyStatus(companion);
     ctx.ui.setStatus("buddy", muted ? `${status} [muted]` : status);
     ctx.ui.setWidget(
       "buddy",

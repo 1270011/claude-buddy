@@ -31,6 +31,7 @@ NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 [ -z "$NAME" ] && exit 0
 
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
+STARS=$(jq -r '.stars // ""' "$STATE" 2>/dev/null)
 SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null)
@@ -67,6 +68,7 @@ if [ -f "$CONFIG_FILE" ]; then
 fi
 
 NC=$'\033[0m'
+NEUTRAL=$'\033[39m'
 case "$RARITY" in
   common)
     [ "$_THEME" = "light" ] && C=$'\033[38;2;90;90;90m' || C=$'\033[38;2;153;153;153m' ;;
@@ -188,6 +190,7 @@ fi
 # so the geometric center sits at col 6.
 NAME_WITH_LEVEL="$NAME"
 [ "$LEVEL" -gt 1 ] 2>/dev/null && NAME_WITH_LEVEL="${NAME} [L${LEVEL}]"
+[ -n "$STARS" ] && NAME_WITH_LEVEL="${NAME_WITH_LEVEL} ${STARS}"
 case "$MOOD" in
     happy)       MOOD_EMOJI="" ;;
     focused)     MOOD_EMOJI="" ;;
@@ -214,11 +217,11 @@ for line in "${ART_LINES[@]}"; do
     if [ "$SHINY" = "true" ]; then
         ALL_COLORS+=("${RAINBOW[$(( (_arc + RAINBOW_OFFSET) % RAINBOW_LEN ))]}")
     else
-        ALL_COLORS+=("$C")
+        ALL_COLORS+=("$NEUTRAL")
     fi
     _arc=$(( _arc + 1 ))
 done
-ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
+ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$C")
 
 case "$SPECIES" in
   axolotl|capybara|rabbit|mushroom|chonk) ART_W=10 ;;
@@ -377,18 +380,18 @@ for (( i=0; i<MAX_LINES; i++ )); do
 
             # Connector: "-- " on the middle text line, spaces otherwise
             if [ $bi -eq $CONNECTOR_BI ]; then
-                gap="${C}--${NC} "
+                gap="${NEUTRAL}--${NC} "
             else
                 gap="   "
             fi
 
             if [ "$btype" = "border" ]; then
-                echo "${SPACER}${C}${bline}${NC}${gap}${art_part}"
+                echo "${SPACER}${NEUTRAL}${bline}${NC}${gap}${art_part}"
             else
                 pipe_l="${bline:0:1}"
                 pipe_r="${bline: -1}"
                 inner="${bline:1:$(( ${#bline} - 2 ))}"
-                echo "${SPACER}${C}${pipe_l}${NC}${DIM}${inner}${NC}${C}${pipe_r}${NC}${gap}${art_part}"
+                echo "${SPACER}${NEUTRAL}${pipe_l}${NC}${DIM}${inner}${NC}${NEUTRAL}${pipe_r}${NC}${gap}${art_part}"
             fi
         else
             empty=$(printf '%*s' "$BOX_W" '')
