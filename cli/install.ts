@@ -8,12 +8,13 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from "fs";
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 import { resolve, dirname, join } from "path";
 
 import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../core/engine.ts"
 import {
   claudeConfigDir,
+  buddyStateDir,
   claudeSettingsPath,
   claudeSkillDir,
   claudeUserConfigPath,
@@ -21,6 +22,7 @@ import {
 } from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
 import { generateFallbackName } from "../core/reactions.ts"
+import { copyRuntimeApp, stableRuntimePaths } from "./runtime-app.ts";
 
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
@@ -116,8 +118,8 @@ function saveSettings(settings: Record<string, any>) {
 
 // ─── Step 1: Register MCP server (in ~/.claude.json) ────────────────────────
 
-function installMcp() {
-  const serverPath = join(PROJECT_ROOT, "server", "index.ts");
+function installMcp(appDir: string) {
+  const serverPath = stableRuntimePaths(appDir).mcpServer;
 
   let claudeJson: Record<string, any> = {};
   try {
@@ -129,7 +131,7 @@ function installMcp() {
   claudeJson.mcpServers["claude-buddy"] = {
     command: "bun",
     args: [toUnixPath(serverPath)],
-    cwd: toUnixPath(PROJECT_ROOT),
+    cwd: toUnixPath(appDir),
   };
 
   writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
@@ -147,8 +149,8 @@ function installSkill() {
 
 // ─── Step 3: Configure status line (with animation refresh) ─────────────────
 
-function installStatusLine(settings: Record<string, any>) {
-  const statusScript = join(PROJECT_ROOT, "statusline", "buddy-status.sh");
+function installStatusLine(settings: Record<string, any>, appDir: string) {
+  const statusScript = stableRuntimePaths(appDir).statusline;
 
   settings.statusLine = {
     type: "command",
@@ -181,13 +183,14 @@ function stripLegacyPopupHooks(settings: Record<string, any>) {
 
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
 
-function installHooks(settings: Record<string, any>) {
-  const reactHook     = join(PROJECT_ROOT, "hooks", "react.sh");
-  const fileTypeHook  = join(PROJECT_ROOT, "hooks", "file-type-react.sh");
-  const commentHook   = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
-  const suggestHook   = join(PROJECT_ROOT, "hooks", "suggest.sh");
-  const nameHook      = join(PROJECT_ROOT, "hooks", "name-react.sh");
-  const moodHook      = join(PROJECT_ROOT, "hooks", "mood-react.sh");
+function installHooks(settings: Record<string, any>, appDir: string) {
+  const hooksDir = stableRuntimePaths(appDir).hooks;
+  const reactHook     = join(hooksDir, "react.sh");
+  const fileTypeHook  = join(hooksDir, "file-type-react.sh");
+  const commentHook   = join(hooksDir, "buddy-comment.sh");
+  const suggestHook   = join(hooksDir, "suggest.sh");
+  const nameHook      = join(hooksDir, "name-react.sh");
+  const moodHook      = join(hooksDir, "mood-react.sh");
   const commandHook = (command: string) => ({
     type: "command",
     command: toUnixPath(command),
@@ -237,6 +240,15 @@ function installHooks(settings: Record<string, any>) {
   });
 
   ok("Hooks registered: PostToolUse (Bash + Write/Edit) + Stop (comment + suggest) + UserPromptSubmit (name + mood)");
+}
+
+function installRuntimeApp(): string {
+  const appDir = copyRuntimeApp(PROJECT_ROOT, buddyStateDir());
+  const installArgs = ["install", "--production", "--ignore-scripts"];
+  if (existsSync(join(appDir, "bun.lock"))) installArgs.push("--frozen-lockfile");
+  execFileSync("bun", installArgs, { cwd: appDir, stdio: "ignore" });
+  ok(`Stable runtime installed: ${appDir}`);
+  return appDir;
 }
 
 // ─── Step 5: Ensure MCP tools are allowed ───────────────────────────────────
@@ -301,14 +313,15 @@ console.log("");
 info("Installing coding-buddy...\n");
 
 const settings = loadSettings();
+const appDir = installRuntimeApp();
 
-installMcp();
+installMcp(appDir);
 installSkill();
 
 stripLegacyPopupHooks(settings);
-installStatusLine(settings);
+installStatusLine(settings, appDir);
 
-installHooks(settings);
+installHooks(settings, appDir);
 ensurePermissions(settings);
 saveSettings(settings);
 

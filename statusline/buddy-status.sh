@@ -16,6 +16,7 @@
 
 # shellcheck source=../scripts/paths.sh
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/substatus.sh"
 
 STATE="$BUDDY_STATE_DIR/status.json"
 CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
@@ -39,7 +40,7 @@ ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 
-cat > /dev/null  # drain stdin
+BUDDY_STATUSLINE_INPUT=$(cat)
 
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
@@ -401,5 +402,9 @@ for (( i=0; i<MAX_LINES; i++ )); do
         echo "${SPACER}${art_part}"
     fi
 done
+
+# Append the last cached sub-status result below the buddy panel and refresh
+# it asynchronously when stale. The statusline itself never waits on it.
+append_substatus
 
 exit 0

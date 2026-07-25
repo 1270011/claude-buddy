@@ -324,6 +324,7 @@ export interface BuddyConfig {
   bubbleWidth: number;
   bubbleMargin: number;
   useCombinedStatus: boolean;
+  subStatusCommand?: string;
   rainbowColors?: string[];
   theme: "dark" | "light" | "auto";
   moodEnabled: boolean;
@@ -349,12 +350,22 @@ const DEFAULT_CONFIG: BuddyConfig = {
   suggestionCooldown: 180,
 };
 
+export function normalizeConfig(data: unknown): BuddyConfig {
+  const values = data && typeof data === "object" && !Array.isArray(data)
+    ? data
+    : {};
+  const config = { ...DEFAULT_CONFIG, ...values } as BuddyConfig;
+  if (typeof config.subStatusCommand !== "string" || config.subStatusCommand.trim() === "") {
+    delete config.subStatusCommand;
+  }
+  return config;
+}
+
 export function loadConfig(): BuddyConfig {
   try {
-    const data = JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
-    return { ...DEFAULT_CONFIG, ...data };
+    return normalizeConfig(JSON.parse(readFileSync(CONFIG_FILE, "utf8")));
   } catch {
-    return { ...DEFAULT_CONFIG };
+    return normalizeConfig({});
   }
 }
 
@@ -507,6 +518,7 @@ const TRANSIENT_PREFIXES = [
   "reaction.",
   ".last_reaction.",
   ".last_comment.",
+  ".substatus.",
 ];
 
 /**
