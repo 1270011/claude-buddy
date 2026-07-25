@@ -25,11 +25,23 @@ append_substatus() {
     local cache_file="$state_dir/.substatus.$sid"
     local lock_dir="$state_dir/.substatus.$sid.lock"
     local command=""
-    local now cache_age lock_age
+    local now cache_age lock_age refresh_seconds configured_refresh_seconds
+
+    # Remove abandoned refresh output without touching the complete cache or
+    # the lock directory. The refresh path below uses the same deterministic
+    # temp filename, so this also cleans up files from older implementations.
+    find "$state_dir" -type f -name ".substatus.$sid.*" -mmin +60 -exec rm -f {} \; 2>/dev/null
 
     [ -f "$config_file" ] || return 0
     command=$(jq -r '.subStatusCommand // ""' "$config_file" 2>/dev/null)
     [ -n "$command" ] || return 0
+
+    refresh_seconds=15
+    configured_refresh_seconds=$(jq -r '.subStatusRefreshSeconds // empty' "$config_file" 2>/dev/null)
+    case "$configured_refresh_seconds" in
+        ''|*[!0-9]*) ;;
+        *) [ "$configured_refresh_seconds" -gt 0 ] && refresh_seconds="$configured_refresh_seconds" ;;
+    esac
 
     # Always show the last complete result first. A missing or stale cache is
     # allowed to be blank; the refresh below will populate the next tick.
@@ -41,7 +53,7 @@ append_substatus() {
         cache_age=$(( now - $(_substatus_mtime "$cache_file") ))
         [ "$cache_age" -lt 0 ] && cache_age=0
     fi
-    [ "$cache_age" -lt 5 ] && return 0
+    [ "$cache_age" -lt "$refresh_seconds" ] && return 0
 
     # mkdir is the portable atomic lock primitive. Only remove locks that are
     # over a minute old, so a slow but healthy command is never duplicated.
@@ -58,9 +70,18 @@ append_substatus() {
     # The explicit /dev/null stdin makes this process independent of Claude's
     # killed statusline process; the captured payload is piped to the command.
     (
-        local tmp_file="$cache_file.$$"
-        printf '%s' "${BUDDY_STATUSLINE_INPUT:-}" | sh -c "$command" > "$tmp_file" 2>/dev/null
-        mv "$tmp_file" "$cache_file" 2>/dev/null || rm -f "$tmp_file" 2>/dev/null
-        rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null
+        tmp_file="$state_dir/.substatus.$sid.tmp"
+        cleanup_substatus_refresh() {
+            rm -f "$tmp_file" 2>/dev/null
+            rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null
+        }
+        trap cleanup_substatus_refresh EXIT
+        trap 'exit 1' HUP INT TERM
+
+        if printf '%s' "${BUDDY_STATUSLINE_INPUT:-}" | sh -c "$command" > "$tmp_file" 2>/dev/null; then
+            mv "$tmp_file" "$cache_file" 2>/dev/null || exit 1
+        else
+            exit 1
+        fi
     ) </dev/null > /dev/null 2>/dev/null &
 }

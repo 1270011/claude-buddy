@@ -24,6 +24,13 @@ describe("normalizeConfig", () => {
     expect(normalizeConfig({ subStatusCommand: "  " }).subStatusCommand).toBeUndefined();
     expect(normalizeConfig({ subStatusCommand: null }).subStatusCommand).toBeUndefined();
   });
+
+  test("defaults and validates subStatusRefreshSeconds", () => {
+    expect(normalizeConfig({}).subStatusRefreshSeconds).toBe(15);
+    expect(normalizeConfig({ subStatusRefreshSeconds: 30 }).subStatusRefreshSeconds).toBe(30);
+    expect(normalizeConfig({ subStatusRefreshSeconds: "30" }).subStatusRefreshSeconds).toBe(15);
+    expect(normalizeConfig({ subStatusRefreshSeconds: 0 }).subStatusRefreshSeconds).toBe(15);
+  });
 });
 
 describe("slugify", () => {

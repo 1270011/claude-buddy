@@ -1,10 +1,67 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 const temporaryDirectories: string[] = [];
+const statuslineScript = join(import.meta.dir, "buddy-status.sh");
+
+function createStatuslineFixture(config: Record<string, unknown>) {
+  const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-substatus-"));
+  temporaryDirectories.push(configDir);
+  const stateDir = join(configDir, "buddy-state");
+  mkdirSync(stateDir);
+  writeFileSync(join(stateDir, "config.json"), JSON.stringify(config));
+  writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+    name: "Nimbus",
+    rarity: "common",
+    stars: "",
+    shiny: false,
+    reaction: "",
+    achievement: "",
+    level: 1,
+    mood: "focused",
+    frames: ["  art"],
+    frameSequence: [0],
+  }));
+  return { configDir, stateDir };
+}
+
+function runStatusline(configDir: string, input = "{}\n") {
+  return spawnSync("bash", [statuslineScript], {
+    env: {
+      ...process.env,
+      CLAUDE_CONFIG_DIR: configDir,
+      CLAUDE_CODE_SESSION_ID: "",
+      TMUX_PANE: "",
+      BUDDY_FAKE_NOW: "0",
+      COLUMNS: "80",
+      BUDDY_SHELL: "",
+    },
+    input,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+}
+
+async function waitFor(condition: () => boolean, timeoutMs = 3000) {
+  const attempts = Math.ceil(timeoutMs / 50);
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (condition()) return;
+    await Bun.sleep(50);
+  }
+  throw new Error(`condition was not met within ${timeoutMs}ms`);
+}
 
 afterEach(() => {
   for (const directory of temporaryDirectories.splice(0)) {
@@ -59,42 +116,13 @@ describe("buddy statusline colors", () => {
 
 describe("buddy sub-status cache", () => {
   test("returns immediately and refreshes the cache with the same stdin payload", async () => {
-    const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-substatus-"));
-    temporaryDirectories.push(configDir);
-    const stateDir = join(configDir, "buddy-state");
-    mkdirSync(stateDir);
-    writeFileSync(join(stateDir, "config.json"), JSON.stringify({
+    const { configDir, stateDir } = createStatuslineFixture({
       subStatusCommand: "sleep 1; cat",
-    }));
-    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
-      name: "Nimbus",
-      rarity: "common",
-      stars: "",
-      shiny: false,
-      reaction: "",
-      achievement: "",
-      level: 1,
-      mood: "focused",
-      frames: ["  art"],
-      frameSequence: [0],
-    }));
+    });
 
     const input = '{"payload":"same-input"}\n';
     const started = performance.now();
-    const first = spawnSync("bash", [join(import.meta.dir, "buddy-status.sh")], {
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: configDir,
-        CLAUDE_CODE_SESSION_ID: "",
-        TMUX_PANE: "",
-        BUDDY_FAKE_NOW: "0",
-        COLUMNS: "80",
-        BUDDY_SHELL: "",
-      },
-      input,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const first = runStatusline(configDir, input);
     const elapsedMs = performance.now() - started;
 
     expect(first.status).toBe(0);
@@ -110,21 +138,66 @@ describe("buddy sub-status cache", () => {
 
     expect(readFileSync(join(stateDir, ".substatus.default"), "utf8").trim()).toBe(input.trim());
     await Bun.sleep(200);
-    const second = spawnSync("bash", [join(import.meta.dir, "buddy-status.sh")], {
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: configDir,
-        CLAUDE_CODE_SESSION_ID: "",
-        TMUX_PANE: "",
-        BUDDY_FAKE_NOW: "0",
-        COLUMNS: "80",
-        BUDDY_SHELL: "",
-      },
-      input,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const second = runStatusline(configDir, input);
 
     expect(second.stdout.toString()).toContain(input.trim());
+  });
+
+  test("uses one temp path and cleans it up after a failed refresh", async () => {
+    const { configDir, stateDir } = createStatuslineFixture({
+      subStatusCommand: "sleep 1; exit 1",
+    });
+    const tempFile = join(stateDir, ".substatus.default.tmp");
+    const lockDir = join(stateDir, ".substatus.default.lock");
+
+    expect(runStatusline(configDir).status).toBe(0);
+    await waitFor(() => existsSync(tempFile));
+    expect(readdirSync(stateDir).filter((name) => name.startsWith(".substatus.default.")).sort())
+      .toEqual([".substatus.default.lock", ".substatus.default.tmp"]);
+
+    await waitFor(() => !existsSync(tempFile) && !existsSync(lockDir));
+    expect(existsSync(tempFile)).toBe(false);
+    expect(readdirSync(stateDir).filter((name) => name.startsWith(".substatus.default.")).sort())
+      .toEqual([]);
+  });
+
+  test("sweeps old temp files without deleting the cache or lock", () => {
+    const { configDir, stateDir } = createStatuslineFixture({});
+    const cacheFile = join(stateDir, ".substatus.default");
+    const staleTemp = join(stateDir, ".substatus.default.old");
+    const lockDir = join(stateDir, ".substatus.default.lock");
+    const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
+
+    writeFileSync(cacheFile, "cached\n");
+    writeFileSync(staleTemp, "orphan\n");
+    mkdirSync(lockDir);
+    utimesSync(staleTemp, oldDate, oldDate);
+
+    expect(runStatusline(configDir).status).toBe(0);
+    expect(existsSync(staleTemp)).toBe(false);
+    expect(readFileSync(cacheFile, "utf8")).toBe("cached\n");
+    expect(existsSync(lockDir)).toBe(true);
+  });
+
+  test("uses the 15-second default and honors a numeric TTL override", async () => {
+    const { configDir, stateDir } = createStatuslineFixture({
+      subStatusCommand: "printf refreshed",
+      subStatusRefreshSeconds: "invalid",
+    });
+    const cacheFile = join(stateDir, ".substatus.default");
+    const oldDate = new Date(Date.now() - 10 * 1000);
+    writeFileSync(cacheFile, "cached\n");
+    utimesSync(cacheFile, oldDate, oldDate);
+
+    expect(runStatusline(configDir).status).toBe(0);
+    await Bun.sleep(200);
+    expect(readFileSync(cacheFile, "utf8")).toBe("cached\n");
+
+    writeFileSync(join(stateDir, "config.json"), JSON.stringify({
+      subStatusCommand: "printf refreshed",
+      subStatusRefreshSeconds: 5,
+    }));
+    expect(runStatusline(configDir).status).toBe(0);
+    await waitFor(() => readFileSync(cacheFile, "utf8") === "refreshed");
   });
 });
