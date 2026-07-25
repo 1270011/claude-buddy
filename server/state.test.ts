@@ -8,7 +8,23 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { slugify } from "./state.ts";
+import { normalizeConfig, slugify } from "./state.ts";
+
+describe("normalizeConfig", () => {
+  test("leaves subStatusCommand unset by default", () => {
+    expect(normalizeConfig({}).subStatusCommand).toBeUndefined();
+  });
+
+  test("preserves a configured subStatusCommand", () => {
+    expect(normalizeConfig({ subStatusCommand: "ccstatusline" }).subStatusCommand)
+      .toBe("ccstatusline");
+  });
+
+  test("treats empty and non-string subStatusCommand values as unset", () => {
+    expect(normalizeConfig({ subStatusCommand: "  " }).subStatusCommand).toBeUndefined();
+    expect(normalizeConfig({ subStatusCommand: null }).subStatusCommand).toBeUndefined();
+  });
+});
 
 describe("slugify", () => {
   test("lowercases input", () => {

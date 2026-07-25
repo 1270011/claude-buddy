@@ -80,3 +80,8 @@ export function buddyStateDir(): string {
   if (cfgDir) return join(cfgDir, "buddy-state");
   return join(homedir(), ".claude-buddy");
 }
+
+/** Stable per-profile runtime copy used by installer registrations. */
+export function buddyAppDir(): string {
+  return join(buddyStateDir(), "app");
+}

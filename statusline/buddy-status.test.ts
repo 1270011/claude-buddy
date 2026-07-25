@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -35,6 +36,8 @@ describe("buddy statusline colors", () => {
       env: {
         ...process.env,
         CLAUDE_CONFIG_DIR: configDir,
+        CLAUDE_CODE_SESSION_ID: "",
+        TMUX_PANE: "",
         BUDDY_FAKE_NOW: "0",
         COLUMNS: "80",
         BUDDY_SHELL: "",
@@ -51,5 +54,77 @@ describe("buddy statusline colors", () => {
     expect(greenLines[0]).toContain("Nimbus ★★");
     expect(output).not.toContain(`${green}  art`);
     expect(output).not.toContain(`${green} (°°)`);
+  });
+});
+
+describe("buddy sub-status cache", () => {
+  test("returns immediately and refreshes the cache with the same stdin payload", async () => {
+    const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-substatus-"));
+    temporaryDirectories.push(configDir);
+    const stateDir = join(configDir, "buddy-state");
+    mkdirSync(stateDir);
+    writeFileSync(join(stateDir, "config.json"), JSON.stringify({
+      subStatusCommand: "sleep 1; cat",
+    }));
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "common",
+      stars: "",
+      shiny: false,
+      reaction: "",
+      achievement: "",
+      level: 1,
+      mood: "focused",
+      frames: ["  art"],
+      frameSequence: [0],
+    }));
+
+    const input = '{"payload":"same-input"}\n';
+    const started = performance.now();
+    const first = spawnSync("bash", [join(import.meta.dir, "buddy-status.sh")], {
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: configDir,
+        CLAUDE_CODE_SESSION_ID: "",
+        TMUX_PANE: "",
+        BUDDY_FAKE_NOW: "0",
+        COLUMNS: "80",
+        BUDDY_SHELL: "",
+      },
+      input,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const elapsedMs = performance.now() - started;
+
+    expect(first.status).toBe(0);
+    // Includes launching a fresh bash process; the one-second sub-command is
+    // intentionally not part of this wall-clock measurement.
+    expect(elapsedMs).toBeLessThan(1500);
+    expect(existsSync(join(stateDir, ".substatus.default"))).toBe(false);
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      if (Bun.file(join(stateDir, ".substatus.default")).size > 0) break;
+      await Bun.sleep(100);
+    }
+
+    expect(readFileSync(join(stateDir, ".substatus.default"), "utf8").trim()).toBe(input.trim());
+    await Bun.sleep(200);
+    const second = spawnSync("bash", [join(import.meta.dir, "buddy-status.sh")], {
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: configDir,
+        CLAUDE_CODE_SESSION_ID: "",
+        TMUX_PANE: "",
+        BUDDY_FAKE_NOW: "0",
+        COLUMNS: "80",
+        BUDDY_SHELL: "",
+      },
+      input,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    expect(second.stdout.toString()).toContain(input.trim());
   });
 });

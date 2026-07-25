@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # statusline/combined-status.sh
 # Two-panel status line: rate-limit stats left, buddy art right.
-# buddy-status.sh is intentionally untouched (kept clean for upstream PR).
+# buddy-status.sh renders the buddy panel and shared cached sub-status below it.
 
 [ "$BUDDY_SHELL" = "1" ] && exit 0
 
@@ -54,7 +54,7 @@ except Exception:
 " 2>/dev/null)
 
 # ── Capture buddy art (buddy reads state files, not stdin) ───────────────────
-BUDDY_OUTPUT=$("$BUDDY_SCRIPT" </dev/null 2>/dev/null)
+BUDDY_OUTPUT=$(printf '%s' "$STDIN_DATA" | "$BUDDY_SCRIPT" 2>/dev/null)
 
 # No buddy output → exit silently (muted, no state, etc.)
 [ -z "$BUDDY_OUTPUT" ] && exit 0

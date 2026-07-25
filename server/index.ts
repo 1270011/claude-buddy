@@ -9,6 +9,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { existsSync } from "fs";
 import { join, resolve, dirname } from "path";
 
 import { generateBones,
@@ -45,6 +46,7 @@ import {
 } from "./state";
 import {
   buddyStateDir,
+  buddyAppDir,
   claudeConfigDir,
   claudeSettingsPath,
 } from "./path";
@@ -622,7 +624,7 @@ server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
 
 server.tool(
   "buddy_statusline",
-  "Enable or disable the buddy status line, and toggle combined mode (shows rate-limit usage bars alongside the buddy). Returns current status if called without arguments.",
+  "Enable or disable the buddy status line, toggle combined mode (shows rate-limit usage bars alongside the buddy), or set a cached asynchronous sub-status command. Returns current status if called without arguments.",
   {
     enabled: z
       .boolean()
@@ -636,17 +638,24 @@ server.tool(
       .describe(
         "true to show rate-limit usage bars alongside buddy (requires python3), false for buddy-only mode.",
       ),
+    subStatusCommand: z
+      .string()
+      .optional()
+      .describe(
+        "Shell command whose cached output is appended below the buddy panel. Empty string clears it; the command always runs asynchronously.",
+      ),
   },
-  async ({ enabled, combined }) => {
-    if (enabled === undefined && combined === undefined) {
+  async ({ enabled, combined, subStatusCommand }) => {
+    if (enabled === undefined && combined === undefined && subStatusCommand === undefined) {
       const cfg = loadConfig();
       const state = cfg.statusLineEnabled ? "enabled" : "disabled";
       const mode = cfg.useCombinedStatus ? "combined (with rate-limit bars)" : "basic (buddy only)";
+      const subStatus = cfg.subStatusCommand ?? "unset";
       return {
         content: [
           {
             type: "text",
-            text: `Status line: ${state}\nMode: ${mode}\nUse /buddy statusline on|off to toggle, /buddy statusline combined to add rate-limit bars.\nRestart Claude Code after changes for them to take effect.`,
+            text: `Status line: ${state}\nMode: ${mode}\nSub-status command: ${subStatus}\nUse /buddy statusline on|off to toggle, /buddy statusline combined to add rate-limit bars, or set subStatusCommand to append cached command output.\nRestart Claude Code after changes for them to take effect.`,
           },
         ],
       };
@@ -656,6 +665,10 @@ server.tool(
       saveConfig({ useCombinedStatus: combined });
     }
 
+    if (subStatusCommand !== undefined) {
+      saveConfig({ subStatusCommand: subStatusCommand.trim() ? subStatusCommand : undefined });
+    }
+
     if (enabled !== undefined) {
       saveConfig({ statusLineEnabled: enabled });
     }
@@ -663,7 +676,10 @@ server.tool(
     const cfg = loadConfig();
 
     if (cfg.statusLineEnabled) {
-      const pluginRoot = resolve(dirname(import.meta.dir));
+      const installedRoot = buddyAppDir();
+      const pluginRoot = existsSync(join(installedRoot, "statusline", "buddy-status.sh"))
+        ? installedRoot
+        : resolve(dirname(import.meta.dir));
       const scriptName = cfg.useCombinedStatus ? "combined-status.sh" : "buddy-status.sh";
       const statusScript = join(pluginRoot, "statusline", scriptName);
       setBuddyStatusLine(statusScript);
