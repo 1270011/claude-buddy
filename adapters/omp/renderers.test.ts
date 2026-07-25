@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Companion, ReactionState } from "../../core/model.ts";
-import { renderBuddyStatus, renderBuddyWidget } from "./renderers.ts";
+import { displayWidth, OMP_WIDGET_MAX_LINES, renderBuddyWidget } from "./renderers.ts";
 
 const companion: Companion = {
   name: "Nimbus",
@@ -26,34 +26,47 @@ const reaction: ReactionState = {
 };
 
 describe("OMP buddy renderers", () => {
-  test("keeps reactions out of the compact status line", () => {
-    expect(renderBuddyStatus(companion)).not.toContain(reaction.reaction);
+  test("composes details left and intact art right within the SDK height budget", () => {
+    const lines = renderBuddyWidget(companion, reaction, [], 64);
+    const plain = lines.join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+    const artLine = plain.split("\n").find((line) => /\.-{2,6}\./.test(line)) ?? "";
+
+    expect(lines).toHaveLength(5);
+    expect(lines.length).toBeLessThanOrEqual(OMP_WIDGET_MAX_LINES);
+    expect(plain).toMatch(/\.-{2,6}\./);
+    expect(plain).toContain("Nimbus ★★");
+    expect(plain).toContain("💬 *watching closely*");
+    expect(artLine).toMatch(/\.-{2,6}\./);
+    expect(artLine.indexOf("uncommon")).toBeLessThan(artLine.indexOf(".-"));
+    expect(displayWidth(artLine)).toBe(64);
+    expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
   });
 
-  test("renders the reaction exactly once inside a framed bubble", () => {
-    const rendered = renderBuddyWidget(companion, reaction).join("\n");
-
-    expect(rendered.split(reaction.reaction)).toHaveLength(2);
-    expect(rendered).toContain("╭──────────────────────────────────────────────╮");
-    expect(rendered).toContain(`│ 💬 ${reaction.reaction} `);
-    expect(rendered).toContain("╰──────────────────────────────────────────────╯");
-    expect(rendered).not.toContain(`“${reaction.reaction}”`);
-  });
-
-  test("wraps long reactions at word boundaries", () => {
+  test("renders one wrapped reaction without a second bubble or status copy", () => {
     const longReaction = "the stray new PiBuddyStorage() on every turn_end — silent wrong-directory config reads — that is the crack in the file";
-    const lines = renderBuddyWidget(companion, { ...reaction, reaction: longReaction });
-    const start = lines.indexOf("╭──────────────────────────────────────────────╮");
-    const end = lines.indexOf("╰──────────────────────────────────────────────╯");
+    const lines = renderBuddyWidget(companion, { ...reaction, reaction: longReaction }, [], 64);
+    const rendered = lines.join("\n");
+    const plain = rendered.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
 
-    expect(start).toBeGreaterThan(-1);
-    expect(end).toBeGreaterThan(start);
-    expect(lines.slice(start, end + 1)).toEqual([
-      "╭──────────────────────────────────────────────╮",
-      "│ 💬 the stray new PiBuddyStorage() on every   │",
-      "│ turn_end — silent wrong-directory config     │",
-      "│ reads — that is the crack in the file        │",
-      "╰──────────────────────────────────────────────╯",
-    ]);
+    expect(plain.match(/💬/g)).toHaveLength(1);
+    expect(plain.match(/PiBuddyStorage\(\)/g)).toHaveLength(1);
+    expect(rendered).not.toContain("╭");
+    expect(rendered).not.toContain("╰");
+    expect(lines.length).toBeLessThanOrEqual(OMP_WIDGET_MAX_LINES);
+  });
+
+  test("keeps rarity ANSI and embedded per-part art ANSI intact", () => {
+    const wyvern: Companion = {
+      ...companion,
+      name: "Ember",
+      bones: { ...companion.bones, rarity: "legendary", species: "wyvern" },
+    };
+    const rendered = renderBuddyWidget(wyvern, reaction, [], 72).join("\n");
+
+    expect(rendered).toContain("\x1b[38;2;");
+    expect(rendered).toContain("\x1b[2;3m");
+    expect(rendered).toContain("Ember");
+    expect(rendered).toContain("★★★★★");
+    expect(rendered).toContain("|\\^```^/|");
   });
 });

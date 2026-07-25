@@ -1,7 +1,7 @@
 import type { OmpBuddyUiContext } from "./context.ts";
 import type { Achievement } from "../../core/achievements.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
-import { renderAchievementsSummary, renderBuddyStatus, renderBuddyWidget } from "./renderers.ts";
+import { renderAchievementsSummary, renderBuddyWidget } from "./renderers.ts";
 import { OmpBuddyStorage } from "./storage.ts";
 
 export class OmpBuddyUI {
@@ -27,8 +27,7 @@ export class OmpBuddyUI {
   ): void {
     const currentReaction = reaction ?? null;
     const muted = this.storage.isMuted();
-    const status = renderBuddyStatus(companion);
-    ctx.ui.setStatus("buddy", muted ? `${status} [muted]` : status);
+    ctx.ui.setStatus("buddy", undefined);
     ctx.ui.setWidget(
       "buddy",
       renderBuddyWidget(companion, muted ? null : currentReaction, achievements),
