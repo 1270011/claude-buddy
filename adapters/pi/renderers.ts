@@ -2,45 +2,59 @@ import { RARITY_STARS } from "../../core/engine.ts";
 import { getArtFrame, HAT_ART } from "../../core/render-model.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
 import type { Achievement } from "../../core/achievements.ts";
+import { getRarityColor } from "../../server/theme.ts";
+import {
+  composeDetailsAndArt,
+  getDetailsWidth,
+  getWidgetWidth,
+  WIDGET_MAX_LINES,
+  wrapReaction,
+} from "../shared/widget-layout.ts";
+
+export const PI_WIDGET_MAX_LINES = WIDGET_MAX_LINES;
+
+const RESET = "\x1b[0m";
+const DIM_ITALIC = "\x1b[2;3m";
 
 function trimArt(line: string): string {
   return line.replace(/\s+$/g, "");
-}
-
-export function renderBuddyStatus(companion: Companion, reaction?: ReactionState | null): string {
-  const shiny = companion.bones.shiny ? " ✨" : "";
-  const stars = RARITY_STARS[companion.bones.rarity];
-  const suffix = reaction?.reaction ? ` — ${reaction.reaction}` : "";
-  return `${trimArt(getArtFrame(companion.bones.species, companion.bones.eye, Date.now())[0])} ${companion.name} ${stars}${shiny}${suffix}`;
 }
 
 export function renderBuddyWidget(
   companion: Companion,
   reaction?: ReactionState | null,
   achievements: Achievement[] = [],
+  width: number = getWidgetWidth(),
 ): string[] {
-  const frame = Math.floor(Date.now() / 700);
-  const art = getArtFrame(companion.bones.species, companion.bones.eye, frame).map(trimArt);
-  const hat = companion.bones.hat === "none" ? [] : [trimArt(HAT_ART[companion.bones.hat])];
+  const art = getFullArtFrame(companion, Math.floor(Date.now() / 700));
+  const sideWidth = getDetailsWidth(art, width);
+  const color = getRarityColor(companion.bones.rarity);
   const stars = RARITY_STARS[companion.bones.rarity];
   const shiny = companion.bones.shiny ? " ✨" : "";
-  const lines = [
-    `buddy · ${companion.name}`,
-    `${companion.bones.rarity} ${companion.bones.species} ${stars}${shiny}`,
-    "",
-    ...hat,
-    ...art,
+  const details = [
+    `${color}${companion.name} ${stars}${shiny}${RESET}`,
+    `${companion.bones.rarity} ${companion.bones.species}`,
   ];
 
   if (reaction?.reaction) {
-    lines.push("", `“${reaction.reaction}”`);
+    const remainingLines = Math.max(1, PI_WIDGET_MAX_LINES - details.length);
+    details.push(...wrapReaction(reaction.reaction, sideWidth, remainingLines).map((line) => `${DIM_ITALIC}${line}${RESET}`));
   }
 
-  if (achievements.length > 0) {
-    lines.push("", ...achievements.map((achievement) => `🏆 ${achievement.name}`));
+  for (const achievement of achievements) {
+    if (details.length >= PI_WIDGET_MAX_LINES) break;
+    details.push(`🏆 ${achievement.name}`);
   }
 
-  return lines;
+  return composeDetailsAndArt(details, art, width, PI_WIDGET_MAX_LINES);
+}
+
+function getFullArtFrame(companion: Companion, frame: number): string[] {
+  const art = getArtFrame(companion.bones.species, companion.bones.eye, frame);
+  if (companion.bones.hat !== "none" && !(art[0] ?? "").trim()) {
+    art[0] = HAT_ART[companion.bones.hat];
+  }
+  return art.map(trimArt);
 }
 
 export function renderBuddyStats(companion: Companion): string[] {
