@@ -26,15 +26,19 @@ const reaction: ReactionState = {
 };
 
 describe("OMP buddy renderers", () => {
-  test("composes intact art and details horizontally within the SDK height budget", () => {
+  test("composes details left and intact art right within the SDK height budget", () => {
     const lines = renderBuddyWidget(companion, reaction, [], 64);
     const plain = lines.join("\n").replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, "");
+    const artLine = plain.split("\n").find((line) => /\.-{2,6}\./.test(line)) ?? "";
 
     expect(lines).toHaveLength(5);
     expect(lines.length).toBeLessThanOrEqual(OMP_WIDGET_MAX_LINES);
     expect(plain).toMatch(/\.-{2,6}\./);
     expect(plain).toContain("Nimbus ★★");
     expect(plain).toContain("💬 *watching closely*");
+    expect(artLine).toMatch(/\.-{2,6}\./);
+    expect(artLine.indexOf("uncommon")).toBeLessThan(artLine.indexOf(".-"));
+    expect(displayWidth(artLine)).toBe(64);
     expect(lines.every((line) => displayWidth(line) <= 64)).toBe(true);
   });
 

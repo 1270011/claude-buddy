@@ -96,10 +96,8 @@ function renderDetails(
   companion: Companion,
   reaction: ReactionState | null | undefined,
   achievements: Achievement[],
-  width: number,
-  artWidth: number,
+  sideWidth: number,
 ): string[] {
-  const sideWidth = Math.max(8, width - artWidth - ART_GAP.length);
   const color = getRarityColor(companion.bones.rarity);
   const stars = RARITY_STARS[companion.bones.rarity];
   const shiny = companion.bones.shiny ? " ✨" : "";
@@ -129,13 +127,15 @@ export function renderBuddyWidget(
 ): string[] {
   const art = getFullArtFrame(companion, Math.floor(Date.now() / 700));
   const artWidth = Math.max(...art.map(displayWidth), 0);
-  const details = renderDetails(companion, reaction, achievements, Math.max(24, width), artWidth);
+  const widgetWidth = Math.max(24, width);
+  const sideWidth = Math.max(8, widgetWidth - artWidth - ART_GAP.length);
+  const details = renderDetails(companion, reaction, achievements, sideWidth);
   const rows = Math.max(art.length, details.length);
 
   return Array.from({ length: Math.min(OMP_WIDGET_MAX_LINES, rows) }, (_, index) => {
     const artLine = art[index] ?? "";
     const detailLine = details[index] ?? "";
-    return `${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}${ART_GAP}${detailLine}`.trimEnd();
+    return `${detailLine}${" ".repeat(Math.max(0, sideWidth - displayWidth(detailLine)))}${ART_GAP}${artLine}${" ".repeat(Math.max(0, artWidth - displayWidth(artLine)))}`;
   });
 }
 
