@@ -157,6 +157,7 @@ describe("buddy statusline colors", () => {
     expect(result.stdout.toString().split("\n").filter(Boolean).every((line) => displayWidth(line) <= columns)).toBe(true);
     const budget = columns >= 40 ? Math.min(columns, Math.max(40, columns - chromeReserve)) : columns;
     expect(result.stdout.toString().split("\n").filter(Boolean).every((line) => displayWidth(line) <= budget)).toBe(true);
+    expect(Math.max(...lines.map((line) => displayWidth(line)))).toBe(budget);
     const connectorLine = result.stdout.toString().split("\n").find((line) => line.includes("--"));
     expect(connectorLine).toContain("\x1b[38;2;78;186;101m");
     expect(lines.some((line) => /\|.*\|-- /.test(line))).toBe(true);

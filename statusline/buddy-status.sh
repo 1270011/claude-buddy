@@ -231,16 +231,6 @@ if [ -f "$CONFIG_FILE" ]; then
         esac
     fi
 fi
-STATUSLINE_BUDGET=$(( DETECTED_COLS - CHROME_RESERVE + STATUSLINE_WIDTH_ADJUST ))
-# Preserve the existing compact-card behavior at the smallest supported
-# terminal size; the reserve applies once there is enough room for chrome.
-if [ "$DETECTED_COLS" -ge 40 ] 2>/dev/null && [ "$STATUSLINE_BUDGET" -lt 40 ]; then
-    STATUSLINE_BUDGET=40
-fi
-[ "$STATUSLINE_BUDGET" -lt 1 ] && STATUSLINE_BUDGET=1
-[ "$STATUSLINE_BUDGET" -gt "$DETECTED_COLS" ] && STATUSLINE_BUDGET="$DETECTED_COLS"
-COLS="$STATUSLINE_BUDGET"
-
 _sweep_expired_reactions() {
     [ "$REACTION_TTL" -gt 0 ] 2>/dev/null || return 0
     local now cutoff_ms cutoff_seconds file ts
@@ -462,6 +452,31 @@ if [ "$LABEL_W" -gt "$ART_W" ] 2>/dev/null; then
     NAME_LINE="$(printf '%*s%s' "$NAME_PAD" '' "$NAME_WITH_LEVEL")"
     ALL_LINES[$(( ART_COUNT - 1 ))]="$NAME_LINE"
 fi
+NAME_LINE_W=$(dwidth "$NAME_LINE")
+# Centering the name against a short fixture frame can make the label wider
+# than every art row; include that width before sizing the card.
+[ "$NAME_LINE_W" -gt "$ART_W" ] && ART_W="$NAME_LINE_W"
+
+STATUSLINE_BUDGET=$(( DETECTED_COLS - CHROME_RESERVE + STATUSLINE_WIDTH_ADJUST ))
+# Preserve the existing compact-card behavior at the smallest supported
+# terminal size; the reserve applies once there is enough room for chrome.
+if [ "$DETECTED_COLS" -ge 40 ] 2>/dev/null && [ "$STATUSLINE_BUDGET" -lt 40 ]; then
+    STATUSLINE_BUDGET=40
+fi
+[ "$STATUSLINE_BUDGET" -gt "$DETECTED_COLS" ] && STATUSLINE_BUDGET="$DETECTED_COLS"
+
+# The sprite and its identifying name are the irreducible minimum of the card.
+# Never let the chrome reserve push the usable budget below the sprite's own
+# width; if it does, fall back to the raw terminal width. If the terminal
+# itself is narrower than the sprite, use the historical default rather than
+# slicing art or name.
+if [ "$STATUSLINE_BUDGET" -lt "$ART_W" ]; then
+    STATUSLINE_BUDGET="$DETECTED_COLS"
+fi
+if [ "$STATUSLINE_BUDGET" -lt "$ART_W" ]; then
+    STATUSLINE_BUDGET=125
+fi
+COLS="$STATUSLINE_BUDGET"
 
 # The bubble, tail, and sprite are one unit. At narrow widths, drop the
 # bubble rather than allowing a partial border or tail to escape the panel.
@@ -529,7 +544,10 @@ if [ $BUBBLE_COUNT -gt 0 ]; then
 else
     TOTAL_W=$ART_W
 fi
-PAD=$(( COLS - TOTAL_W - MARGIN ))
+# COLS already includes the Claude Code chrome reserve. The spacer starts with
+# one Braille Blank cell, so account for that cell but don't subtract MARGIN
+# again; doing so leaves the card visibly short of the pane's right edge.
+PAD=$(( COLS - TOTAL_W - 1 ))
 [ "$PAD" -lt 0 ] && PAD=0
 
 # On Windows (Git Bash / MSYS2), Braille Blank (U+2800) renders as double-width,
@@ -668,16 +686,8 @@ ansi_truncate() {
     printf '%s' "$out"
 }
 
-# The sprite (and the name centered under it) is the irreducible minimum of the
-# card: the bubble is already dropped as a unit when it cannot fit, but slicing
-# the art itself shears the sprite and cuts the pet's name mid-word. Floor the
-# truncation budget at ART_W so a very narrow terminal overflows by a few
-# columns instead of rendering a mutilated companion.
-OUTPUT_BUDGET="$STATUSLINE_BUDGET"
-[ "$OUTPUT_BUDGET" -lt "$ART_W" ] 2>/dev/null && OUTPUT_BUDGET="$ART_W"
-
 statusline_output_line() {
-    ansi_truncate "$1" "$OUTPUT_BUDGET"
+    ansi_truncate "$1" "$STATUSLINE_BUDGET"
     printf '\n'
 }
 
