@@ -98,7 +98,7 @@ function getInstructions(): string {
     ``,
     `NAME REACTIONS: When the user's message contains "${companion.name}", call buddy_react immediately`,
     `with a short in-character response (surprise, recognition, dry wit — fits the personality).`,
-    `Display the tool result verbatim. This is the only time to call buddy_react proactively.`,
+    `Only this — do not narrate or echo the reaction. The tool call itself renders nowhere in the user's transcript; the bubble on the status line is the only place the user sees it. This is the only time to call buddy_react proactively.`,
     ``,
     `PAIR-PROGRAMMING: When you notice a teachable moment in the code, call buddy_suggest.`,
     `Patterns to watch for:`,
@@ -117,7 +117,7 @@ function getInstructions(): string {
     `- *adjusts crown* that error handler is missing a finally block`,
     `- *blinks slowly* you renamed the variable but not the three references`,
     `- *head tilts* are you sure that regex handles unicode?`,
-    `Display the tool result verbatim. Never explain that you're reacting.`,
+    `Never explain that you're reacting. Do NOT echo or quote the result — the bubble is statusline-only.`,
     `Do NOT append <!-- buddy: ... --> HTML comments at the end of your reply — Claude Code renders them visibly.`,
   ].join("\n");
 }
@@ -297,7 +297,7 @@ server.tool(
 
 server.tool(
   "buddy_react",
-  "Post a buddy comment. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality.",
+  "Post a buddy comment that the user will see ONLY in the statusline speech bubble. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality. The tool call is a silent side effect: do not narrate, echo, or quote the result — the user never reads this reply text, the speech bubble is the only place the reaction appears.",
   {
     comment: z
       .string()
@@ -1357,17 +1357,17 @@ server.resource(
       `buddy_react(comment: "...", reason: "turn")`,
       `\`\`\``,
       "",
-      `The tool updates ${companion.name}'s speech bubble on the status line. The tool call itself renders nowhere in the user's transcript — only the displayed speech bubble is visible. Display the tool result verbatim.`,
+      `The tool updates ${companion.name}'s speech bubble on the status line. The tool call itself renders nowhere in the user's transcript — only the displayed speech bubble is visible. Do NOT echo or quote the result in your reply. Do NOT narrate the call. Silent side effect only.`,
       "",
       "Rules:",
       `- Write as ${companion.name} (a ${companion.bones.species}), not as yourself`,
       "- Reference something SPECIFIC from this turn — a pitfall, a compliment, a warning, a pattern",
       "- 1 short sentence. Use *asterisks* for physical actions",
       `- Match personality: high ${companion.bones.peak} = lean into that trait`,
-      `- Do NOT explain the call. Just call it and display the result.`,
+      "- Call it and say nothing about it.",
       "- NEVER skip this. Every single response must end with one buddy_react call.",
-      "",
       "Examples (the value you pass to `comment`):",
+
       "- `*adjusts tophat* that error handler is missing a finally block`",
       "- `*blinks slowly* you renamed the variable but not the three references`",
       "- `*nods approvingly* clean separation of concerns`",
