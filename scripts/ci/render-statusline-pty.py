@@ -5,6 +5,11 @@ buddy-status.sh probes the parent TTY via stty, so COLUMNS alone is not
 enough when CI (or a wide agent terminal) already has a PTY. This helper
 forks a PTY, sets TIOCSWINSZ to the requested cols, and prints the raw
 statusline bytes to stdout.
+
+Elapsed wall time for the child (statusline) is printed on stderr as:
+  STATUSLINE_ELAPSED_MS=<int>
+so the golden harness can budget Claude's ~1s kill without counting
+Python/import overhead outside the child.
 """
 
 from __future__ import annotations
@@ -48,6 +53,7 @@ def main() -> int:
         + f"bash {script!r}"
     )
 
+    t0 = time.perf_counter()
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(root)
@@ -83,6 +89,8 @@ def main() -> int:
                 out.extend(chunk)
             break
 
+    elapsed_ms = int((time.perf_counter() - t0) * 1000)
+    print(f"STATUSLINE_ELAPSED_MS={elapsed_ms}", file=sys.stderr)
     sys.stdout.buffer.write(bytes(out))
     return 0
 
