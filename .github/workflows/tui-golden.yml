@@ -8,7 +8,7 @@ jobs:
   statusline:
     name: Statusline golden render
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -16,7 +16,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.3.9
 
       - name: Install jq
         run: sudo apt-get update -qq && sudo apt-get install -y -qq jq
@@ -24,49 +24,21 @@ jobs:
       - name: Golden check (width matrix + structure + timing)
         run: bash scripts/ci/check-statusline.sh
 
-      # vhs-action@v2's dependency installer looks for a stale
-      # ffmpeg-n5.1-* asset on BtbN/FFmpeg-Builds and fails when that tag
-      # rotates off "latest". Install ffmpeg/ttyd from Ubuntu and pin the
-      # vhs binary ourselves so the visual gate is deterministic.
-      - name: Install vhs + terminal deps (pinned)
-        run: |
-          set -euo pipefail
-          sudo apt-get install -y -qq ffmpeg ttyd curl ca-certificates fonts-dejavu-core
-          VHS_VERSION=0.11.0
-          ARCH=$(uname -m)
-          case "$ARCH" in
-            x86_64|amd64) VHS_ARCH=x86_64 ;;
-            aarch64|arm64) VHS_ARCH=arm64 ;;
-            *) echo "unsupported arch: $ARCH" >&2; exit 1 ;;
-          esac
-          # charmbracelet release asset names: vhs_${ver}_Linux_${arch}.tar.gz
-          # arm64 asset uses aarch64 in some releases — probe both.
-          TMP=$(mktemp -d)
-          BASE="https://github.com/charmbracelet/vhs/releases/download/v${VHS_VERSION}"
-          for CAND in \
-            "vhs_${VHS_VERSION}_Linux_${VHS_ARCH}.tar.gz" \
-            "vhs_${VHS_VERSION}_Linux_x86_64.tar.gz" \
-            "vhs_${VHS_VERSION}_Linux_arm64.tar.gz" \
-            "vhs_${VHS_VERSION}_Linux_aarch64.tar.gz"
-          do
-            if curl -fsSL -o "$TMP/vhs.tgz" "$BASE/$CAND"; then
-              echo "downloaded $CAND"
-              break
-            fi
-          done
-          tar -xzf "$TMP/vhs.tgz" -C "$TMP"
-          BIN=$(find "$TMP" -type f -name vhs | head -n1)
-          sudo install -m 755 "$BIN" /usr/local/bin/vhs
-          vhs --version
-          ffmpeg -version | head -n1
-          ttyd --version
+      # Pixel goldens are platform-sensitive (font rasterization). Both the
+      # committed baselines and CI renders go through the pinned linux/amd64
+      # image in scripts/ci/Dockerfile.vhs — never host macOS vhs.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Render vhs goldens
+      - name: Render vhs goldens (pinned linux/amd64 container)
         env:
-          # Prevent termenv from disabling ANSI under GHA.
           CI: ""
           COLORTERM: truecolor
+          VHS_GOLDEN_IMAGE: coding-buddy-vhs:ci
         run: bash scripts/ci/render-vhs-goldens.sh
+
+      - name: Install ffmpeg for golden compare
+        run: sudo apt-get install -y -qq ffmpeg
 
       - name: Compare vhs goldens
         run: bash scripts/ci/check-vhs-goldens.sh

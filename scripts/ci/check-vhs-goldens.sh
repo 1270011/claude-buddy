@@ -4,8 +4,10 @@
 # Usage (from repo root, after render-vhs-goldens.sh):
 #   bash scripts/ci/check-vhs-goldens.sh
 #
-# To re-baseline intentionally:
+# To re-baseline intentionally (MUST use the linux/amd64 container path):
 #   bash scripts/ci/render-vhs-goldens.sh --update
+#   # or: bun run ci:vhs:update
+# Never re-baseline from host macOS vhs — CI will fail on font SSIM.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -67,7 +69,6 @@ for golden in "${goldens[@]}"; do
     fail=1
     continue
   fi
-  # bc may be missing; use awk for the float compare.
   ok=$(awk -v s="$ssim_all" 'BEGIN { print (s + 0 >= 0.99) ? "yes" : "no" }')
   if [ "$ok" = "yes" ]; then
     echo "OK: $base (ssim All=$ssim_all)"
@@ -75,7 +76,8 @@ for golden in "${goldens[@]}"; do
     echo "FAIL: $base visual regression (ssim All=$ssim_all < 0.99)" >&2
     echo "  golden: $golden" >&2
     echo "  got:    $got" >&2
-    echo "  re-baseline: bash scripts/ci/render-vhs-goldens.sh --update" >&2
+    echo "  re-baseline (linux/amd64 container only):" >&2
+    echo "    bash scripts/ci/render-vhs-goldens.sh --update" >&2
     fail=1
   fi
 done
