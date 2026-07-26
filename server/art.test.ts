@@ -8,7 +8,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import { displayWidth, getStatusFrames, resolveEyeGlyph, STATUS_FRAME_SEQUENCE } from "./art.ts";
 import { SPECIES_ART as CORE_SPECIES_ART } from "../core/art-data.ts";
 import { SPECIES, type BuddyBones } from "../core/engine.ts"
 
@@ -127,6 +127,33 @@ describe("getStatusFrames", () => {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
     }
+  });
+
+  test("descriptor eye 'normal' does not leak into baked duck frames", () => {
+    // Live bug: bones.eye was the word "normal", so duck `<(° )___` rendered
+    // as `<(normal …`. Sanitization must keep sprite glyphs only.
+    const corrupted = bones({ species: "duck" });
+    // @ts-expect-error intentionally invalid eye descriptor from corrupted state
+    corrupted.eye = "normal";
+    const { frames } = getStatusFrames(corrupted);
+    for (const body of frames) {
+      expect(body).not.toContain("normal");
+      expect(body).not.toContain("{E}");
+    }
+    // Idle frames fall back to the default degree-sign glyph.
+    expect(frames[0]).toContain("°");
+    expect(frames[0]).toContain("<(°");
+    // Blink frame still uses "-" (must not be re-sanitized to °).
+    expect(frames[3]).toContain("<(-");
+    expect(frames[3]).not.toContain("°");
+  });
+
+  test("resolveEyeGlyph keeps real glyphs and rejects words", () => {
+    expect(resolveEyeGlyph("°")).toBe("°");
+    expect(resolveEyeGlyph("@")).toBe("@");
+    expect(resolveEyeGlyph("normal")).toBe("°");
+    expect(resolveEyeGlyph("")).toBe("°");
+    expect(resolveEyeGlyph(undefined)).toBe("°");
   });
 });
 

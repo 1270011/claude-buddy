@@ -6,7 +6,7 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "../core/engine.ts"
+import { EYES, type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "../core/engine.ts"
 import { HAT_ART } from "../core/art-data.ts";
 import { getRarityColor } from "./theme.ts";
 export { HAT_ART };
@@ -217,12 +217,28 @@ function dpad(s: string, targetW: number): string {
   return w < targetW ? s + " ".repeat(targetW - w) : s;
 }
 
+/** Fallback eye when bones.eye is a non-glyph descriptor (e.g. "normal"). */
+const DEFAULT_EYE: Eye = "\u00b0";
+
+/**
+ * Eyes are single display glyphs substituted into `{E}` art slots.
+ * A free-form word like "normal" must never reach those slots — it shears
+ * the sprite (duck `<(° )___` becomes `<(normal )___`).
+ */
+export function resolveEyeGlyph(eye: string | null | undefined): Eye {
+  if (typeof eye === "string" && (EYES as readonly string[]).includes(eye)) {
+    return eye as Eye;
+  }
+  return DEFAULT_EYE;
+}
+
 // ─── Render functions ───────────────────────────────────────────────────────
 
-export function getArtFrame(species: Species, eye: Eye, frame: number = 0): string[] {
+export function getArtFrame(species: Species, eye: Eye | string, frame: number = 0): string[] {
   const frames = SPECIES_ART[species];
   const f = frames[frame % frames.length];
-  return f.map((line) => line.replace(/\{E\}/g, eye));
+  const glyph = resolveEyeGlyph(eye);
+  return f.map((line) => line.replace(/\{E\}/g, glyph));
 }
 
 // Original 15-tick cycle [0,0,0,0,1,0,0,0,-1,0,0,2,0,0,0]: -1 (blink) becomes
@@ -238,9 +254,9 @@ export function getStatusFrames(bones: BuddyBones): {
   frames: string[];
   frameSequence: number[];
 } {
-  const resolveFrame = (frameIdx: number, eye: string): string => {
+  const resolveFrame = (frameIdx: number, eyeGlyph: string): string => {
     const raw = SPECIES_ART[bones.species][frameIdx];
-    const art = raw.map((line) => line.replace(/\{E\}/g, eye));
+    const art = raw.map((line) => line.replace(/\{E\}/g, eyeGlyph));
     const hatLine = HAT_ART[bones.hat];
     if (hatLine && !art[0].trim()) {
       art[0] = hatLine;
@@ -248,11 +264,14 @@ export function getStatusFrames(bones: BuddyBones): {
     return art.join("\n");
   };
 
+  // Sanitize once at the boundary. Blink uses a literal "-" eye, which is
+  // intentionally outside EYES and must not pass through resolveEyeGlyph.
+  const eye = resolveEyeGlyph(bones.eye);
   return {
     frames: [
-      resolveFrame(0, bones.eye),
-      resolveFrame(1, bones.eye),
-      resolveFrame(2, bones.eye),
+      resolveFrame(0, eye),
+      resolveFrame(1, eye),
+      resolveFrame(2, eye),
       resolveFrame(0, "-"),
     ],
     frameSequence: [...STATUS_FRAME_SEQUENCE],

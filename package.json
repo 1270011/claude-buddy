@@ -36,7 +36,11 @@
     "tui": "bun run cli/tui.tsx",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts"
+    "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts",
+    "ci:statusline": "bash scripts/ci/check-statusline.sh",
+    "ci:vhs:render": "bash scripts/ci/render-vhs-goldens.sh",
+    "ci:vhs:update": "bash scripts/ci/render-vhs-goldens.sh --update",
+    "ci:vhs:check": "bash scripts/ci/check-vhs-goldens.sh"
   },
   "files": [
     "core/",

@@ -440,7 +440,7 @@ export function writeStatusState(
   mkdirSync(STATE_DIR, { recursive: true });
   const { renderFace, RARITY_STARS } =
     require("../core/engine.ts") as typeof import("../core/engine.ts");
-  const { getStatusFrames } =
+  const { getStatusFrames, resolveEyeGlyph } =
     require("./art.ts") as typeof import("./art.ts");
   const { frames, frameSequence } = getStatusFrames(companion.bones);
   let xpLevel = level ?? 1;
@@ -460,13 +460,14 @@ export function writeStatusState(
   } catch {
     // Mood state is optional during first install / version skew.
   }
+  const eye = resolveEyeGlyph(companion.bones.eye);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
     rarity: companion.bones.rarity,
     stars: RARITY_STARS[companion.bones.rarity],
-    face: renderFace(companion.bones.species, companion.bones.eye),
-    eye: companion.bones.eye,
+    face: renderFace(companion.bones.species, eye),
+    eye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
     reaction: "",
