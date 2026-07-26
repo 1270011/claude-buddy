@@ -62,10 +62,11 @@ if [ "$NATIVE" -eq 0 ]; then
   args=("--native")
   [ "$UPDATE" -eq 1 ] && args+=("--update")
 
-  # Bind-mount the repo read-write so vhs-out/ and goldens/ land on the host.
-  # Run as root inside the container: Chromium (vhs/rod) needs a writable
-  # cache and a few kernel capabilities that non-root + default seccomp
-  # often deny under Docker Desktop/OrbStack. Ownership is fixed up after.
+  # Host creates output dirs world-writable so the container's uid 1000 can
+  # write through the bind mount (GHA checkout owner is not 1000).
+  mkdir -p "$OUT_DIR" "$GOLDEN_DIR"
+  chmod a+rwx "$OUT_DIR" "$GOLDEN_DIR" 2>/dev/null || true
+
   echo "run: docker render (${args[*]})"
   set +e
   # Match the image USER (vhs:1000). Chromium will not start as root.
@@ -108,7 +109,10 @@ command -v bun >/dev/null 2>&1 || { echo "bun not on PATH (native mode)" >&2; ex
 echo "native render host=$(uname -s)/$(uname -m) vhs=$(vhs --version 2>/dev/null | head -n1)"
 echo "font: $(fc-match 'DejaVu Sans Mono' 2>/dev/null || echo 'fc-match unavailable')"
 
-rm -rf "$OUT_DIR"
+# Prefer cleaning contents over rm -rf of the directory itself: on CI the
+# host owns scripts/ci/vhs-out (created world-writable above) and uid 1000
+# cannot unlink the directory from scripts/.
+rm -rf "${OUT_DIR:?}/"* 2>/dev/null || true
 mkdir -p "$OUT_DIR"
 
 env_ci_was="${CI-}"
