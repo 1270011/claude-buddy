@@ -13,3 +13,10 @@
 - Scope: floor usable width at `ART_W`; keep sprite and name intact through narrow-width degradation; preserve the statusline CI, TTY/non-TTY, runtime, and typecheck bars.
 - Acceptance: the golden check keeps the full pet name visible, no sprite or name row is sliced mid-character, and all requested verification commands pass.
 - Status: in progress.
+
+## 2026-07-26 — PR #158 resize review findings
+
+- Complaint: the resize timer could let a stale harness setter throw out of an uncaught callback, and the hero card silently clipped reactions, hid later achievements, and dropped achievements at narrow widths.
+- Scope: swallow/log timer-render errors; restore the prior reaction and achievement capability within the widget line budget, including a narrow-width non-bubble path.
+- Acceptance: timer exceptions don't escape; long reactions retain up to eight wrapped lines when space permits; all achievements render when budget permits; narrow cards still show achievement lines without exceeding width.
+- Status: in progress.

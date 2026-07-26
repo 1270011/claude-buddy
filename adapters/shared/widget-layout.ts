@@ -164,16 +164,20 @@ function padLine(line: string, width: number): string {
 }
 
 function frameReaction(reaction: string, achievements: Achievement[], innerWidth: number): string[] {
-  const reactionLines = wrapReaction(reaction, innerWidth, 2);
-  const achievementLine = achievements[0] ? `🏆 ${achievements[0].name}` : "";
-  const content = [...reactionLines, ...(achievementLine ? [achievementLine] : [])]
-    .slice(0, 3)
-    .map((line) => `${DIM_ITALIC}${line}${RESET}`);
+  const maxContentLines = WIDGET_MAX_LINES - 2;
+  const trimmedReaction = reaction.trim();
+  const achievementLines = achievements.map((achievement) => `🏆 ${achievement.name}`);
+  const reactionMax = Math.max(0, maxContentLines - achievementLines.length);
+  const reactionLines = trimmedReaction ? wrapReaction(trimmedReaction, innerWidth, reactionMax) : [];
+  const content = reactionLines.concat(achievementLines).slice(0, maxContentLines);
+  const paddedContent = content.length === 1 ? ["", ...content] : content;
+
   const top = `.${"-".repeat(innerWidth + 2)}.`;
+  const bottom = `\`${"-".repeat(innerWidth + 2)}'`;
   return [
     top,
-    ...content.map((line) => `| ${padLine(line, innerWidth)} |`),
-    `\`${"-".repeat(innerWidth + 2)}'`,
+    ...paddedContent.map((line) => `| ${DIM_ITALIC}${padLine(line, innerWidth)}${RESET} |`),
+    bottom,
   ];
 }
 
@@ -205,16 +209,21 @@ export function renderCompanionWidget(
   const maxBubbleInner = safeWidth - spriteWidth - tailWidth - 4;
   const hasContent = Boolean(reaction?.reaction?.trim()) || achievements.length > 0;
   const canFrame = hasContent && maxBubbleInner >= minBubbleInner;
-  const bubbleInner = canFrame ? Math.min(44, maxBubbleInner) : 0;
+  const bubbleInner = canFrame ? maxBubbleInner : 0;
   const bubble = canFrame ? frameReaction(reaction?.reaction ?? "", achievements, bubbleInner) : [];
   const bubbleWidth = bubbleInner + 4;
   const cardWidth = canFrame ? bubbleWidth + tailWidth + spriteWidth : spriteWidth;
-  const height = Math.max(clippedArt.length + 1, bubble.length);
+
+  const achievementSprites = canFrame
+    ? []
+    : achievements.map((achievement) => `${DIM_ITALIC}${padLine(`🏆 ${achievement.name}`, spriteWidth)}${RESET}`);
+  const spriteBody = [...clippedArt, clippedLabel, ...achievementSprites];
+  const height = Math.max(spriteBody.length, bubble.length);
   const connectorRow = canFrame ? Math.min(bubble.length - 2, Math.max(1, Math.floor(bubble.length / 2))) : -1;
 
   return Array.from({ length: Math.min(WIDGET_MAX_LINES, height) }, (_, index) => {
-    const artLine = index < clippedArt.length ? clippedArt[index]! : index === clippedArt.length ? clippedLabel : "";
-    const sprite = padLine(artLine, spriteWidth);
+    const spriteLine = spriteBody[index] ?? "";
+    const sprite = padLine(spriteLine, spriteWidth);
     let body: string;
     if (canFrame) {
       const bubbleLine = bubble[index] ?? " ".repeat(bubbleWidth);
@@ -310,10 +319,13 @@ export class BuddyWidget {
     this.cancelTimer();
     this.timer = this.scheduler.setTimeout(() => {
       this.timer = null;
-      this.renderAndSet();
+      try {
+        this.renderAndSet();
+      } catch (error) {
+        console.error("BuddyWidget render failed:", error);
+      }
     }, this.coalesceMs);
   }
-
   private renderAndSet(): void {
     if (!this.state || !this.setWidget) return;
     const width = this.getWidth();

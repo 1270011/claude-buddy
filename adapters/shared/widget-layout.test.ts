@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { Companion, ReactionState } from "../../core/model.ts";
+import type { Achievement } from "../../core/achievements.ts";
 import { BuddyWidget, displayWidth, renderCompanionWidget, stripAnsi, subscribeToWidgetResize } from "./widget-layout.ts";
 
 const companion: Companion = {
@@ -69,6 +70,58 @@ describe("shared buddy widget layout", () => {
     process.stdout.emit("resize");
     expect(calls).toBe(1);
   });
+  test("renders long reactions up to eight wrapped content lines", () => {
+    const longReaction: ReactionState = {
+      reaction: Array.from({ length: 32 }, (_, i) => `a${i.toString().padStart(2, "0")}`).join(" "),
+      reason: "test",
+      timestamp: 0,
+    };
+    const width = 32;
+    const lines = renderCompanionWidget(companion, longReaction, [], width, 0);
+    const plain = lines.map(stripAnsi).join("\n");
+
+    expect(lines.length).toBeLessThanOrEqual(10);
+    expect(lines.every((line) => displayWidth(line) <= width)).toBe(true);
+
+    const bubbleMatch = plain.match(/^ *\.-{12,}\.\s*$\n([\s\S]*?)\n^ *`-{12,}'\s*$/m);
+    expect(bubbleMatch).toBeDefined();
+    const contentLines = bubbleMatch![1]!.split("\n").filter((line) => line.trim().startsWith("|"));
+    expect(contentLines.length).toBe(8);
+    const joined = contentLines.join(" ");
+    expect(joined).toContain("a00");
+    expect(joined).toContain("a27");
+    expect(contentLines.at(-1)!).toContain("…");
+  });
+
+  test("renders multiple achievements in order within the line budget", () => {
+    const achievements: Achievement[] = [
+      { id: "a", name: "First Steps", description: "", icon: "🏆", check: () => true, secret: false },
+      { id: "b", name: "Good Buddy", description: "", icon: "🏆", check: () => true, secret: false },
+      { id: "c", name: "Long Haul", description: "", icon: "🏆", check: () => true, secret: false },
+    ];
+    const lines = renderCompanionWidget(companion, reaction, achievements, 80, 0);
+    const plain = lines.map(stripAnsi).join("\n");
+
+    expect(lines.every((line) => displayWidth(line) <= 80)).toBe(true);
+    expect(plain).toContain("🏆 First Steps");
+    expect(plain).toContain("🏆 Good Buddy");
+    expect(plain).toContain("🏆 Long Haul");
+    expect(plain.indexOf("🏆 First Steps")).toBeLessThan(plain.indexOf("🏆 Long Haul"));
+  });
+
+  test("shows achievements in the sprite output when the bubble cannot fit", () => {
+    const shortAchievements: Achievement[] = [
+      { id: "x", name: "Foo", description: "", icon: "🏆", check: () => true, secret: false },
+      { id: "y", name: "Bar", description: "", icon: "🏆", check: () => true, secret: false },
+    ];
+    const lines = renderCompanionWidget(companion, reaction, shortAchievements, 24, 0);
+    const plain = lines.map(stripAnsi).join("\n");
+
+    expect(lines.every((line) => displayWidth(line) <= 24)).toBe(true);
+    expect(plain).toContain("🏆 Foo");
+    expect(plain).toContain("🏆 Bar");
+  });
+
 });
 
 describe("east-asian width parity with the shell renderer", () => {
@@ -209,6 +262,7 @@ describe("BuddyWidget resize behavior", () => {
     process.stdout.emit("resize");
     widthRef.width = 24;
     scheduler.runAll();
+
     const last = captures.at(-1)!;
     expect(last.every((line) => displayWidth(line) <= 24)).toBe(true);
   });
@@ -261,4 +315,39 @@ describe("BuddyWidget resize behavior", () => {
 
     expect(scheduler.pendingCount()).toBe(0);
   });
+  test("swallows and logs render errors from the resize timer", () => {
+    const originalConsoleError = console.error;
+    const errors: unknown[][] = [];
+    console.error = ((...args: unknown[]) => {
+      errors.push(args);
+    }) as typeof console.error;
+    try {
+      const scheduler = createFakeScheduler();
+      let shouldThrow = false;
+      const widget = new BuddyWidget({
+        getWidth: () => {
+          if (shouldThrow) throw new Error("render boom");
+          return 80;
+        },
+        scheduler,
+        coalesceMs: 10,
+      });
+      activeWidgets.push(widget);
+      const captures: string[][] = [];
+      widget.refresh((lines) => captures.push(lines), companion, reaction, []);
+      expect(captures).toHaveLength(1);
+
+      shouldThrow = true;
+      process.stdout.emit("resize");
+      expect(scheduler.pendingCount()).toBe(1);
+      expect(() => scheduler.runAll()).not.toThrow();
+      expect(captures).toHaveLength(1);
+      expect(errors.length).toBe(1);
+      expect(String(errors[0]![0])).toContain("BuddyWidget render failed");
+      expect(errors[0]![1]).toBeInstanceOf(Error);
+    } finally {
+      console.error = originalConsoleError;
+    }
+  });
+
 });
