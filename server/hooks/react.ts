@@ -386,7 +386,7 @@ export function handleReact(rawInput: string, runtime: HookRuntime = {}): ReactR
   writeFileSync(join(stateDir, `.last_reaction.${sid}`), String(clock.nowSeconds));
   writeFileSync(
     join(stateDir, `reaction.${sid}.json`),
-    JSON.stringify({ reaction, timestamp: clock.nowSeconds * 1000, reason }),
+    JSON.stringify({ reaction, timestamp: clock.nowSeconds * 1000, reason, source: "fallback" }),
   );
 
   const xpEvent = updateEvents(stateDir, reason);

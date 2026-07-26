@@ -1919,8 +1919,6 @@ export const DEFAULT_REACTION_POOLS: Readonly<Record<string, ReactionPool>> = {
   "large-diff": [
     "that's... a lot of changes.",
     "*counts lines* are you refactoring or rewriting?",
-    "might want to split that PR.",
-    "*nervous laughter* {lines} lines changed.",
     "bold move. let's see if CI agrees."
   ],
   "success": [

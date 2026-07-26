@@ -30,5 +30,10 @@ describe("name-react UserPromptSubmit hook", () => {
       reason: "name",
       timestamp: 1_700_000_000_000,
     });
+    expect(JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"))).toMatchObject({
+      source: "fallback",
+      reason: "name",
+      timestamp: 1_700_000_000_000,
+    });
   });
 });

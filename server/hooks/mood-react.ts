@@ -89,7 +89,7 @@ export function handleMoodReact(rawInput: string, runtime: HookRuntime = {}): Mo
   writeFileSync(join(stateDir, `.last_mood.${sid}`), String(Math.floor(now / 1000)));
   writeFileSync(
     join(stateDir, `reaction.${sid}.json`),
-    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: mood }),
+    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: mood, source: "fallback" }),
   );
   if (parsedStatus) writeFileSync(statusFile, JSON.stringify({ ...status, reaction }, null, 2));
   incrementEvent(stateDir, `mood_${mood}`);

@@ -32,6 +32,7 @@ test("file-type-react classifies JavaScript as TypeScript and writes its reactio
   expect(JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"))).toMatchObject({
     reason: "lang-typescript",
     timestamp: 1_700_000_000_000,
+    source: "fallback",
   });
   expect(JSON.parse(readFileSync(join(stateDir, "status.json"), "utf8")).reaction).toBe(
     "TypeScript: because JavaScript needed more opinions.",

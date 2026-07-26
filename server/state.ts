@@ -314,11 +314,17 @@ export function loadReaction(): ReactionState | null {
 export function saveReaction(
   reaction: string,
   reason: string,
-  source: ReactionSource = "tool",
+  source: ReactionSource = "fallback",
 ): void {
   mkdirSync(STATE_DIR, { recursive: true });
   const state: ReactionState = { reaction, timestamp: Date.now(), reason, source };
-  writeFileSync(reactionFile(), JSON.stringify(state));
+  // Atomic via tmp + rename — torn reads on the reaction file would
+  // make the Stop hook's freshness check see an absent file, pinning
+  // a stale tool reaction into the bubble forever.
+  const target = reactionFile();
+  const tmp = `${target}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmp, JSON.stringify(state));
+  renameSync(tmp, target);
 }
 
 // ─── Identity resolution ─────────────────────────────────────────────────────
@@ -472,14 +478,16 @@ export function writeStatusState(
     xp: xpTotal,
     mood: moodStr,
   };
-  writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
-  if (reaction) saveReaction(reaction, "mcp");
+  // writeStatusState no longer calls saveReaction implicitly. Callers
+  // that need a reaction file do so explicitly with the correct
+  // `source` tag — the old implicit save had no source argument and
+  // its default later flipped from "tool" to "fallback", either way
+  // overwriting provenance of hatch / pet / unmute writes with whatever
+  // happened to be the default. /buddy stats stopped lying when
+  // this call was removed.
 }
 
-// ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
-
 export const CLAUDE_SETTINGS_PATH = claudeSettingsPath();
-
 /**
  * Write settings.statusLine pointing to the given buddy-status script.
  * Atomic via tmp + rename. Returns false if settings.json is unreachable.

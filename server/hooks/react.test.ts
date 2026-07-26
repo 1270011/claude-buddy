@@ -51,6 +51,7 @@ describe("react PostToolUse hook", () => {
       reaction: "ERROR RATE: CRITICAL. RECOMMEND: RUBBER DUCK PROTOCOL.",
       timestamp: 1_700_000_000_000,
       reason: "error",
+      source: "fallback",
     });
     expect(JSON.parse(readFileSync(join(stateDir, "events.json"), "utf8"))).toMatchObject({
       kept: true,
