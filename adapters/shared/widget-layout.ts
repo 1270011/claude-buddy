@@ -164,16 +164,20 @@ function padLine(line: string, width: number): string {
 }
 
 function frameReaction(reaction: string, achievements: Achievement[], innerWidth: number): string[] {
-  const reactionLines = wrapReaction(reaction, innerWidth, 2);
-  const achievementLine = achievements[0] ? `🏆 ${achievements[0].name}` : "";
-  const content = [...reactionLines, ...(achievementLine ? [achievementLine] : [])]
-    .slice(0, 3)
-    .map((line) => `${DIM_ITALIC}${line}${RESET}`);
+  const maxContentLines = WIDGET_MAX_LINES - 2;
+  const trimmedReaction = reaction.trim();
+  const achievementLines = achievements.map((achievement) => `🏆 ${achievement.name}`);
+  const reactionMax = Math.max(0, maxContentLines - achievementLines.length);
+  const reactionLines = trimmedReaction ? wrapReaction(trimmedReaction, innerWidth, reactionMax) : [];
+  const content = reactionLines.concat(achievementLines).slice(0, maxContentLines);
+  const paddedContent = content.length === 1 ? ["", ...content] : content;
+
   const top = `.${"-".repeat(innerWidth + 2)}.`;
+  const bottom = `\`${"-".repeat(innerWidth + 2)}'`;
   return [
     top,
-    ...content.map((line) => `| ${padLine(line, innerWidth)} |`),
-    `\`${"-".repeat(innerWidth + 2)}'`,
+    ...paddedContent.map((line) => `| ${DIM_ITALIC}${padLine(line, innerWidth)}${RESET} |`),
+    bottom,
   ];
 }
 
@@ -205,16 +209,21 @@ export function renderCompanionWidget(
   const maxBubbleInner = safeWidth - spriteWidth - tailWidth - 4;
   const hasContent = Boolean(reaction?.reaction?.trim()) || achievements.length > 0;
   const canFrame = hasContent && maxBubbleInner >= minBubbleInner;
-  const bubbleInner = canFrame ? Math.min(44, maxBubbleInner) : 0;
+  const bubbleInner = canFrame ? maxBubbleInner : 0;
   const bubble = canFrame ? frameReaction(reaction?.reaction ?? "", achievements, bubbleInner) : [];
   const bubbleWidth = bubbleInner + 4;
   const cardWidth = canFrame ? bubbleWidth + tailWidth + spriteWidth : spriteWidth;
-  const height = Math.max(clippedArt.length + 1, bubble.length);
+
+  const achievementSprites = canFrame
+    ? []
+    : achievements.map((achievement) => `${DIM_ITALIC}${padLine(`🏆 ${achievement.name}`, spriteWidth)}${RESET}`);
+  const spriteBody = [...clippedArt, clippedLabel, ...achievementSprites];
+  const height = Math.max(spriteBody.length, bubble.length);
   const connectorRow = canFrame ? Math.min(bubble.length - 2, Math.max(1, Math.floor(bubble.length / 2))) : -1;
 
   return Array.from({ length: Math.min(WIDGET_MAX_LINES, height) }, (_, index) => {
-    const artLine = index < clippedArt.length ? clippedArt[index]! : index === clippedArt.length ? clippedLabel : "";
-    const sprite = padLine(artLine, spriteWidth);
+    const spriteLine = spriteBody[index] ?? "";
+    const sprite = padLine(spriteLine, spriteWidth);
     let body: string;
     if (canFrame) {
       const bubbleLine = bubble[index] ?? " ".repeat(bubbleWidth);
@@ -225,4 +234,109 @@ export function renderCompanionWidget(
     }
     return `${" ".repeat(Math.max(0, safeWidth - cardWidth))}${body}`;
   });
+}
+
+export interface BuddyWidgetScheduler {
+  setTimeout(callback: () => void, ms?: number): Timer;
+  clearTimer(timer: Timer): void;
+}
+
+/**
+ * Width-aware buddy widget manager.
+ *
+ * Renders once when state arrives, then re-renders with the current terminal
+ * width after coalescing rapid process.stdout resize events. Callers supply
+ * only their harness `setWidget` and the current state; this class owns the
+ * resize subscription, debounce, and re-render logic.
+ */
+export class BuddyWidget {
+  private readonly getWidth: () => number;
+  private scheduler: BuddyWidgetScheduler;
+  private readonly coalesceMs: number;
+  private setWidget: ((lines: string[]) => void) | null = null;
+  private state: { companion: Companion; reaction: ReactionState | null; achievements: Achievement[] } | null = null;
+  private resizeUnsubscribe: (() => void) | null = null;
+  private timer: Timer | null = null;
+
+  constructor(options?: {
+    getWidth?: () => number;
+    scheduler?: BuddyWidgetScheduler;
+    coalesceMs?: number;
+  }) {
+    this.getWidth = options?.getWidth ?? getWidgetWidth;
+    this.scheduler = options?.scheduler ?? {
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimer: globalThis.clearTimeout.bind(globalThis),
+    };
+    this.coalesceMs = options?.coalesceMs ?? 50;
+  }
+
+  /**
+   * Render immediately with the current state and start (or renew) the shared
+   * resize subscription. The `setWidget` callback is the adapter's harness
+   * setter bound to the current UI context.
+   */
+  refresh(
+    setWidget: (lines: string[]) => void,
+    companion: Companion,
+    reaction: ReactionState | null,
+    achievements: Achievement[] = [],
+    scheduler?: BuddyWidgetScheduler,
+  ): void {
+    // Cancel any pending resize timer before swapping the scheduler or state
+    // so clearTimer is always paired with the scheduler that created the timer.
+    this.cancelTimer();
+    this.setWidget = setWidget;
+    if (scheduler) this.scheduler = scheduler;
+    this.state = { companion, reaction, achievements };
+    this.renderAndSet();
+    this.subscribe();
+  }
+
+  /** Stop reacting to resizes without unsubscribing from the shared listener. */
+  clear(): void {
+    this.cancelTimer();
+    this.state = null;
+  }
+
+  /** Tear down timers and the shared resize listener. */
+  dispose(): void {
+    this.cancelTimer();
+    this.resizeUnsubscribe?.();
+    this.resizeUnsubscribe = null;
+    this.state = null;
+    this.setWidget = null;
+  }
+
+  private subscribe(): void {
+    if (this.resizeUnsubscribe) return;
+    this.resizeUnsubscribe = subscribeToWidgetResize(() => this.onResize());
+  }
+
+  private onResize(): void {
+    // A cleared widget has no state/setter to render; don't schedule work.
+    if (!this.state || !this.setWidget) return;
+    this.cancelTimer();
+    this.timer = this.scheduler.setTimeout(() => {
+      this.timer = null;
+      try {
+        this.renderAndSet();
+      } catch (error) {
+        console.error("BuddyWidget render failed:", error);
+      }
+    }, this.coalesceMs);
+  }
+  private renderAndSet(): void {
+    if (!this.state || !this.setWidget) return;
+    const width = this.getWidth();
+    const lines = renderCompanionWidget(this.state.companion, this.state.reaction, this.state.achievements, width);
+    this.setWidget(lines);
+  }
+
+  private cancelTimer(): void {
+    if (this.timer !== null) {
+      this.scheduler.clearTimer(this.timer);
+      this.timer = null;
+    }
+  }
 }

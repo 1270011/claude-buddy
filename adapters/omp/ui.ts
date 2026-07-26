@@ -1,19 +1,13 @@
 import type { OmpBuddyUiContext } from "./context.ts";
 import type { Achievement } from "../../core/achievements.ts";
 import type { Companion, ReactionState } from "../../core/model.ts";
-import { renderAchievementsSummary, renderBuddyWidget } from "./renderers.ts";
+import { renderAchievementsSummary } from "./renderers.ts";
 import { OmpBuddyStorage } from "./storage.ts";
-import { getWidgetWidth, subscribeToWidgetResize } from "../shared/widget-layout.ts";
+import { BuddyWidget } from "../shared/widget-layout.ts";
 
 export class OmpBuddyUI {
   private readonly timers: Array<{ timer: Timer; clear: (timer: Timer) => void }> = [];
-  private resizeUnsubscribe: (() => void) | null = null;
-  private rendered: {
-    ctx: OmpBuddyUiContext;
-    companion: Companion;
-    reaction: ReactionState | null;
-    achievements: Achievement[];
-  } | null = null;
+  private readonly buddy = new BuddyWidget();
 
   constructor(private readonly storage: OmpBuddyStorage) {}
 
@@ -29,9 +23,7 @@ export class OmpBuddyUI {
 
   dispose(): void {
     this.cancelTimers();
-    this.resizeUnsubscribe?.();
-    this.resizeUnsubscribe = null;
-    this.rendered = null;
+    this.buddy.dispose();
   }
 
   refresh(
@@ -42,12 +34,15 @@ export class OmpBuddyUI {
   ): void {
     const currentReaction = reaction ?? null;
     const muted = this.storage.isMuted();
-    this.rendered = { ctx, companion, reaction: currentReaction, achievements: [...achievements] };
-    this.subscribeToResize();
+    const scheduler = getScheduler(ctx);
+
     ctx.ui.setStatus("buddy", undefined);
-    ctx.ui.setWidget(
-      "buddy",
-      renderBuddyWidget(companion, muted ? null : currentReaction, achievements, getWidgetWidth()),
+    this.buddy.refresh(
+      (lines) => ctx.ui.setWidget("buddy", lines),
+      companion,
+      muted ? null : currentReaction,
+      [...achievements],
+      scheduler ?? undefined,
     );
 
     this.cancelTimers();
@@ -55,8 +50,6 @@ export class OmpBuddyUI {
 
     const ttl = this.storage.loadConfig().reactionTTL;
     if (ttl <= 0) return;
-
-    const scheduler = getScheduler(ctx);
     if (!scheduler) return;
 
     const reactionTimestamp = currentReaction.timestamp;
@@ -83,20 +76,9 @@ export class OmpBuddyUI {
     unlocked: Array<{ achievement: Achievement; unlockedAt: number; slot?: string }>,
     remaining: Achievement[],
   ): void {
-    this.rendered = null;
+    this.buddy.clear();
     ctx.ui.setWidget("buddy", renderAchievementsSummary(unlocked, remaining));
     ctx.ui.notify(`Achievements: ${unlocked.length} unlocked`, "info");
-  }
-
-  private subscribeToResize(): void {
-    if (this.resizeUnsubscribe) return;
-    const resizeHandler = () => {
-      if (!this.rendered) return;
-      const { ctx, companion, reaction, achievements } = this.rendered;
-      const muted = this.storage.isMuted();
-      ctx.ui.setWidget("buddy", renderBuddyWidget(companion, muted ? null : reaction, achievements, getWidgetWidth()));
-    };
-    this.resizeUnsubscribe = subscribeToWidgetResize(resizeHandler);
   }
 }
 
