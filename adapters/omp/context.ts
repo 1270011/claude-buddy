@@ -16,7 +16,7 @@ export interface OmpBuddyContext extends OmpBuddyUiContext {
   model: ExtensionContext["model"];
   modelRegistry: Pick<
     ExtensionContext["modelRegistry"],
-    "find" | "getApiKey" | "getProviderHeaders"
+    "find" | "getApiKeyForProvider" | "getProviderHeaders"
   >;
   sessionManager: Pick<ExtensionContext["sessionManager"], "getBranch">;
 }

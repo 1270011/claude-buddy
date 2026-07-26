@@ -8,8 +8,11 @@ import {
   looksLikeTestFailure,
   registerBuddyEvents,
   resolveTurnCommentModel,
+  resolveTurnCommentTimeoutMs,
+  TURN_COMMENT_TIMEOUT_MS,
   type PiBuddyLog,
   type PiTurnCommentModelContext,
+  type TurnCommentCompleter,
 } from "./events.ts";
 import { registerBuddyCommands } from "./commands.ts";
 import { getNameReaction, getSuccessReaction } from "../../core/reactions.ts";
@@ -264,7 +267,7 @@ describe("generateTurnComment", () => {
         event,
         logger,
         fakeComplete,
-        storage.loadPiConfig().turnCommentModel,
+        { modelOverride: storage.loadPiConfig().turnCommentModel },
       );
 
       return { result, logs, longAssistant, longTool, longUser };
@@ -328,6 +331,277 @@ describe("generateTurnComment", () => {
     if (typeof prompt!.data.promptPreview === "string") {
       expect(prompt!.data.promptPreview.length).toBeLessThanOrEqual(1200);
     }
+  });
+
+  test("hanging completion aborts under budget and falls back", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-hang-turn-comment-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    storage.savePiConfig({ turnCommentModel: { provider: model.provider, model: model.id } });
+
+    let seenSignal: AbortSignal | undefined;
+    const hangingComplete: TurnCommentCompleter = async (_model, _request, options) => {
+      seenSignal = options?.signal;
+      await new Promise<never>(() => {});
+      throw new Error("unreachable");
+    };
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: PiBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const ctx = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyAndHeaders() {
+          return { ok: true, apiKey: "secret-key", headers: {} };
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } as unknown as ExtensionContext;
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 4,
+      message: assistantMessage(
+        "I updated adapters/pi/events.ts to stop random turn chatter.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const started = Date.now();
+    const result = await generateTurnComment(
+      ctx,
+      companion,
+      event,
+      logger,
+      hangingComplete,
+      {
+        modelOverride: storage.loadPiConfig().turnCommentModel,
+        timeoutMs: 40,
+      },
+    );
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(elapsed).toBeLessThan(TURN_COMMENT_TIMEOUT_MS);
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
+    expect(seenSignal?.aborted).toBe(true);
+    expect(result.source).toBe("fallback");
+    expect(result.comment).toContain("adapters/pi/events.ts");
+    expect(logs.some((entry) => entry.event === "turn_comment_llm_timeout")).toBe(true);
+  });
+
+  test("hanging auth aborts under budget and falls back", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-hang-auth-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    storage.savePiConfig({ turnCommentModel: { provider: model.provider, model: model.id } });
+
+    let completionCalled = false;
+    const hangingAuthCtx = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyAndHeaders() {
+          await new Promise<never>(() => {});
+          return { ok: true, apiKey: "secret-key", headers: {} };
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } as unknown as ExtensionContext;
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: PiBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const hangingComplete: TurnCommentCompleter = async () => {
+      completionCalled = true;
+      throw new Error("completion should not run when auth hangs");
+    };
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 5,
+      message: assistantMessage(
+        "I updated adapters/pi/events.ts to stop random turn chatter.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const started = Date.now();
+    const result = await generateTurnComment(
+      hangingAuthCtx,
+      companion,
+      event,
+      logger,
+      hangingComplete,
+      {
+        modelOverride: storage.loadPiConfig().turnCommentModel,
+        timeoutMs: 40,
+      },
+    );
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(elapsed).toBeLessThan(TURN_COMMENT_TIMEOUT_MS);
+    expect(completionCalled).toBe(false);
+    expect(result.source).toBe("fallback");
+    expect(result.comment).toContain("adapters/pi/events.ts");
+    expect(logs.some((entry) => entry.event === "turn_comment_llm_timeout")).toBe(true);
+  });
+
+  test("auth throw falls back instead of rejecting the handler", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-auth-throw-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    storage.savePiConfig({ turnCommentModel: { provider: model.provider, model: model.id } });
+
+    const ctx = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyAndHeaders() {
+          throw new Error("auth storage exploded");
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } as unknown as ExtensionContext;
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: PiBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 6,
+      message: assistantMessage(
+        "I updated adapters/pi/events.ts to stop random turn chatter.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const result = await generateTurnComment(
+      ctx,
+      companion,
+      event,
+      logger,
+      async () => {
+        throw new Error("completion should not run when auth throws");
+      },
+      { modelOverride: storage.loadPiConfig().turnCommentModel },
+    );
+
+    expect(result.source).toBe("fallback");
+    expect(result.comment).toContain("adapters/pi/events.ts");
+    expect(logs.some((entry) => entry.event === "turn_comment_auth_unavailable")).toBe(true);
+  });
+
+  test("invalid timeoutMs values fall back to the default positive bound", async () => {
+    expect(resolveTurnCommentTimeoutMs(undefined)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(0)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(-1)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(Number.NaN)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(null as unknown as number)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(250)).toBe(250);
+
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-invalid-timeout-"));
+    temporaryDirectories.push(stateDir);
+    const storage = new PiBuddyStorage(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    storage.savePiConfig({ turnCommentModel: { provider: model.provider, model: model.id } });
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: PiBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const ctx = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model: undefined,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyAndHeaders() {
+          return { ok: true, apiKey: "secret-key", headers: {} };
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } as unknown as ExtensionContext;
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 7,
+      message: assistantMessage(
+        "I updated adapters/pi/events.ts to stop random turn chatter.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const result = await generateTurnComment(
+      ctx,
+      companion,
+      event,
+      logger,
+      async () => assistantMessage("*nods* timeout sanitized."),
+      {
+        modelOverride: storage.loadPiConfig().turnCommentModel,
+        timeoutMs: 0,
+      },
+    );
+
+    expect(result).toEqual({ comment: "*nods* timeout sanitized.", source: "llm" });
+    const attempt = logs.find((entry) => entry.event === "turn_comment_llm_attempt");
+    expect(attempt?.data.timeoutMs).toBe(TURN_COMMENT_TIMEOUT_MS);
   });
 });
 

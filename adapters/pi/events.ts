@@ -29,6 +29,7 @@ interface RegisterBuddyEventsDeps {
   storage: PiBuddyStorage;
   ui: PiBuddyUI;
   logger: PiBuddyLog;
+  completeTurnComment?: TurnCommentCompleter;
 }
 
 export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsDeps): void {
@@ -152,14 +153,17 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
       deps.ui.refresh(ctx, progress.companion, null, progress.achievements);
       return;
     }
-
+    const config = deps.storage.loadPiConfig();
     const generated = await generateTurnComment(
       ctx,
       progress.companion,
       event,
       deps.logger,
-      complete,
-      deps.storage.loadPiConfig().turnCommentModel,
+      deps.completeTurnComment ?? complete,
+      {
+        modelOverride: config.turnCommentModel,
+        timeoutMs: config.turnCommentTimeoutMs,
+      },
     );
     if (!generated.comment) {
       const assistantLength = isAssistantMessage(event.message) ? getAssistantText(event.message).length : 0;
@@ -283,19 +287,34 @@ function getAssistantText(message: AssistantMessage): string {
     .join("\n");
 }
 
-type TurnCommentCompleter = (
+export type TurnCommentCompleter = (
   model: Parameters<typeof complete>[0],
   context: Parameters<typeof complete>[1],
   options: Parameters<typeof complete>[2],
 ) => Promise<AssistantMessage>;
+
+/** Well under typical harness handler budgets; cosmetic reactions must never stall a turn. */
+export const TURN_COMMENT_TIMEOUT_MS = 5_000;
+
+export function resolveTurnCommentTimeoutMs(timeoutMs: number | undefined): number {
+  return typeof timeoutMs === "number" && Number.isFinite(timeoutMs) && timeoutMs > 0
+    ? timeoutMs
+    : TURN_COMMENT_TIMEOUT_MS;
+}
+
 export async function generateTurnComment(
   ctx: ExtensionContext,
   companion: Companion,
   event: TurnEndEvent,
   logger: PiBuddyLog,
   completeTurnComment: TurnCommentCompleter = complete,
-  modelOverride?: BuddyTurnCommentModelConfig,
+  options: {
+    modelOverride?: BuddyTurnCommentModelConfig;
+    timeoutMs?: number;
+  } = {},
 ): Promise<{ comment: string | null; source: "llm" | "fallback" | "none" }> {
+  const { modelOverride } = options;
+  const timeoutMs = resolveTurnCommentTimeoutMs(options.timeoutMs);
   const assistantText = isAssistantMessage(event.message) ? getAssistantText(event.message) : "";
   if (!assistantText.trim()) {
     logger.warn("turn_comment_skipped", { reason: "empty_assistant_text" });
@@ -303,91 +322,144 @@ export async function generateTurnComment(
   }
 
   const turnCommentModel = resolveTurnCommentModel(ctx, logger, modelOverride);
-  if (turnCommentModel) {
-    const toolResultsText = getToolResultsText(event);
-    const userText = getUserPromptText(ctx);
-    const systemPrompt = buildBuddyReactionSystemPrompt(companion);
-    const promptText = buildBuddyReactionPrompt(companion, assistantText, toolResultsText, userText);
-    logger.info("turn_comment_llm_attempt", {
-      modelProvider: turnCommentModel.provider,
-      modelId: turnCommentModel.id,
+  if (!turnCommentModel) {
+    logger.warn("turn_comment_llm_skipped", { reason: "no_model" });
+    const fallback = deriveTurnComment(companion, event.message);
+    logger.warn("turn_comment_fallback", {
+      fallbackLength: fallback?.length ?? 0,
       assistantLength: assistantText.length,
-      toolLength: toolResultsText.length,
-      userTextLength: userText.length,
-      promptLength: promptText.length,
-      systemPromptLength: systemPrompt.length,
-      toolResultCount: event.toolResults.length,
     });
-    const promptDebugData: Record<string, unknown> = {
-      assistantLength: assistantText.length,
-      toolLength: toolResultsText.length,
-      userTextLength: userText.length,
-    };
-    if (diagnosticPreviewsEnabled()) {
-      promptDebugData.systemPromptPreview = systemPrompt.slice(0, 800);
-      promptDebugData.promptPreview = promptText.slice(0, 1200);
-      promptDebugData.userTextPreview = userText.slice(0, 200);
-      promptDebugData.assistantPreview = assistantText.slice(0, 200);
-      promptDebugData.toolPreview = toolResultsText.slice(0, 200);
+    return { comment: fallback, source: fallback ? "fallback" : "none" };
+  }
+
+  const toolResultsText = getToolResultsText(event);
+  const userText = getUserPromptText(ctx);
+  const systemPrompt = buildBuddyReactionSystemPrompt(companion);
+  const promptText = buildBuddyReactionPrompt(companion, assistantText, toolResultsText, userText);
+  logger.info("turn_comment_llm_attempt", {
+    modelProvider: turnCommentModel.provider,
+    modelId: turnCommentModel.id,
+    assistantLength: assistantText.length,
+    toolLength: toolResultsText.length,
+    userTextLength: userText.length,
+    promptLength: promptText.length,
+    systemPromptLength: systemPrompt.length,
+    toolResultCount: event.toolResults.length,
+    timeoutMs,
+  });
+  const promptDebugData: Record<string, unknown> = {
+    assistantLength: assistantText.length,
+    toolLength: toolResultsText.length,
+    userTextLength: userText.length,
+  };
+  if (diagnosticPreviewsEnabled()) {
+    promptDebugData.systemPromptPreview = systemPrompt.slice(0, 800);
+    promptDebugData.promptPreview = promptText.slice(0, 1200);
+    promptDebugData.userTextPreview = userText.slice(0, 200);
+    promptDebugData.assistantPreview = assistantText.slice(0, 200);
+    promptDebugData.toolPreview = toolResultsText.slice(0, 200);
+  }
+  logger.debug("turn_comment_llm_prompt", promptDebugData);
+
+  const userMessage: UserMessage = {
+    role: "user",
+    content: [{ type: "text", text: promptText }],
+    timestamp: Date.now(),
+  };
+
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new Error("Turn comment generation timed out"));
+      reject(new Error("Turn comment generation timed out"));
+    }, timeoutMs);
+  });
+
+  const workPromise = (async (): Promise<string | null> => {
+    let auth: Awaited<ReturnType<ExtensionContext["modelRegistry"]["getApiKeyAndHeaders"]>>;
+    try {
+      auth = await ctx.modelRegistry.getApiKeyAndHeaders(turnCommentModel);
+    } catch (error) {
+      logger.warn("turn_comment_auth_unavailable", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return null;
     }
-    logger.debug("turn_comment_llm_prompt", promptDebugData);
-    const auth = await ctx.modelRegistry.getApiKeyAndHeaders(turnCommentModel);
+
     logger.debug("turn_comment_auth", {
       ok: auth.ok,
       hasApiKey: auth.ok ? !!auth.apiKey : false,
       headerKeys: auth.ok ? Object.keys(auth.headers ?? {}) : [],
     });
-    if (auth.ok && auth.apiKey) {
-      const userMessage: UserMessage = {
-        role: "user",
-        content: [{ type: "text", text: promptText }],
-        timestamp: Date.now(),
-      };
-
-      try {
-        const response = await completeTurnComment(
-          turnCommentModel,
-          {
-            systemPrompt,
-            messages: [userMessage],
-          },
-          {
-            apiKey: auth.apiKey,
-            headers: auth.headers,
-          },
-        );
-
-        if (response.stopReason !== "aborted") {
-          const text = response.content
-            .filter((block): block is TextContent => block.type === "text")
-            .map((block) => block.text)
-            .join("\n");
-          const normalized = normalizeBuddyComment(text);
-          logger.info("turn_comment_llm_result", {
-            stopReason: response.stopReason,
-            errorMessage: "errorMessage" in response ? (response as { errorMessage?: string }).errorMessage : undefined,
-            contentTypes: response.content.map((block) => block.type),
-            contentCount: response.content.length,
-            rawLength: text.length,
-            normalizedLength: normalized.length,
-          });
-          if (normalized) return { comment: normalized, source: "llm" };
-          logger.warn("turn_comment_llm_empty", { rawLength: text.length });
-        }
-      } catch (error) {
-        logger.error("turn_comment_llm_error", {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-      }
-    } else {
+    if (!auth.ok || !auth.apiKey) {
       logger.warn("turn_comment_auth_unavailable", {
         ok: auth.ok,
         message: auth.ok ? "missing api key" : auth.error,
       });
+      return null;
     }
-  } else {
-    logger.warn("turn_comment_llm_skipped", { reason: "no_model" });
+
+    const response = await completeTurnComment(
+      turnCommentModel,
+      {
+        systemPrompt,
+        messages: [userMessage],
+      },
+      {
+        apiKey: auth.apiKey,
+        headers: auth.headers,
+        signal: controller.signal,
+      },
+    );
+
+    if (response.stopReason === "aborted") {
+      logger.warn("turn_comment_llm_aborted", {
+        errorMessage: "errorMessage" in response ? response.errorMessage : undefined,
+      });
+      return null;
+    }
+
+    const text = response.content
+      .filter((block): block is TextContent => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+    const normalized = normalizeBuddyComment(text);
+    logger.info("turn_comment_llm_result", {
+      stopReason: response.stopReason,
+      errorMessage: "errorMessage" in response ? response.errorMessage : undefined,
+      contentTypes: response.content.map((block) => block.type),
+      contentCount: response.content.length,
+      rawLength: text.length,
+      normalizedLength: normalized.length,
+    });
+    if (normalized) return normalized;
+    logger.warn("turn_comment_llm_empty", { rawLength: text.length });
+    return null;
+  })();
+
+  // Prevent unhandled rejection if timeout wins the race first.
+  workPromise.catch(() => {});
+
+  try {
+    const comment = await Promise.race([workPromise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    if (comment) return { comment, source: "llm" };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (timedOut) {
+      logger.warn("turn_comment_llm_timeout", {
+        timeoutMs,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } else {
+      logger.error("turn_comment_llm_error", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
   }
 
   const fallback = deriveTurnComment(companion, event.message);

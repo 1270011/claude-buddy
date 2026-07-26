@@ -39,6 +39,8 @@ export interface BuddyConfig {
   showRarity: boolean;
   statusLineEnabled: boolean;
   turnCommentModel?: BuddyTurnCommentModelConfig;
+  /** Optional per-host bound for end-of-turn reaction LLM calls (ms). */
+  turnCommentTimeoutMs?: number;
 }
 
 export interface GlobalCounters {

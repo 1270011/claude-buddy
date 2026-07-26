@@ -56,6 +56,7 @@ export const DEFAULT_FILE_BUDDY_CONFIG: FileBuddyConfig = {
   showRarity: true,
   statusLineEnabled: true,
   turnCommentModel: undefined,
+  turnCommentTimeoutMs: undefined,
   muted: false,
 };
 

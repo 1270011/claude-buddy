@@ -18,6 +18,8 @@ import {
   generateTurnComment,
   isOmpBashToolResult,
   looksLikeTestFailure,
+  resolveTurnCommentTimeoutMs,
+  TURN_COMMENT_TIMEOUT_MS,
   type OmpBuddyLog,
   type TurnCommentCompleter,
 } from "./events.ts";
@@ -90,7 +92,7 @@ function createHarness(stateDir: string) {
       find() {
         return undefined;
       },
-      async getApiKey() {
+      async getApiKeyForProvider() {
         return undefined;
       },
       getProviderHeaders() {
@@ -339,9 +341,10 @@ const completionCompanion: Companion = {
 };
 
 describe("OMP turn-comment adaptation", () => {
-  test("uses OMP getApiKey and provider headers for contextual completion", async () => {
+  test("uses OMP getApiKeyForProvider and provider headers for contextual completion", async () => {
     const calls: string[] = [];
     let completionOptions: Parameters<TurnCommentCompleter>[2] | undefined;
+    let authOptions: { baseUrl?: string; modelId?: string; signal?: AbortSignal } | undefined;
     const model = getBundledModels("openai")[0];
     if (!model) throw new Error("Expected an OpenAI model fixture.");
     const context = {
@@ -355,8 +358,13 @@ describe("OMP turn-comment adaptation", () => {
         find() {
           return model;
         },
-        async getApiKey(selectedModel: Model) {
-          calls.push(`key:${selectedModel.id}`);
+        async getApiKeyForProvider(
+          provider: string,
+          _sessionId?: string,
+          options?: { baseUrl?: string; modelId?: string; signal?: AbortSignal },
+        ) {
+          calls.push(`key:${provider}:${options?.modelId ?? ""}`);
+          authOptions = options;
           return "secret-key";
         },
         getProviderHeaders(provider: string) {
@@ -414,11 +422,16 @@ describe("OMP turn-comment adaptation", () => {
       completeTurnComment,
     );
 
-    expect(calls).toEqual([`key:${model.id}`, "headers:openai"]);
-    expect(completionOptions).toEqual({
+    expect(calls).toEqual([`key:${model.provider}:${model.id}`, "headers:openai"]);
+    expect(authOptions?.baseUrl).toBe(model.baseUrl);
+    expect(authOptions?.modelId).toBe(model.id);
+    expect(authOptions?.signal).toBeInstanceOf(AbortSignal);
+    expect(completionOptions).toMatchObject({
       apiKey: "secret-key",
       headers: { "x-provider-header": "present" },
     });
+    expect(completionOptions?.signal).toBeInstanceOf(AbortSignal);
+    expect(completionOptions?.signal?.aborted).toBe(false);
     expect(result).toEqual({
       comment: "*nods* the provider header made it through.",
       source: "llm",
@@ -464,7 +477,7 @@ describe("OMP turn-comment adaptation", () => {
           find() {
             return model;
           },
-          async getApiKey() {
+          async getApiKeyForProvider() {
             return "secret-key";
           },
           getProviderHeaders() {
@@ -592,6 +605,335 @@ describe("OMP turn-comment adaptation", () => {
     if (typeof prompt!.data.promptPreview === "string") {
       expect(prompt!.data.promptPreview.length).toBeLessThanOrEqual(1200);
     }
+  });
+
+  test("hanging completion aborts under budget and falls back", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OpenAI model fixture.");
+
+    let seenSignal: AbortSignal | undefined;
+    const hangingComplete: TurnCommentCompleter = async (_model, _request, options) => {
+      seenSignal = options?.signal;
+      await new Promise<never>(() => {});
+      throw new Error("unreachable");
+    };
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: OmpBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const context = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model,
+      modelRegistry: {
+        find() {
+          return model;
+        },
+        async getApiKeyForProvider() {
+          return "secret-key";
+        },
+        getProviderHeaders() {
+          return {};
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } satisfies OmpBuddyContext;
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 3,
+      message: assistantMessage(
+        "The focused tests for `adapters/omp/events.ts` now pass.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const started = Date.now();
+    const result = await generateTurnComment(
+      context,
+      completionCompanion,
+      event,
+      logger,
+      hangingComplete,
+      { timeoutMs: 40 },
+    );
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(elapsed).toBeLessThan(TURN_COMMENT_TIMEOUT_MS);
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
+    expect(seenSignal?.aborted).toBe(true);
+    expect(result.source).toBe("fallback");
+    expect(result.comment).toContain("adapters/omp/events.ts");
+    expect(logs.some((entry) => entry.event === "turn_comment_llm_timeout")).toBe(true);
+  });
+
+  test("hanging auth aborts under budget and falls back", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OpenAI model fixture.");
+
+    let seenSignal: AbortSignal | undefined;
+    let completionCalled = false;
+    const hangingAuthContext = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model,
+      modelRegistry: {
+        find() {
+          return model;
+        },
+        async getApiKeyForProvider(
+          _provider: string,
+          _sessionId?: string,
+          options?: { signal?: AbortSignal },
+        ) {
+          seenSignal = options?.signal;
+          await new Promise<never>(() => {});
+          return "secret-key";
+        },
+        getProviderHeaders() {
+          return {};
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } satisfies OmpBuddyContext;
+
+    const completeTurnComment: TurnCommentCompleter = async () => {
+      completionCalled = true;
+      throw new Error("completion should not run when auth hangs");
+    };
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: OmpBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 5,
+      message: assistantMessage(
+        "The focused tests for `adapters/omp/events.ts` now pass.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const started = Date.now();
+    const result = await generateTurnComment(
+      hangingAuthContext,
+      completionCompanion,
+      event,
+      logger,
+      completeTurnComment,
+      { timeoutMs: 40 },
+    );
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(elapsed).toBeLessThan(TURN_COMMENT_TIMEOUT_MS);
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
+    expect(seenSignal?.aborted).toBe(true);
+    expect(completionCalled).toBe(false);
+    expect(result.source).toBe("fallback");
+    expect(result.comment).toContain("adapters/omp/events.ts");
+    expect(logs.some((entry) => entry.event === "turn_comment_llm_timeout")).toBe(true);
+  });
+
+  test("invalid timeoutMs values fall back to the default positive bound", async () => {
+    expect(resolveTurnCommentTimeoutMs(undefined)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(0)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(-1)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(Number.NaN)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(Number.POSITIVE_INFINITY)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(null as unknown as number)).toBe(TURN_COMMENT_TIMEOUT_MS);
+    expect(resolveTurnCommentTimeoutMs(250)).toBe(250);
+
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OpenAI model fixture.");
+
+    const logs: Array<{ level: string; event: string; data: Record<string, unknown> }> = [];
+    const logger: OmpBuddyLog = {
+      info(event, data) { logs.push({ level: "info", event, data: data ?? {} }); },
+      warn(event, data) { logs.push({ level: "warn", event, data: data ?? {} }); },
+      error(event, data) { logs.push({ level: "error", event, data: data ?? {} }); },
+      debug(event, data) { logs.push({ level: "debug", event, data: data ?? {} }); },
+    };
+
+    const context = {
+      ui: { notify() {}, setStatus() {}, setWidget() {} },
+      model,
+      modelRegistry: {
+        find() {
+          return model;
+        },
+        async getApiKeyForProvider() {
+          return "secret-key";
+        },
+        getProviderHeaders() {
+          return {};
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } satisfies OmpBuddyContext;
+
+    const completeTurnComment: TurnCommentCompleter = async () => ({
+      role: "assistant",
+      content: [{ type: "text", text: "*nods* timeout sanitized." }],
+      api: model.api,
+      provider: model.provider,
+      model: model.id,
+      usage: {
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        totalTokens: 0,
+        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
+      },
+      stopReason: "stop",
+      timestamp: 0,
+    });
+
+    const event = {
+      type: "turn_end",
+      turnIndex: 6,
+      message: assistantMessage(
+        "The focused tests for `adapters/omp/events.ts` now pass.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const result = await generateTurnComment(
+      context,
+      completionCompanion,
+      event,
+      logger,
+      completeTurnComment,
+      { timeoutMs: 0 },
+    );
+
+    expect(result).toEqual({
+      comment: "*nods* timeout sanitized.",
+      source: "llm",
+    });
+    const attempt = logs.find((entry) => entry.event === "turn_comment_llm_attempt");
+    expect(attempt?.data.timeoutMs).toBe(TURN_COMMENT_TIMEOUT_MS);
+  });
+
+  test("hanging turn_end completion still renders fallback widget under handler budget", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-hang-turn-"));
+    temporaryDirectories.push(stateDir);
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OpenAI model fixture.");
+
+    const handlers = new Map<string, EventHandler>();
+    const commands = new Map<string, CommandHandler>();
+    const statuses: Array<{ key: string; text: string | undefined }> = [];
+    const widgets: Array<{ key: string; content: string[] | undefined }> = [];
+    const notifications: Array<{ message: string; type: string | undefined }> = [];
+
+    const extensionApi = {
+      on(event: string, handler: EventHandler) {
+        handlers.set(event, handler);
+      },
+      registerCommand(name: string, command: { handler: CommandHandler }) {
+        commands.set(name, command.handler);
+      },
+    } as ExtensionAPI;
+
+    const context = {
+      ui: {
+        setStatus(key: string, text: string | undefined) {
+          statuses.push({ key, text });
+        },
+        setWidget(key: string, content: string[] | undefined) {
+          widgets.push({ key, content });
+        },
+        notify(message: string, type?: "info" | "warning" | "error") {
+          notifications.push({ message, type });
+        },
+      },
+      model,
+      modelRegistry: {
+        find(provider: string, id: string) {
+          return provider === model.provider && id === model.id ? model : undefined;
+        },
+        async getApiKeyForProvider() {
+          return "secret-key";
+        },
+        getProviderHeaders() {
+          return {};
+        },
+      },
+      sessionManager: {
+        getBranch() {
+          return [];
+        },
+      },
+    } satisfies OmpBuddyContext;
+
+    const hangingComplete: TurnCommentCompleter = async () => {
+      await new Promise<never>(() => {});
+      throw new Error("unreachable");
+    };
+
+    registerOmpBuddyExtension(extensionApi, {
+      stateDir,
+      completeTurnComment: hangingComplete,
+    });
+
+    const storage = new OmpBuddyStorage(stateDir);
+    storage.saveOmpConfig({
+      commentCooldown: 0,
+      turnCommentModel: { provider: model.provider, model: model.id },
+      turnCommentTimeoutMs: 40,
+    });
+
+    await emit(handlers, "session_start", { type: "session_start" }, context);
+    const companion = storage.loadActive();
+    expect(companion).not.toBeNull();
+
+    const turnEvent = {
+      type: "turn_end",
+      turnIndex: 1,
+      message: assistantMessage(
+        "The focused tests now pass for `adapters/omp/events.ts`.",
+      ),
+      toolResults: [],
+    } satisfies TurnEndEvent;
+
+    const started = Date.now();
+    await emit(handlers, "turn_end", turnEvent, context);
+    const elapsed = Date.now() - started;
+
+    expect(elapsed).toBeLessThan(1_000);
+    expect(elapsed).toBeLessThan(30_000);
+    const latest = storage.loadLatest();
+    expect(latest?.reason).toBe("turn");
+    expect(latest?.reaction).toContain("adapters/omp/events.ts");
+    const widget = widgets.at(-1)?.content?.join("\n") ?? "";
+    expect(widget).toContain(companion?.name ?? "");
+    expect(widget).toContain("adapters/omp/events.ts");
+    expect(commands.size).toBe(1);
+    expect(statuses.at(-1)?.key).toBe("buddy");
+    expect(notifications.length).toBeGreaterThan(0);
   });
 });
 describe("OMP looksLikeTestFailure", () => {
