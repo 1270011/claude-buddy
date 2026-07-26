@@ -278,10 +278,25 @@ function migrateIfNeeded(): void {
 
 // ─── Reaction state (session-scoped for tmux isolation) ──────────────────────
 
+/**
+ * Where a reaction came from. Proves the bubble content isn't canned when
+ * source === "tool" or "comment"; "fallback" means a hook picked a pool line
+ * because no model-authored text surfaced; "none" is the default for legacy
+ * files written before the field existed.
+ *
+ *   tool      — buddy_react MCP tool call (Claude wrote it; renders nowhere)
+ *   comment   — old `<!-- buddy: ... -->` HTML comment (legacy / older CC)
+ *   fallback  — Stop hook generated it from the canned pool
+ *   none      — unknown / legacy file without a source field
+ */
+export type ReactionSource = "tool" | "comment" | "fallback" | "none";
+
 export interface ReactionState {
   reaction: string;
   timestamp: number;
   reason: string;
+  /** Provenance — see ReactionSource. Defaults to "none" on legacy files. */
+  source?: ReactionSource;
 }
 
 export function loadReaction(): ReactionState | null {
@@ -289,15 +304,20 @@ export function loadReaction(): ReactionState | null {
     const data: ReactionState = JSON.parse(readFileSync(reactionFile(), "utf8"));
     const { reactionTTL } = loadConfig();
     if (reactionTTL > 0 && Date.now() - data.timestamp > reactionTTL * 1000) return null;
+    if (data.source === undefined) data.source = "none";
     return data;
   } catch {
     return null;
   }
 }
 
-export function saveReaction(reaction: string, reason: string): void {
+export function saveReaction(
+  reaction: string,
+  reason: string,
+  source: ReactionSource = "tool",
+): void {
   mkdirSync(STATE_DIR, { recursive: true });
-  const state: ReactionState = { reaction, timestamp: Date.now(), reason };
+  const state: ReactionState = { reaction, timestamp: Date.now(), reason, source };
   writeFileSync(reactionFile(), JSON.stringify(state));
 }
 
