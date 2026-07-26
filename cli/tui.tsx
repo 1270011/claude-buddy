@@ -1459,7 +1459,7 @@ interface SettingDef {
 
 const SETTING_DEFS: SettingDef[] = [
   { key: "commentCooldown", label: "Comment Cooldown", description: ["Minimum seconds between", "buddy status line comments.", "", "Lower = chatty, Higher = quiet"], type: "number", min: 0, default: "30" },
-  { key: "reactionTTL", label: "Reaction TTL", description: ["How long reactions stay", "visible in status line.", "", "0 = permanent"], type: "number", min: 0, default: "0" },
+  { key: "reactionTTL", label: "Reaction TTL", description: ["How long reactions stay", "visible in status line.", "", "0 = permanent"], type: "number", min: 0, default: "900" },
   { key: "bubbleStyle", label: "Bubble Style", description: ["Speech bubble style.", "", 'classic → "quoted"', "round → (parens)"], type: "options", options: ["classic", "round"], default: "classic" },
   { key: "bubblePosition", label: "Bubble Position", description: ["Bubble placement.", "", "top → above buddy", "left → beside buddy"], type: "options", options: ["top", "left"], default: "top" },
   { key: "showRarity", label: "Show Rarity", description: ["Show rarity stars in", "the status line.", "", "true → ★★★★ visible", "false → hidden"], type: "options", options: ["true", "false"], default: "true" },

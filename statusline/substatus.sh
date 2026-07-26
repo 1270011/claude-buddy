@@ -25,12 +25,24 @@ append_substatus() {
     local cache_file="$state_dir/.substatus.$sid"
     local lock_dir="$state_dir/.substatus.$sid.lock"
     local command=""
-    local now cache_age lock_age refresh_seconds configured_refresh_seconds
+    local now cache_age lock_age refresh_seconds configured_refresh_seconds line sweep_lock sweep_lock_age
 
-    # Remove abandoned refresh output without touching the complete cache or
-    # the lock directory. The refresh path below uses the same deterministic
-    # temp filename, so this also cleans up files from older implementations.
-    find "$state_dir" -type f -name ".substatus.$sid.*" -mmin +60 -exec rm -f {} \; 2>/dev/null
+    # Cleanup is intentionally detached: stale temp files are housekeeping and
+    # must not make the statusline wait on a filesystem walk. The lock keeps
+    # concurrent statusline ticks from launching duplicate sweeps.
+    sweep_lock="$state_dir/.substatus-sweep.$sid.lock"
+    if [ -d "$sweep_lock" ]; then
+        sweep_lock_age=$(( $(date +%s) - $(_substatus_mtime "$sweep_lock") ))
+        if [ "$sweep_lock_age" -gt 300 ]; then
+            rmdir "$sweep_lock" 2>/dev/null || rm -rf "$sweep_lock" 2>/dev/null
+        fi
+    fi
+    if mkdir "$sweep_lock" 2>/dev/null; then
+        (
+            trap 'rmdir "$sweep_lock" 2>/dev/null' EXIT
+            find "$state_dir" -type f -name ".substatus.$sid.*" -mmin +60 -exec rm -f {} + 2>/dev/null
+        ) >/dev/null 2>&1 &
+    fi
 
     [ -f "$config_file" ] || return 0
     command=$(jq -r '.subStatusCommand // ""' "$config_file" 2>/dev/null)
@@ -43,10 +55,21 @@ append_substatus() {
         *) [ "$configured_refresh_seconds" -gt 0 ] && refresh_seconds="$configured_refresh_seconds" ;;
     esac
 
-    # Always show the last complete result first. A missing or stale cache is
-    # allowed to be blank; the refresh below will populate the next tick.
-    [ -f "$cache_file" ] && cat "$cache_file"
-
+    # The main statusline supplies ANSI-aware output when it has a width
+    # budget. Keep this helper standalone for callers that don't.
+    _substatus_print_line() {
+        local line="$1"
+        if [ "$(type -t statusline_output_line 2>/dev/null)" = "function" ]; then
+            statusline_output_line "$line"
+        else
+            printf '%s\n' "$line"
+        fi
+    }
+    if [ -f "$cache_file" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            _substatus_print_line "$line"
+        done < "$cache_file"
+    fi
     now=$(date +%s)
     cache_age=999999
     if [ -f "$cache_file" ]; then

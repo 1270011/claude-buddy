@@ -8,9 +8,23 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getArtFrame, getStatusFrames, resolveEyeGlyph, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import { displayWidth, getArtFrame, getStatusFrames, resolveEyeGlyph, STATUS_FRAME_SEQUENCE, truncateDisplayWidth } from "./art.ts";
 import { SPECIES_ART as CORE_SPECIES_ART } from "../core/art-data.ts";
 import { SPECIES, EYES, type BuddyBones } from "../core/engine.ts"
+function readCodepointRanges(path: string): number[] {
+  const ranges = readFileSync(path, "utf8")
+    .split("\n")
+    .filter((line) => line && !line.startsWith("#"))
+    .join(" ")
+    .trim()
+    .split(/[,\s]+/);
+  return ranges.flatMap((range) => {
+    const [startText, endText = startText] = range.split("-");
+    const start = Number(startText);
+    const end = Number(endText);
+    return Array.from({ length: end - start + 1 }, (_, index) => start + index);
+  });
+}
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -61,6 +75,26 @@ describe("displayWidth", () => {
     // "🏆 ✅ Good Buddy" → 2+1+2+1+10 = 16
     expect(displayWidth("\u{1F3C6} \u2705 Good Buddy")).toBe(16);
   });
+});
+
+describe("truncateDisplayWidth", () => {
+  test("keeps wide emoji intact and preserves ANSI state", () => {
+    const value = "\x1b[31mhello 🏆 world\x1b[0m";
+    const truncated = truncateDisplayWidth(value, 8);
+
+    expect(displayWidth(truncated)).toBeLessThanOrEqual(8);
+    expect(truncated).toContain("hello");
+    expect(truncated).toContain("\u2026");
+    expect(truncated).toContain("\x1b[0m");
+    expect(truncated).not.toContain("🏆");
+  });
+  test("keeps a VS16-upgraded symbol within the suffix budget", () => {
+    const truncated = truncateDisplayWidth("❤️x", 2);
+
+    expect(displayWidth(truncated)).toBeLessThanOrEqual(2);
+    expect(truncated).toContain("\u2026");
+  });
+
 });
 
 describe("getStatusFrames", () => {
@@ -180,23 +214,27 @@ describe("getStatusFrames", () => {
 });
 
 describe("statusline/emoji-widths.data", () => {
-  test("matches Unicode Emoji_Presentation in U+2600-U+27BF (regenerate via 'bun run gen:emoji-widths')", () => {
-    const data = readFileSync(
+  test("matches Unicode Emoji_Presentation (regenerate via 'bun run gen:emoji-widths')", () => {
+    const fileList = readCodepointRanges(
       join(import.meta.dir, "..", "statusline", "emoji-widths.data"),
-      "utf8",
     );
-    const fileList = data
-      .split("\n")
-      .filter((l) => l && !l.startsWith("#"))
-      .join(" ")
-      .trim()
-      .split(/\s+/)
-      .map(Number);
-
     const re = /\p{Emoji_Presentation}/u;
     const expected: number[] = [];
-    for (let cp = 0x2600; cp <= 0x27BF; cp++) {
+    for (let cp = 0; cp <= 0x10FFFF; cp++) {
       if (re.test(String.fromCodePoint(cp))) expected.push(cp);
+    }
+    expect(fileList).toEqual(expected);
+  });
+  test("matches Unicode Emoji codepoints that need VS16 upgrades", () => {
+    const fileList = readCodepointRanges(
+      join(import.meta.dir, "..", "statusline", "emoji-text.data"),
+    );
+    const emoji = /\p{Emoji}/u;
+    const presentation = /\p{Emoji_Presentation}/u;
+    const expected: number[] = [];
+    for (let cp = 0; cp <= 0x10FFFF; cp++) {
+      const character = String.fromCodePoint(cp);
+      if (emoji.test(character) && !presentation.test(character)) expected.push(cp);
     }
     expect(fileList).toEqual(expected);
   });

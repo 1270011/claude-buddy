@@ -306,8 +306,11 @@ export function loadReaction(): ReactionState | null {
   try {
     const data: ReactionState = JSON.parse(readFileSync(reactionFile(), "utf8"));
     const { reactionTTL } = loadConfig();
-    if (reactionTTL > 0 && Date.now() - data.timestamp > reactionTTL * 1000) return null;
-    if (data.source === undefined) data.source = "none";
+if (reactionTTL > 0 && Date.now() - data.timestamp > reactionTTL * 1000) {
+  rmSync(reactionFile(), { force: true });
+  return null;
+}
+if (data.source === undefined) data.source = "none";
     return data;
   } catch {
     return null;
@@ -342,9 +345,7 @@ export function resolveUserId(): string {
     return "anon";
   }
 }
-
 // ─── Config persistence (PR #6: tmux popup settings) ─────────────────────────
-
 export interface BuddyConfig {
   commentCooldown: number;
   reactionTTL: number;
@@ -352,6 +353,7 @@ export interface BuddyConfig {
   bubblePosition: "top" | "left";
   showRarity: boolean;
   statusLineEnabled: boolean;
+  statuslineWidthAdjust: number;
   bubbleWidth: number;
   bubbleMargin: number;
   useCombinedStatus: boolean;
@@ -367,11 +369,15 @@ export interface BuddyConfig {
 
 const DEFAULT_CONFIG: BuddyConfig = {
   commentCooldown: 30,
-  reactionTTL: 0,
+  // Long enough that a reaction survives the turn you were reading when it was
+  // written, short enough that yesterday's bubble is never still on screen.
+  // Set to 0 to opt out and keep reactions until they are replaced.
+  reactionTTL: 900,
   bubbleStyle: "classic",
   bubblePosition: "top",
   showRarity: true,
   statusLineEnabled: false,
+  statuslineWidthAdjust: 0,
   bubbleWidth: 28,
   bubbleMargin: 8,
   useCombinedStatus: false,
@@ -393,6 +399,12 @@ export function normalizeConfig(data: unknown): BuddyConfig {
   }
   if (!Number.isInteger(config.subStatusRefreshSeconds) || config.subStatusRefreshSeconds <= 0) {
     config.subStatusRefreshSeconds = DEFAULT_CONFIG.subStatusRefreshSeconds;
+  }
+  if (!Number.isInteger(config.reactionTTL) || config.reactionTTL < 0) {
+    config.reactionTTL = DEFAULT_CONFIG.reactionTTL;
+  }
+  if (!Number.isInteger(config.statuslineWidthAdjust)) {
+    config.statuslineWidthAdjust = DEFAULT_CONFIG.statuslineWidthAdjust;
   }
   return config;
 }

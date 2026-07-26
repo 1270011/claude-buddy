@@ -51,7 +51,7 @@ import {
   claudeConfigDir,
   claudeSettingsPath,
 } from "./path";
-import { getReaction, generatePersonalityPrompt, } from "../core/reactions.ts"
+import { getReaction } from "../core/reactions.ts"
 import { renderCompanionCardMarkdown } from "./art";
 import {
   incrementEvent, checkAndAward, trackActiveDay,

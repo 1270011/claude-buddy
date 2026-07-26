@@ -12,9 +12,11 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { displayWidth } from "../server/art.ts";
 
 const temporaryDirectories: string[] = [];
 const statuslineScript = join(import.meta.dir, "buddy-status.sh");
+const chromeReserve = Number(readFileSync(statuslineScript, "utf8").match(/^CHROME_RESERVE=([0-9]+)/m)?.[1] ?? 0);
 
 function createStatuslineFixture(config: Record<string, unknown>) {
   const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-substatus-"));
@@ -37,7 +39,12 @@ function createStatuslineFixture(config: Record<string, unknown>) {
   return { configDir, stateDir };
 }
 
-function runStatusline(configDir: string, input = "{}\n", columns = "80") {
+function runStatusline(
+  configDir: string,
+  input = "{}\n",
+  columns = "80",
+  envOverrides: Record<string, string> = {},
+) {
   return spawnSync("bash", [statuslineScript], {
     env: {
       ...process.env,
@@ -45,8 +52,11 @@ function runStatusline(configDir: string, input = "{}\n", columns = "80") {
       CLAUDE_CODE_SESSION_ID: "",
       TMUX_PANE: "",
       BUDDY_FAKE_NOW: "0",
-      COLUMNS: columns,
+      BUDDY_STATUSLINE_COLS: columns,
+      TERM: "xterm-256color",
+      NO_COLOR: "",
       BUDDY_SHELL: "",
+      ...envOverrides,
     },
     input,
     stdout: "pipe",
@@ -68,7 +78,6 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
-
 describe("buddy statusline colors", () => {
   test("uses rarity color for the name, stars, and sprite", () => {
     const configDir = mkdtempSync(join(tmpdir(), "coding-buddy-statusline-"));
@@ -88,6 +97,10 @@ describe("buddy statusline colors", () => {
       frames: ["  art\n (°°)"],
       frameSequence: [0],
     }));
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "colored *bubble [x]",
+      timestamp: Date.now(),
+    }));
 
     const result = Bun.spawnSync(["bash", join(import.meta.dir, "buddy-status.sh")], {
       env: {
@@ -96,7 +109,9 @@ describe("buddy statusline colors", () => {
         CLAUDE_CODE_SESSION_ID: "",
         TMUX_PANE: "",
         BUDDY_FAKE_NOW: "0",
-        COLUMNS: "80",
+        BUDDY_STATUSLINE_COLS: "80",
+        TERM: "xterm-256color",
+        NO_COLOR: "",
         BUDDY_SHELL: "",
       },
       stdout: "pipe",
@@ -110,25 +125,27 @@ describe("buddy statusline colors", () => {
     expect(greenLines.length).toBeGreaterThanOrEqual(2);
     expect(greenLines.some((line) => line.includes("Nimbus ★★"))).toBe(true);
     expect(greenLines.some((line) => line.includes("(°°)"))).toBe(true);
+    expect(greenLines.some((line) => /\.[-]{4,}\./.test(line))).toBe(true);
+    expect(output).toContain("colored *bubble [x]");
   });
 
   test.each([40, 60, 80, 120])("keeps the shared card inside %i columns", (columns) => {
-    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
     writeFileSync(join(stateDir, "status.json"), JSON.stringify({
       name: "Nimbus",
       rarity: "uncommon",
       stars: "★★",
       shiny: false,
       reaction: "",
-      achievement: "",
+      achievement: "milestone with 🏆🌈 wide emoji and enough words to wrap across multiple lines",
       level: 1,
       mood: "focused",
       frames: [" .----.\n(°  °)\n(    )\n `----'"],
       frameSequence: [0],
     }));
     writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
-      reaction: "hello from buddy",
-      timestamp: 0,
+      reaction: "hello from buddy with several words and 🏆 wide emoji",
+      timestamp: Date.now(),
     }));
 
     const result = runStatusline(configDir, "{}\n", String(columns));
@@ -137,15 +154,148 @@ describe("buddy statusline colors", () => {
 
     expect(result.status).toBe(0);
     expect(lines.every((line) => line.length <= columns)).toBe(true);
+    expect(result.stdout.toString().split("\n").filter(Boolean).every((line) => displayWidth(line) <= columns)).toBe(true);
+    const budget = columns >= 40 ? Math.min(columns, Math.max(40, columns - chromeReserve)) : columns;
+    expect(result.stdout.toString().split("\n").filter(Boolean).every((line) => displayWidth(line) <= budget)).toBe(true);
+    const connectorLine = result.stdout.toString().split("\n").find((line) => line.includes("--"));
+    expect(connectorLine).toContain("\x1b[38;2;78;186;101m");
     expect(lines.some((line) => /\|.*\|-- /.test(line))).toBe(true);
     expect(plain).toContain("Nimbus ★★");
   });
 
+  test("honors a signed width adjustment and NO_COLOR", () => {
+    const { configDir, stateDir } = createStatuslineFixture({
+      reactionTTL: 900,
+      statuslineWidthAdjust: -10,
+    });
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "width override",
+      timestamp: Date.now(),
+    }));
+
+    const result = runStatusline(configDir, "{}\n", "80", { NO_COLOR: "1" });
+    const lines = result.stdout.toString().split("\n").filter(Boolean);
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => displayWidth(line) <= 56)).toBe(true);
+  });
+
+  test("BUDDY_STATUSLINE_COLS wins over exported COLUMNS", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "uncommon",
+      stars: "★★",
+      shiny: false,
+      reaction: "",
+      achievement: "milestone with 🏆🌈 wide emoji and enough words to wrap across multiple lines",
+      level: 1,
+      mood: "focused",
+      frames: [" .----.\n(°  °)\n(    )\n `----'"],
+      frameSequence: [0],
+    }));
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "hello from buddy with several words and 🏆 wide emoji",
+      timestamp: Date.now(),
+    }));
+
+    const result = runStatusline(configDir, "{}\n", "60", { COLUMNS: "200" });
+    const lines = result.stdout.toString().split("\n").filter(Boolean);
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => displayWidth(line) <= 46)).toBe(true);
+  });
+
+  test("exported COLUMNS wins over a wider controlling PTY", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "uncommon",
+      stars: "★★",
+      shiny: false,
+      reaction: "",
+      achievement: "milestone with 🏆🌈 wide emoji and enough words to wrap across multiple lines",
+      level: 1,
+      mood: "focused",
+      frames: [" .----.\n(°  °)\n(    )\n `----'"],
+      frameSequence: [0],
+    }));
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "hello from buddy with several words and 🏆 wide emoji",
+      timestamp: Date.now(),
+    }));
+
+    const env = {
+      ...process.env,
+      CLAUDE_CONFIG_DIR: configDir,
+      CLAUDE_CODE_SESSION_ID: "",
+      TMUX_PANE: "",
+      BUDDY_FAKE_NOW: "0",
+      BUDDY_STATUSLINE_COLS: process.stdin.isTTY ? "" : "60",
+      COLUMNS: "60",
+      TERM: "xterm-256color",
+      LC_ALL: "C",
+      NO_COLOR: "",
+      BUDDY_SHELL: "",
+    };
+    const result = process.stdin.isTTY
+      ? spawnSync("script", ["-q", "/dev/null", "bash", "-c", `stty cols 120 rows 24; bash ${statuslineScript} </dev/null`], {
+        env,
+        stdio: ["inherit", "pipe", "pipe"],
+      })
+      : spawnSync("bash", [statuslineScript], {
+        env,
+        input: "{}\n",
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+    const lines = result.stdout.toString()
+      .replace(/\r/g, "")
+      .replace(/\^D/g, "")
+      .replace(/\x08/g, "")
+      .split("\n")
+      .filter(Boolean);
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => displayWidth(line) <= 46)).toBe(true);
+  });
+
+  test("invalid BUDDY_STATUSLINE_COLS values are ignored and fall through", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "uncommon",
+      stars: "★★",
+      shiny: false,
+      reaction: "",
+      achievement: "milestone with 🏆🌈 wide emoji and enough words to wrap across multiple lines",
+      level: 1,
+      mood: "focused",
+      frames: [" .----.\n(°  °)\n(    )\n `----'"],
+      frameSequence: [0],
+    }));
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "hello from buddy with several words and 🏆 wide emoji",
+      timestamp: Date.now(),
+    }));
+
+    for (const override of ["0", "abc"]) {
+      const result = runStatusline(configDir, "{}\n", "60", {
+        BUDDY_STATUSLINE_COLS: override,
+        COLUMNS: "60",
+      });
+      const lines = result.stdout.toString().split("\n").filter(Boolean);
+
+      expect(result.status).toBe(0);
+      expect(lines.every((line) => displayWidth(line) <= 46)).toBe(true);
+    }
+  });
+
   test("drops the shell bubble and tail when the panel is narrow", () => {
-    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
     writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
       reaction: "hello from buddy",
-      timestamp: 0,
+      timestamp: Date.now(),
     }));
 
     const result = runStatusline(configDir, "{}\n", "24");
@@ -156,6 +306,50 @@ describe("buddy statusline colors", () => {
     expect(lines.every((line) => line.length <= 24)).toBe(true);
     expect(lines.some((line) => /\|.*\|-- /.test(line))).toBe(false);
     expect(plain).not.toMatch(/^ *\.[-]{12,}\.$/m);
+  });
+
+  test("expires stale reactions and sweeps per-session reaction files", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 30 });
+    const staleReaction = join(stateDir, "reaction.default.json");
+    const staleComment = join(stateDir, ".last_comment.default");
+    writeFileSync(staleReaction, JSON.stringify({
+      reaction: "stale reaction",
+      timestamp: Date.now() - 60_000,
+    }));
+    writeFileSync(staleComment, String(Math.floor(Date.now() / 1000) - 60));
+
+    const result = runStatusline(configDir);
+    const output = result.stdout.toString();
+
+    expect(result.status).toBe(0);
+    expect(output).not.toContain("stale reaction");
+    expect(existsSync(staleReaction)).toBe(false);
+    expect(existsSync(staleComment)).toBe(false);
+    expect(output).not.toMatch(/^ *\.[-]{12,}\.$/m);
+  });
+
+  test("uses a finite default TTL while honoring zero as permanent", () => {
+    const defaultFixture = createStatuslineFixture({});
+    const defaultReaction = join(defaultFixture.stateDir, "reaction.default.json");
+    writeFileSync(defaultReaction, JSON.stringify({
+      reaction: "default stale reaction",
+      timestamp: Date.now() - 901_000,
+    }));
+
+    const defaultResult = runStatusline(defaultFixture.configDir);
+    expect(defaultResult.stdout.toString()).not.toContain("default stale reaction");
+    expect(existsSync(defaultReaction)).toBe(false);
+
+    const permanentFixture = createStatuslineFixture({ reactionTTL: 0 });
+    const permanentReaction = join(permanentFixture.stateDir, "reaction.default.json");
+    writeFileSync(permanentReaction, JSON.stringify({
+      reaction: "permanent reaction",
+      timestamp: Date.now() - 901_000,
+    }));
+
+    const permanentResult = runStatusline(permanentFixture.configDir);
+    expect(permanentResult.stdout.toString()).toContain("permanent reaction");
+    expect(existsSync(permanentReaction)).toBe(true);
   });
 });
 
@@ -206,22 +400,48 @@ describe("buddy sub-status cache", () => {
       .toEqual([]);
   });
 
-  test("sweeps old temp files without deleting the cache or lock", () => {
+  test("sweeps old temp files without deleting the cache or lock", async () => {
     const { configDir, stateDir } = createStatuslineFixture({});
     const cacheFile = join(stateDir, ".substatus.default");
     const staleTemp = join(stateDir, ".substatus.default.old");
     const lockDir = join(stateDir, ".substatus.default.lock");
+    const sweepLock = join(stateDir, ".substatus-sweep.default.lock");
     const oldDate = new Date(Date.now() - 2 * 60 * 60 * 1000);
 
     writeFileSync(cacheFile, "cached\n");
     writeFileSync(staleTemp, "orphan\n");
     mkdirSync(lockDir);
+    mkdirSync(sweepLock);
     utimesSync(staleTemp, oldDate, oldDate);
+    utimesSync(sweepLock, oldDate, oldDate);
 
     expect(runStatusline(configDir).status).toBe(0);
+    await waitFor(() => !existsSync(staleTemp));
+    await waitFor(() => !existsSync(sweepLock));
     expect(existsSync(staleTemp)).toBe(false);
     expect(readFileSync(cacheFile, "utf8")).toBe("cached\n");
     expect(existsSync(lockDir)).toBe(true);
+  });
+
+  test("truncates cached sub-status rows to the adjusted budget", () => {
+    const { configDir, stateDir } = createStatuslineFixture({
+      reactionTTL: 900,
+      subStatusCommand: "printf ignored",
+    });
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "cached-bubble reaction 🏆 with enough words to wrap",
+      timestamp: Date.now(),
+    }));
+    const cacheFile = join(stateDir, ".substatus.default");
+    writeFileSync(cacheFile, "\u00a0[Timeout]\u00a0\uE0B0\u00a0💰\u00a0$143.14\u00a0session\u00a0\uE0B0\u00a0⏰\u00a04h\u00a054m\u00a0left\n");
+
+    const result = runStatusline(configDir, "{}\n", "60");
+    const lines = result.stdout.toString().split("\n").filter(Boolean);
+    expect(result.stdout.toString()).toContain("cached-bubble");
+    expect(result.stdout.toString()).toContain("reaction 🏆");
+
+    expect(result.status).toBe(0);
+    expect(lines.every((line) => displayWidth(line) <= 46)).toBe(true);
   });
 
   test("uses the 15-second default and honors a numeric TTL override", async () => {

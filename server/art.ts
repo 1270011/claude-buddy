@@ -172,10 +172,38 @@ export const RARITY_STARS: Record<Rarity, string> = {
 
 function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
 
+const SGR_TOKEN_RE = /\x1b\[[^m]*m|./gu;
+
+/** Truncate a string to terminal columns without splitting wide characters. */
+export function truncateDisplayWidth(
+  value: string,
+  maxWidth: number,
+  suffix = "\u2026",
+): string {
+  if (maxWidth <= 0) return "";
+  if (displayWidth(value) <= maxWidth) return value;
+
+  const suffixWidth = displayWidth(suffix);
+  const contentWidth = Math.max(0, maxWidth - suffixWidth);
+  let result = "";
+  for (const token of value.match(SGR_TOKEN_RE) ?? []) {
+    if (token.startsWith("\x1b[")) {
+      result += token;
+      continue;
+    }
+    // Measure the candidate, not the codepoint in isolation: VS16 upgrades
+    // the preceding symbol and must be accounted for before accepting it.
+    if (displayWidth(result + token) > contentWidth) break;
+    result += token;
+  }
+  return `${result}${suffix}${NC}`;
+}
+
 // Unicode property escapes (ES2018) are the source of truth for which
 // codepoints terminals render 2 cols wide. The statusline (bash) can't use
-// these directly, so scripts/gen-emoji-widths.ts exports the subset that
-// bash needs into statusline/emoji-widths.data — regenerate on version bumps.
+// these directly, so scripts/gen-emoji-widths.ts exports the complete
+// Emoji_Presentation table into statusline/emoji-widths.data — regenerate on
+// Unicode/runtime version bumps.
 const EMOJI_PRES_RE = /\p{Emoji_Presentation}/u;
 const EMOJI_RE = /\p{Emoji}/u;
 
@@ -330,7 +358,7 @@ export function renderCompanionCard(
   if (reaction) {
     lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
     const maxMsg = innerW - 3; // "💬 " prefix (💬 = 2 cols + space)
-    const msg = displayWidth(reaction) > maxMsg ? reaction.slice(0, maxMsg - 1) + "\u2026" : reaction;
+    const msg = truncateDisplayWidth(reaction, maxMsg);
     const msgPad = Math.max(0, innerW - displayWidth(msg) - 3);
     lines.push(`${color}\u2502${NC}  \ud83d\udcac ${msg}${" ".repeat(msgPad)}${color}\u2502${NC}`);
   }
