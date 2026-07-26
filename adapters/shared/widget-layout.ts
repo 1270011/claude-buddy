@@ -18,10 +18,33 @@ export function stripAnsi(text: string): string {
   return text.replace(ANSI_PATTERN, "");
 }
 
+// East-Asian Wide/Fullwidth ranges. These MUST stay in sync with char_width()
+// in statusline/buddy-status.sh \u2014 the two surfaces render the same companion
+// card, and a disagreement here shears the bubble: borders sized from an
+// undercounted width, text rows drawn at their true width.
+//
+// Box Drawing (U+2500-U+257F) and Block Elements sit inside the CJK span but
+// are narrow, so they are carved out explicitly, matching the shell.
+const BOX_DRAWING_START = 0x2500; // 9472
+const BOX_DRAWING_END = 0x25bf; // 9631
+const CJK_START = 0x3000; // 12288 \u2014 CJK punctuation through Hangul syllables
+const CJK_END = 0x9fff; // 40959
+const FULLWIDTH_START = 0xff01; // 65281 \u2014 Fullwidth ASCII variants
+const FULLWIDTH_END = 0xff60; // 65376
+
+function isEastAsianWide(codePoint: number): boolean {
+  if (codePoint >= BOX_DRAWING_START && codePoint <= BOX_DRAWING_END) return false;
+  if (codePoint >= CJK_START && codePoint <= CJK_END) return true;
+  if (codePoint >= FULLWIDTH_START && codePoint <= FULLWIDTH_END) return true;
+  return false;
+}
+
 function characterWidth(character: string, next?: string): number {
   if (character === "\u200d" || /[\uFE00-\uFE0F]/u.test(character)) return 0;
   if (next === "\uFE0F" && /\p{Emoji}/u.test(character)) return 2;
-  return /\p{Emoji_Presentation}/u.test(character) ? 2 : 1;
+  if (/\p{Emoji_Presentation}/u.test(character)) return 2;
+  const codePoint = character.codePointAt(0);
+  return codePoint !== undefined && isEastAsianWide(codePoint) ? 2 : 1;
 }
 
 export function displayWidth(text: string): number {

@@ -70,3 +70,27 @@ describe("shared buddy widget layout", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("east-asian width parity with the shell renderer", () => {
+  test("counts CJK and fullwidth as two columns, box drawing as one", () => {
+    expect(displayWidth("你好")).toBe(4);
+    expect(displayWidth("这个错误处理程序")).toBe(16);
+    expect(displayWidth("Ａ")).toBe(2);
+    expect(displayWidth("│")).toBe(1);
+    expect(displayWidth("abc")).toBe(3);
+    expect(displayWidth("🏆")).toBe(2);
+  });
+
+  test("frames a CJK reaction without shearing the box", () => {
+    const width = 60;
+    const lines = renderCompanionWidget(
+      { name: "Nimbus", bones: { species: "duck", rarity: "uncommon", eye: "°", hat: "none", shiny: false, stats: {}, peak: "CHAOS", dump: "PATIENCE" } } as never,
+      { reaction: "这个错误处理程序缺少一个最终块", timestamp: Date.now() } as never,
+      [],
+      width,
+    );
+    for (const line of lines) {
+      expect(displayWidth(line)).toBeLessThanOrEqual(width);
+    }
+  });
+});
