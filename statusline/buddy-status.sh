@@ -668,8 +668,16 @@ ansi_truncate() {
     printf '%s' "$out"
 }
 
+# The sprite (and the name centered under it) is the irreducible minimum of the
+# card: the bubble is already dropped as a unit when it cannot fit, but slicing
+# the art itself shears the sprite and cuts the pet's name mid-word. Floor the
+# truncation budget at ART_W so a very narrow terminal overflows by a few
+# columns instead of rendering a mutilated companion.
+OUTPUT_BUDGET="$STATUSLINE_BUDGET"
+[ "$OUTPUT_BUDGET" -lt "$ART_W" ] 2>/dev/null && OUTPUT_BUDGET="$ART_W"
+
 statusline_output_line() {
-    ansi_truncate "$1" "$STATUSLINE_BUDGET"
+    ansi_truncate "$1" "$OUTPUT_BUDGET"
     printf '\n'
 }
 

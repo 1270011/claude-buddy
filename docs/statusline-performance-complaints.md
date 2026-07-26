@@ -6,3 +6,10 @@
 - Scope: preserve deterministic width resolution and TTY/non-TTY test parity; do not touch dirty `adapters/` or `core/` work.
 - Acceptance: three `COLUMNS=93` timings at or below 1.0 seconds, `bun test` green, and `script -q /dev/null bun test statusline/` green.
 - Status: resolved; compressed emoji ranges removed the hot-path regression. Fresh timings were 0.76s, 0.72s, and 0.82s; `bun test` passed 417/417 and the TTY statusline suite passed 17/17.
+
+## 2026-07-26 — Narrow-width sprite slicing
+
+- Complaint: the resize path accepts widths below the sprite's own width, shearing sprite rows and truncating the pet name at `COLUMNS=20` (`Cobalt` becomes `Cob`), which fails the gating golden check.
+- Scope: floor usable width at `ART_W`; keep sprite and name intact through narrow-width degradation; preserve the statusline CI, TTY/non-TTY, runtime, and typecheck bars.
+- Acceptance: the golden check keeps the full pet name visible, no sprite or name row is sliced mid-character, and all requested verification commands pass.
+- Status: in progress.
