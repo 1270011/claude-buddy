@@ -12,7 +12,7 @@ import { complete, type AssistantMessage, type TextContent, type UserMessage } f
 import { BuddyCommandService, type ReactionResult } from "../../core/command-service.ts";
 import type { BuddyTurnCommentModelConfig, Companion } from "../../core/model.ts";
 import type { Achievement } from "../../core/achievements.ts";
-import { getNameReaction, getSuccessReaction, isNameMentioned } from "../../core/reactions.ts";
+import { extractGeneratedPersonality, generatePersonalityPrompt, getNameReaction, getSuccessReaction, isNameMentioned } from "../../core/reactions.ts";
 import { OmpBuddyStorage } from "./storage.ts";
 import { buildBuddyReactionPrompt, buildBuddyReactionSystemPrompt, normalizeBuddyComment, stripBuddyComments } from "./prompt.ts";
 import { OmpBuddyUI } from "./ui.ts";
@@ -37,19 +37,31 @@ interface RegisterOmpBuddyEventsDeps {
   ui: OmpBuddyUI;
   logger: OmpBuddyLog;
   completeTurnComment?: TurnCommentCompleter;
+  completePersonality?: PersonalityCompleter;
 }
 
 export function registerOmpBuddyEvents(pi: ExtensionAPI, deps: RegisterOmpBuddyEventsDeps): void {
   pi.on("session_start", async (_event: SessionStartEvent, ctx: OmpBuddyContext) => {
     const result = deps.service.startSession();
+    let companion = result.companion;
+    if (result.created) {
+      const generated = await generatePersonality(ctx, companion, deps.logger, deps.completePersonality, {
+        modelOverride: deps.storage.loadOmpConfig().turnCommentModel,
+      });
+      if (generated) {
+        const updated = deps.service.setPersonalityForSlot(result.slot, generated, result.companion.personality);
+        if (updated) companion = updated;
+      }
+    }
+    companion = deps.storage.loadActive() ?? companion;
     deps.logger.info("session_start", {
-      companion: result.companion.name,
-      species: result.companion.bones.species,
+      companion: companion.name,
+      species: companion.bones.species,
       created: result.created,
     });
-    deps.ui.refresh(ctx, result.companion, deps.storage.loadLatest(), result.achievements);
+    deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), result.achievements);
     if (result.created) {
-      ctx.ui.notify(`A new buddy hatched: ${result.companion.name}`, "info");
+      ctx.ui.notify(`A new buddy hatched: ${companion.name}`, "info");
     }
     deps.ui.notifyAchievements(ctx, result.achievements);
   });
@@ -480,6 +492,123 @@ export async function generateTurnComment(
     assistantLength: assistantText.length,
   });
   return { comment: fallback, source: fallback ? "fallback" : "none" };
+}
+const PERSONALITY_GENERATION_TIMEOUT_MS = 10_000;
+
+export type PersonalityCompleter = (
+  model: Parameters<typeof complete>[0],
+  context: Parameters<typeof complete>[1],
+  options: Parameters<typeof complete>[2],
+) => Promise<AssistantMessage>;
+export async function generatePersonality(
+  ctx: OmpBuddyContext,
+  companion: Companion,
+  logger: OmpBuddyLog,
+  completePersonality: PersonalityCompleter = complete,
+  options: {
+    modelOverride?: BuddyTurnCommentModelConfig;
+    timeoutMs?: number;
+  } = {},
+): Promise<string | null> {
+  const { modelOverride, timeoutMs = PERSONALITY_GENERATION_TIMEOUT_MS } = options;
+  const model = resolveTurnCommentModel(ctx, logger, modelOverride);
+  if (!model) {
+    logger.warn("personality_generation_skipped", { reason: "no_model" });
+    return null;
+  }
+
+  const promptText = generatePersonalityPrompt(
+    companion.bones.species,
+    companion.bones.rarity,
+    { ...companion.bones.stats } as Record<string, number>,
+    companion.bones.shiny,
+  );
+  const userMessage: UserMessage = {
+    role: "user",
+    content: [{ type: "text", text: promptText }],
+    timestamp: Date.now(),
+  };
+
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new Error("Personality generation timed out"));
+      reject(new Error("Personality generation timed out"));
+    }, timeoutMs);
+  });
+
+  const workPromise = (async (): Promise<string | null> => {
+    let apiKey: string | undefined;
+    try {
+      apiKey = await ctx.modelRegistry.getApiKey(model);
+    } catch (error) {
+      logger.warn("personality_generation_auth_unavailable", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+    const headers = ctx.modelRegistry.getProviderHeaders(model.provider);
+    logger.debug("personality_generation_auth", {
+      hasApiKey: Boolean(apiKey),
+      headerKeys: Object.keys(headers ?? {}),
+    });
+    if (!apiKey) {
+      logger.warn("personality_generation_auth_unavailable", { message: "missing api key" });
+      return null;
+    }
+
+    const response = await completePersonality(
+      model,
+      { messages: [userMessage] },
+      { apiKey, headers, signal: controller.signal },
+    );
+
+    if (response.stopReason === "aborted") {
+      logger.warn("personality_generation_aborted", {
+        errorMessage: response.errorMessage,
+      });
+      return null;
+    }
+
+    const text = response.content
+      .filter((block): block is TextContent => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+    const personality = extractGeneratedPersonality(text);
+    logger.info("personality_generation_result", {
+      stopReason: response.stopReason,
+      rawLength: text.length,
+      hasPersonality: !!personality,
+    });
+    if (personality) return personality;
+    logger.warn("personality_generation_malformed", { rawLength: text.length });
+    return null;
+  })();
+
+  workPromise.catch(() => {});
+
+  let result: string | null;
+  try {
+    result = await Promise.race([workPromise, timeoutPromise]);
+    clearTimeout(timeoutId);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (timedOut) {
+      logger.warn("personality_generation_timeout", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } else {
+      logger.error("personality_generation_error", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+    result = null;
+  }
+
+  return result;
 }
 
 export function resolveTurnCommentModel(

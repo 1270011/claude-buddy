@@ -1,4 +1,4 @@
-import type { BuddyStats, Species, Rarity } from "./engine.ts";
+import { PERSONALITY_MAX_LENGTH, type BuddyStats, type Species, type Rarity } from "./engine.ts";
 
 export type ReactionReason =
   | "hatch" | "pet" | "error" | "test-fail" | "large-diff" | "turn" | "idle"
@@ -675,6 +675,33 @@ export function generatePersonalityPrompt(
     `Inspiration words: ${vibes.join(", ")}`,
     shiny ? "SHINY variant — extra special." : "",
     "",
-    "Return JSON: {\"name\": \"1-14 chars\", \"personality\": \"2-3 sentences describing behavior\"}",
+    "Return JSON: {\"name\": \"1-14 chars\", \"personality\": \"2-3 sentences, 1-500 chars\"}",
   ].filter(Boolean).join("\n");
+}
+export function extractGeneratedPersonality(
+  text: string,
+  maxLength: number = PERSONALITY_MAX_LENGTH,
+): string | null {
+  const trimmed = text.trim();
+  if (!trimmed) return null;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    const match = trimmed.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!parsed || typeof parsed !== "object") return null;
+  const personality = (parsed as Record<string, unknown>).personality;
+  if (typeof personality !== "string") return null;
+  const clean = personality.trim();
+  if (!clean || clean.length > maxLength) return null;
+  return clean;
 }

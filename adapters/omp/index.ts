@@ -1,7 +1,7 @@
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 import { BuddyCommandService } from "../../core/command-service.ts";
 import { registerBuddyCommands } from "./commands.ts";
-import { registerOmpBuddyEvents, type TurnCommentCompleter } from "./events.ts";
+import { registerOmpBuddyEvents, type PersonalityCompleter, type TurnCommentCompleter } from "./events.ts";
 import { OmpIdentityProvider } from "./identity.ts";
 import { OmpBuddyLogger } from "./logger.ts";
 import { OmpBuddyStorage } from "./storage.ts";
@@ -10,6 +10,7 @@ import { OmpBuddyUI } from "./ui.ts";
 export interface OmpBuddyExtensionOptions {
   stateDir?: string;
   completeTurnComment?: TurnCommentCompleter;
+  completePersonality?: PersonalityCompleter;
 }
 
 export default function registerOmpBuddyExtension(
@@ -35,5 +36,6 @@ export default function registerOmpBuddyExtension(
     ui,
     logger,
     completeTurnComment: options.completeTurnComment,
+    completePersonality: options.completePersonality,
   });
 }
