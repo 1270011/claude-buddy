@@ -8,9 +8,9 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getStatusFrames, resolveEyeGlyph, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import { displayWidth, getArtFrame, getStatusFrames, resolveEyeGlyph, STATUS_FRAME_SEQUENCE } from "./art.ts";
 import { SPECIES_ART as CORE_SPECIES_ART } from "../core/art-data.ts";
-import { SPECIES, type BuddyBones } from "../core/engine.ts"
+import { SPECIES, EYES, type BuddyBones } from "../core/engine.ts"
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -140,12 +140,8 @@ describe("getStatusFrames", () => {
       expect(body).not.toContain("normal");
       expect(body).not.toContain("{E}");
     }
-    // Idle frames fall back to the default degree-sign glyph.
-    expect(frames[0]).toContain("°");
-    expect(frames[0]).toContain("<(°");
-    // Blink frame still uses "-" (must not be re-sanitized to °).
-    expect(frames[3]).toContain("<(-");
-    expect(frames[3]).not.toContain("°");
+    expect(frames[0]).toContain("  <(° )___  ");
+    expect(frames[3]).toContain("  <(- )___  ");
   });
 
   test("resolveEyeGlyph keeps real glyphs and rejects words", () => {
@@ -154,6 +150,32 @@ describe("getStatusFrames", () => {
     expect(resolveEyeGlyph("normal")).toBe("°");
     expect(resolveEyeGlyph("")).toBe("°");
     expect(resolveEyeGlyph(undefined)).toBe("°");
+  });
+
+  test("invalid persisted hyphen falls back in idle frames", () => {
+    const hyphenEye = bones({
+      species: "duck",
+      // @ts-expect-error: blink is an internal frame sentinel, not a persisted eye
+      eye: "-",
+    });
+    expect(getStatusFrames(hyphenEye).frames[0]).toContain("  <(° )___  ");
+  });
+
+  test("valid eye glyphs remain unchanged in baked frames", () => {
+    for (const eye of EYES) {
+      const { frames } = getStatusFrames(bones({ species: "duck", eye }));
+      for (const frame of frames.slice(0, 3)) {
+        expect(frame).toContain(`  <(${eye} )___  `);
+        expect(frame).not.toContain("{E}");
+      }
+      expect(frames[3]).toContain("  <(- )___  ");
+    }
+  });
+
+  test("getArtFrame also sanitizes invalid eye descriptors", () => {
+    const frame = getArtFrame("duck", "normal", 0);
+    expect(frame.join("\n")).not.toContain("normal");
+    expect(frame).toContain("  <(° )___  ");
   });
 });
 

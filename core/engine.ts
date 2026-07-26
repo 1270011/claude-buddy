@@ -81,6 +81,13 @@ export const EYES = [
   "\u00b0",
 ] as const;
 export type Eye = (typeof EYES)[number];
+const DEFAULT_EYE: Eye = "\u00b0";
+
+/** Keep persisted/runtime eye values from leaking descriptor words into art. */
+export function resolveEyeGlyph(eye: unknown): Eye {
+  return EYES.find((candidate) => candidate === eye) ?? DEFAULT_EYE;
+}
+
 
 export const HATS = [
   "none",
@@ -401,8 +408,8 @@ const FACE_TEMPLATES: Record<Species, string> = {
   pikachu: "({E}ω{E})",
 };
 
-export function renderFace(species: Species, eye: Eye): string {
-  return FACE_TEMPLATES[species].replace(/\{E\}/g, eye);
+export function renderFace(species: Species, eye: string): string {
+  return FACE_TEMPLATES[species].replace(/\{E\}/g, resolveEyeGlyph(eye));
 }
 
 export function renderBuddy(bones: BuddyBones): string {
