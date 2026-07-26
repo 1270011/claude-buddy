@@ -82,7 +82,11 @@ append_substatus() {
     # over a minute old, so a slow but healthy command is never duplicated.
     if [ -d "$lock_dir" ]; then
         lock_age=$(( now - $(_substatus_mtime "$lock_dir") ))
-        if [ "$lock_age" -gt 60 ]; then
+        # A refresh killed alongside its parent leaves this lock behind. The
+        # window must be short enough that a fresh session recovers within a
+        # few ticks instead of rendering no sub-status at all, but longer than
+        # a healthy slow command's runtime so it is never duplicated.
+        if [ "$lock_age" -gt 20 ]; then
             rmdir "$lock_dir" 2>/dev/null || rm -rf "$lock_dir" 2>/dev/null
         fi
     fi
@@ -107,4 +111,19 @@ append_substatus() {
             exit 1
         fi
     ) </dev/null > /dev/null 2>/dev/null &
+}
+
+# Claude Code kills the statusline process when the next render starts, and a
+# plain `&` child stays in that process group — so the refresh was being killed
+# mid-write, leaving a held lock and a 0-byte temp file behind. A session that
+# lost the race that way never rendered a sub-status at all.
+#
+# setsid detaches into a new session so the refresh survives; it is Linux-only,
+# so fall back to nohup (which at least survives SIGHUP) on macOS.
+_substatus_detach() {
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "$@" </dev/null >/dev/null 2>&1 &
+    else
+        nohup "$@" </dev/null >/dev/null 2>&1 &
+    fi
 }
