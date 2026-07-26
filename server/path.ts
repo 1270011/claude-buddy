@@ -11,6 +11,7 @@
 
 import { join } from "path";
 import { homedir } from "os";
+import { sharedStateDir } from "../core/identity.ts";
 
 // ─── (1) Path normalization ─────────────────────────────────────────────────
 
@@ -76,6 +77,8 @@ export function claudeUserConfigPath(): string {
 }
 
 export function buddyStateDir(): string {
+  const shared = sharedStateDir();
+  if (shared) return shared;
   const cfgDir = envDir("CLAUDE_CONFIG_DIR");
   if (cfgDir) return join(cfgDir, "buddy-state");
   return join(homedir(), ".claude-buddy");

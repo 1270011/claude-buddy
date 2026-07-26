@@ -17,6 +17,10 @@ export interface BuddyRepository {
   updateActive(transform: (companion: Companion) => Companion): Companion;
   loadSlot(slot: string): Companion | null;
   saveSlot(slot: string, companion: Companion): void;
+  updateSlot(
+    slot: string,
+    transform: (companion: Companion) => Companion | null,
+  ): Companion | null;
   deleteSlot(slot: string): void;
   listSlots(): Array<{ slot: string; companion: Companion }>;
   loadActiveSlot(): string | null;

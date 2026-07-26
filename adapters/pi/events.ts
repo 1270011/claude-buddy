@@ -13,7 +13,7 @@ import { complete, type AssistantMessage, type TextContent, type UserMessage } f
 import { BuddyCommandService, type ReactionResult } from "../../core/command-service.ts";
 import type { Achievement } from "../../core/achievements.ts";
 import type { BuddyTurnCommentModelConfig, Companion } from "../../core/model.ts";
-import { getNameReaction, getSuccessReaction, isNameMentioned } from "../../core/reactions.ts";
+import { extractGeneratedPersonality, generatePersonalityPrompt, getNameReaction, getSuccessReaction, isNameMentioned } from "../../core/reactions.ts";
 import { PiBuddyStorage } from "./storage.ts";
 import { buildBuddyReactionPrompt, buildBuddyReactionSystemPrompt, normalizeBuddyComment, stripBuddyComments } from "./prompt.ts";
 import { PiBuddyUI } from "./ui.ts";
@@ -30,19 +30,31 @@ interface RegisterBuddyEventsDeps {
   ui: PiBuddyUI;
   logger: PiBuddyLog;
   completeTurnComment?: TurnCommentCompleter;
+  completePersonality?: PersonalityCompleter;
 }
 
 export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsDeps): void {
   pi.on("session_start", async (_event: SessionStartEvent, ctx: ExtensionContext) => {
     const result = deps.service.startSession();
+    let companion = result.companion;
+    if (result.created) {
+      const generated = await generatePersonality(ctx, companion, deps.logger, deps.completePersonality, {
+        modelOverride: deps.storage.loadPiConfig().turnCommentModel,
+      });
+      if (generated) {
+        const updated = deps.service.setPersonalityForSlot(result.slot, generated, result.companion.personality);
+        if (updated) companion = updated;
+      }
+    }
+    companion = deps.storage.loadActive() ?? companion;
     deps.logger.info("session_start", {
-      companion: result.companion.name,
-      species: result.companion.bones.species,
+      companion: companion.name,
+      species: companion.bones.species,
       created: result.created,
     });
-    deps.ui.refresh(ctx, result.companion, deps.storage.loadLatest(), result.achievements);
+    deps.ui.refresh(ctx, companion, deps.storage.loadLatest(), result.achievements);
     if (result.created) {
-      ctx.ui.notify(`A new buddy hatched: ${result.companion.name}`, "info");
+      ctx.ui.notify(`A new buddy hatched: ${companion.name}`, "info");
     }
     deps.ui.notifyAchievements(ctx, result.achievements);
   });
@@ -183,7 +195,7 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
     deps.ui.notifyAchievements(ctx, achievements);
   });
   pi.on("session_shutdown", () => {
-    deps.ui.cancelTimers();
+    deps.ui.dispose();
   });
 }
 function diagnosticPreviewsEnabled(): boolean {
@@ -468,6 +480,119 @@ export async function generateTurnComment(
     assistantLength: assistantText.length,
   });
   return { comment: fallback, source: fallback ? "fallback" : "none" };
+}
+export type PersonalityCompleter = (
+  model: Parameters<typeof complete>[0],
+  context: Parameters<typeof complete>[1],
+  options: Parameters<typeof complete>[2],
+) => Promise<AssistantMessage>;
+const PERSONALITY_GENERATION_TIMEOUT_MS = 10_000;
+
+export async function generatePersonality(
+  ctx: ExtensionContext,
+  companion: Companion,
+  logger: PiBuddyLog,
+  completePersonality: PersonalityCompleter = complete,
+  options: {
+    modelOverride?: BuddyTurnCommentModelConfig;
+    timeoutMs?: number;
+  } = {},
+): Promise<string | null> {
+  const { modelOverride, timeoutMs = PERSONALITY_GENERATION_TIMEOUT_MS } = options;
+  const model = resolveTurnCommentModel(ctx, logger, modelOverride);
+  if (!model) {
+    logger.warn("personality_generation_skipped", { reason: "no_model" });
+    return null;
+  }
+
+  const promptText = generatePersonalityPrompt(
+    companion.bones.species,
+    companion.bones.rarity,
+    { ...companion.bones.stats } as Record<string, number>,
+    companion.bones.shiny,
+  );
+  const userMessage: UserMessage = {
+    role: "user",
+    content: [{ type: "text", text: promptText }],
+    timestamp: Date.now(),
+  };
+
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new Error("Personality generation timed out"));
+      reject(new Error("Personality generation timed out"));
+    }, timeoutMs);
+  });
+
+  const workPromise = (async (): Promise<string | null> => {
+    const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+    logger.debug("personality_generation_auth", {
+      ok: auth.ok,
+      hasApiKey: auth.ok ? !!auth.apiKey : false,
+      headerKeys: auth.ok ? Object.keys(auth.headers ?? {}) : [],
+    });
+    if (!auth.ok || !auth.apiKey) {
+      logger.warn("personality_generation_auth_unavailable", {
+        ok: auth.ok,
+        message: auth.ok ? "missing api key" : auth.error,
+      });
+      return null;
+    }
+
+    const response = await completePersonality(
+      model,
+      { messages: [userMessage] },
+      { apiKey: auth.apiKey, headers: auth.headers, signal: controller.signal },
+    );
+
+    if (response.stopReason === "aborted") {
+      logger.warn("personality_generation_aborted", {
+        errorMessage: response.errorMessage,
+      });
+      return null;
+    }
+
+    const text = response.content
+      .filter((block): block is TextContent => block.type === "text")
+      .map((block) => block.text)
+      .join("\n");
+    const personality = extractGeneratedPersonality(text);
+    logger.info("personality_generation_result", {
+      stopReason: response.stopReason,
+      rawLength: text.length,
+      hasPersonality: !!personality,
+    });
+    if (personality) return personality;
+    logger.warn("personality_generation_malformed", { rawLength: text.length });
+    return null;
+  })();
+
+  workPromise.catch(() => {});
+
+  let result: string | null;
+  try {
+    result = await Promise.race([workPromise, timeoutPromise]);
+    clearTimeout(timeoutId);
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (timedOut) {
+      logger.warn("personality_generation_timeout", {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    } else {
+      logger.error("personality_generation_error", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+    }
+    result = null;
+  }
+
+  return result;
 }
 
 export interface PiTurnCommentModelContext {

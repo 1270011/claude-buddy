@@ -4,12 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   deriveTurnComment,
+  generatePersonality,
   generateTurnComment,
   looksLikeTestFailure,
   registerBuddyEvents,
   resolveTurnCommentModel,
   resolveTurnCommentTimeoutMs,
   TURN_COMMENT_TIMEOUT_MS,
+  type PersonalityCompleter,
   type PiBuddyLog,
   type PiTurnCommentModelContext,
   type TurnCommentCompleter,
@@ -17,7 +19,7 @@ import {
 import { registerBuddyCommands } from "./commands.ts";
 import { getNameReaction, getSuccessReaction } from "../../core/reactions.ts";
 import type { Companion } from "../../core/model.ts";
-import { getModels, type AssistantMessage } from "@mariozechner/pi-ai";
+import { getModels, type AssistantMessage, type Model, type Api, type Context as CompletionContext } from "@mariozechner/pi-ai";
 import type {
   ExtensionAPI,
   ExtensionCommandContext,
@@ -635,7 +637,10 @@ type PiEventHandler = (event: unknown, context: ExtensionContext) => unknown | P
 
 type PiCommandHandler = (args: string, context: ExtensionCommandContext) => Promise<void>;
 
-function createPiHarness(stateDir: string) {
+function createPiHarness(
+  stateDir: string,
+  options?: { completePersonality?: PersonalityCompleter },
+) {
   const handlers = new Map<string, PiEventHandler>();
   const commands = new Map<string, PiCommandHandler>();
   const notifications: { message: string; type: string }[] = [];
@@ -687,7 +692,13 @@ function createPiHarness(stateDir: string) {
     originalNotifyAchievements(ctx, achievements);
   };
 
-  registerBuddyEvents(api, { service, storage, ui, logger });
+  registerBuddyEvents(api, {
+    service,
+    storage,
+    ui,
+    logger,
+    completePersonality: options?.completePersonality,
+  });
   registerBuddyCommands(api, { service, storage, ui });
 
   async function runCommand(args: string): Promise<void> {
@@ -696,7 +707,7 @@ function createPiHarness(stateDir: string) {
     await handler!(args, commandCtx);
   }
 
-  return { handlers, ctx, storage, runCommand, notifications, notifyAchievementsCalls };
+  return { handlers, ctx, service, storage, runCommand, notifications, notifyAchievementsCalls };
 }
 
 async function emitPi(
@@ -900,4 +911,235 @@ describe("Pi buddy command achievements", () => {
     const name = harness.storage.loadActive()?.name ?? "";
     expect(harness.notifications.some((n) => n.type === "info" && n.message.includes(name))).toBe(true);
   });
+});
+function getTextFromUserMessage(request: CompletionContext): string {
+  const message = request.messages[0];
+  if (!message || message.role !== "user") return "";
+  if (typeof message.content === "string") return message.content;
+  const textBlock = message.content.find((block) => block.type === "text");
+  return textBlock?.type === "text" ? textBlock.text : "";
+}
+
+function buildPiPersonalityContext(options: {
+  model?: Model<Api>;
+  auth?: { ok: true; apiKey: string; headers?: Record<string, string> } | { ok: false; error: string };
+}) {
+  const model = options.model ?? getModels("openai")[0];
+  if (!model) throw new Error("Expected a Pi model fixture.");
+  return {
+    ui: { notify() {}, setStatus() {}, setWidget() {} },
+    model,
+    modelRegistry: {
+      find() {
+        return model;
+      },
+      async getApiKeyAndHeaders() {
+        return options.auth ?? { ok: true, apiKey: "secret-key", headers: {} };
+      },
+    },
+    sessionManager: { getBranch() { return []; } },
+  } as unknown as ExtensionContext;
+}
+
+describe("generatePersonality", () => {
+  test("returns a generated personality and exercises the prompt helper", async () => {
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    let capturedRequest: CompletionContext | undefined;
+    const completePersonality: PersonalityCompleter = async (_model, request) => {
+      capturedRequest = request;
+      return assistantMessage(JSON.stringify({ name: "Spark", personality: "A curious coder." }));
+    };
+    const ctx = buildPiPersonalityContext({ model });
+
+    const result = await generatePersonality(ctx, companion, { info() {}, warn() {}, error() {}, debug() {} }, completePersonality);
+
+    expect(result).toBe("A curious coder.");
+    const promptText = getTextFromUserMessage(capturedRequest!);
+    expect(promptText).toContain(`Species: ${companion.bones.species}`);
+    expect(promptText).toContain(`Rarity: ${companion.bones.rarity.toUpperCase()}`);
+    expect(promptText).toContain("Stats:");
+    expect(promptText).toContain('"personality"');
+  });
+
+  test("prefers configured turnCommentModel and uses resolveTurnCommentModel", async () => {
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    let findArgs: { provider: string; model: string } | undefined;
+    const base = buildPiPersonalityContext({ model });
+    const ctx = {
+      ...base,
+      model: undefined,
+      modelRegistry: {
+        ...base.modelRegistry,
+        find(provider: string, modelId: string) {
+          findArgs = { provider, model: modelId };
+          return provider === "openai" && modelId === model.id ? model : null;
+        },
+      },
+    } as unknown as ExtensionContext;
+    const completePersonality: PersonalityCompleter = async () =>
+      assistantMessage(JSON.stringify({ personality: "Config chosen." }));
+
+    const result = await generatePersonality(
+      ctx,
+      companion,
+      { info() {}, warn() {}, error() {}, debug() {} },
+      completePersonality,
+      { modelOverride: { provider: "openai", model: model.id } },
+    );
+
+    expect(result).toBe("Config chosen.");
+    expect(findArgs).toEqual({ provider: "openai", model: model.id });
+  });
+
+  test("falls back to session model when configured turnCommentModel is missing", async () => {
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const base = buildPiPersonalityContext({ model });
+    const ctx = {
+      ...base,
+      modelRegistry: {
+        ...base.modelRegistry,
+        find(provider: string, modelId: string) {
+          return provider === "openai" && modelId === model.id ? model : null;
+        },
+      },
+    } as unknown as ExtensionContext;
+    let receivedModel: Model<Api> | undefined;
+    const completePersonality: PersonalityCompleter = async (m) => {
+      receivedModel = m as Model<Api>;
+      return assistantMessage(JSON.stringify({ personality: "Fallback." }));
+    };
+
+    const result = await generatePersonality(
+      ctx,
+      companion,
+      { info() {}, warn() {}, error() {}, debug() {} },
+      completePersonality,
+      { modelOverride: { provider: "missing", model: "missing" } },
+    );
+
+    expect(result).toBe("Fallback.");
+    expect(receivedModel).toBe(model);
+  });
+
+
+  test("falls back to null for malformed or empty responses", async () => {
+    const cases: PersonalityCompleter[] = [
+      async () => assistantMessage("not json"),
+      async () => assistantMessage(JSON.stringify({ name: "Spark" })),
+      async () => assistantMessage(JSON.stringify({ personality: "" })),
+      async () => assistantMessage(JSON.stringify({ personality: "x".repeat(501) })),
+    ];
+    for (const completePersonality of cases) {
+      const ctx = buildPiPersonalityContext({});
+      const result = await generatePersonality(ctx, companion, { info() {}, warn() {}, error() {}, debug() {} }, completePersonality);
+      expect(result).toBeNull();
+    }
+  });
+
+  test("falls back when there is no model, no auth, an abort, or a provider error", async () => {
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const logger = { info() {}, warn() {}, error() {}, debug() {} };
+
+    const noModelCtx = { ...buildPiPersonalityContext({ model }), model: undefined } as unknown as ExtensionContext;
+    expect(await generatePersonality(noModelCtx, companion, logger)).toBeNull();
+
+    const noAuthCtx = buildPiPersonalityContext({ model, auth: { ok: false, error: "no auth" } });
+    expect(await generatePersonality(noAuthCtx, companion, logger)).toBeNull();
+
+    const noKeyCtx = buildPiPersonalityContext({ model, auth: { ok: true, apiKey: "" } });
+    expect(await generatePersonality(noKeyCtx, companion, logger)).toBeNull();
+
+    const abortedCompleter: PersonalityCompleter = async () => ({ ...assistantMessage("anything"), stopReason: "aborted" as const });
+    expect(await generatePersonality(buildPiPersonalityContext({ model }), companion, logger, abortedCompleter)).toBeNull();
+
+    const throwingCompleter: PersonalityCompleter = async () => {
+      throw new Error("provider down");
+    };
+    expect(await generatePersonality(buildPiPersonalityContext({ model }), companion, logger, throwingCompleter)).toBeNull();
+  });
+
+  test("falls back to null when generation exceeds the timeout", async () => {
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const logger = { info() {}, warn() {}, error() {}, debug() {} };
+    const { promise } = Promise.withResolvers<AssistantMessage>();
+    const neverCompleter: PersonalityCompleter = async () => promise;
+    const ctx = buildPiPersonalityContext({ model });
+
+    const result = await generatePersonality(
+      ctx,
+      companion,
+      logger,
+      neverCompleter,
+      { timeoutMs: 10 },
+    );
+
+    expect(result).toBeNull();
+  });
+
+});
+
+describe("session_start personality generation", () => {
+  test("persists a generated personality for a newly created companion", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-personality-success-"));
+    temporaryDirectories.push(stateDir);
+    let capturedRequest: CompletionContext | undefined;
+    const completePersonality: PersonalityCompleter = async (_model, request) => {
+      capturedRequest = request;
+      return assistantMessage(JSON.stringify({ name: "Spark", personality: "A generated companion." }));
+    };
+    const harness = createPiHarness(stateDir, { completePersonality });
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const ctx = buildPiPersonalityContext({ model });
+
+    await emitPi(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const companion = harness.storage.loadActive();
+    expect(companion).not.toBeNull();
+    expect(companion?.personality).toBe("A generated companion.");
+    expect(getTextFromUserMessage(capturedRequest!)).toContain(`Species: ${companion?.bones.species}`);
+  });
+
+  test("keeps the generic fallback when generation fails", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-personality-fallback-"));
+    temporaryDirectories.push(stateDir);
+    const completePersonality: PersonalityCompleter = async () => assistantMessage("not json");
+    const harness = createPiHarness(stateDir, { completePersonality });
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+    const ctx = buildPiPersonalityContext({ model });
+
+    await emitPi(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const companion = harness.storage.loadActive();
+    expect(companion).not.toBeNull();
+    expect(companion?.personality).toContain(companion?.bones.species);
+  });
+
+  test("does not overwrite a personality edited while generating", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "pi-buddy-personality-concurrent-"));
+    temporaryDirectories.push(stateDir);
+    const model = getModels("openai")[0];
+    if (!model) throw new Error("Expected a Pi model fixture.");
+
+    const harness = createPiHarness(stateDir, {
+      completePersonality: async () => {
+        harness.service.setPersonality("User edited");
+        return assistantMessage(JSON.stringify({ name: "Spark", personality: "A generated companion." }));
+      },
+    });
+    const ctx = buildPiPersonalityContext({ model });
+
+    await emitPi(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const active = harness.storage.loadActive();
+    expect(active).not.toBeNull();
+    expect(active?.personality).toBe("User edited");
+  });
+
 });

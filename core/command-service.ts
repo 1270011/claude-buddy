@@ -142,6 +142,19 @@ export class BuddyCommandService {
     }));
   }
 
+  setPersonalityForSlot(
+    slot: string,
+    personality: string,
+    expectedPersonality: string,
+  ): Companion | null {
+    const trimmed = personality.trim();
+    if (!trimmed) throw new Error("Buddy personality cannot be empty.");
+    return this.deps.buddies.updateSlot(slot, (companion) => {
+      if (companion.personality !== expectedPersonality) return null;
+      return { ...companion, personality: trimmed };
+    });
+  }
+
   saveBuddy(slot?: string): SaveBuddyResult {
     const { companion, slot: activeSlot } = this.ensureCompanion();
     if (slot?.trim()) {

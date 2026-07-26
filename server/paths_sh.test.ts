@@ -104,6 +104,29 @@ describe("scripts/paths.sh (CLAUDE_CONFIG_DIR set)", () => {
   });
 });
 
+describe("scripts/paths.sh shared identity opt-in", () => {
+  test("uses the shared state root without breaking Claude config paths", () => {
+    const env = sourcePaths({
+      CODING_BUDDY_USER_ID: "shared-user",
+      CLAUDE_CONFIG_DIR: "/tmp/profile",
+    });
+
+    expect(env.CLAUDE_CFG_DIR).toBe("/tmp/profile");
+    expect(env.CLAUDE_SETTINGS_FILE).toBe("/tmp/profile/settings.json");
+    expect(env.BUDDY_STATE_DIR).toBe(join(homedir(), ".coding-buddy", "shared"));
+  });
+
+  test("honors an explicit shared state root", () => {
+    const env = sourcePaths({
+      CODING_BUDDY_USER_ID: "shared-user",
+      CODING_BUDDY_STATE_DIR: "/tmp/shared-buddy",
+      CLAUDE_CONFIG_DIR: "/tmp/profile",
+    });
+
+    expect(env.BUDDY_STATE_DIR).toBe("/tmp/shared-buddy");
+  });
+});
+
 describe("scripts/paths.sh BUDDY_SID resolution", () => {
   test("uses CLAUDE_CODE_SESSION_ID (first 8 chars) when set", () => {
     const env = sourcePaths({

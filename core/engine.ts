@@ -138,6 +138,8 @@ export interface Companion {
   hatchedAt: number;
   userId: string;
 }
+export const PERSONALITY_MAX_LENGTH = 500;
+
 
 // ─── Hash: wyhash via Bun.hash, pure JS fallback ───────────────────────────
 // Matches Zig stdlib wyhash v4.2 (used by Bun.hash). The pure JS implementation

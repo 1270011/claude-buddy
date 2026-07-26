@@ -75,6 +75,18 @@ class FakeBuddies implements BuddyRepository {
     return updated;
   }
 
+  updateSlot(
+    slot: string,
+    transform: (companion: Companion) => Companion | null,
+  ): Companion | null {
+    const companion = this.companions.get(slot);
+    if (!companion) return null;
+    const updated = transform(companion);
+    if (!updated) return null;
+    this.companions.set(slot, updated);
+    return updated;
+  }
+
   deleteSlot(slot: string): void {
     this.companions.delete(slot);
   }
@@ -285,6 +297,26 @@ describe("BuddyCommandService", () => {
 
     expect(renamed.name).toBe("Pixel");
     expect(buddies.loadActive()?.name).toBe("Pixel");
+  });
+
+  test("setPersonalityForSlot updates the slot only when personality is still the expected value", () => {
+    const { service, buddies } = makeService();
+    const { companion, slot } = service.ensureCompanion();
+    const originalPersonality = companion.personality;
+
+    const updated = service.setPersonalityForSlot(slot, "Curious now", originalPersonality);
+    expect(updated?.personality).toBe("Curious now");
+    expect(buddies.loadSlot(slot)?.personality).toBe("Curious now");
+  });
+
+  test("setPersonalityForSlot returns null and does not overwrite if personality changed", () => {
+    const { service, buddies } = makeService();
+    const { slot } = service.ensureCompanion();
+    service.setPersonality("Already edited");
+
+    const updated = service.setPersonalityForSlot(slot, "Ignored", "original generic");
+    expect(updated).toBeNull();
+    expect(buddies.loadSlot(slot)?.personality).toBe("Already edited");
   });
 
   test("saveBuddy creates a new named slot and summonBuddy can switch to it", () => {

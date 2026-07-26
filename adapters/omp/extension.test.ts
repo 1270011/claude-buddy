@@ -9,21 +9,29 @@ import type {
   ToolResultEvent,
   TurnEndEvent,
 } from "@oh-my-pi/pi-coding-agent";
-import type { AssistantMessage, Model } from "@oh-my-pi/pi-ai";
+import type { AssistantMessage, Context as CompletionContext, Model } from "@oh-my-pi/pi-ai";
 import { getBundledModels } from "@oh-my-pi/pi-catalog";
+import { BuddyCommandService } from "../../core/command-service.ts";
 import type { Companion } from "../../core/model.ts";
+import { registerBuddyCommands } from "./commands.ts";
 import registerOmpBuddyExtension from "./index.ts";
 import {
   deriveTurnComment,
+  generatePersonality,
   generateTurnComment,
   isOmpBashToolResult,
   looksLikeTestFailure,
   resolveTurnCommentTimeoutMs,
   TURN_COMMENT_TIMEOUT_MS,
+  registerOmpBuddyEvents,
   type OmpBuddyLog,
+  type PersonalityCompleter,
   type TurnCommentCompleter,
 } from "./events.ts";
+import { OmpIdentityProvider } from "./identity.ts";
+import { OmpBuddyLogger } from "./logger.ts";
 import { OmpBuddyStorage } from "./storage.ts";
+import { OmpBuddyUI } from "./ui.ts";
 import type { OmpBuddyContext, OmpBuddyUiContext } from "./context.ts";
 const temporaryDirectories: string[] = [];
 
@@ -56,7 +64,10 @@ function assistantMessage(text: string): AssistantMessage {
 }
 
 
-function createHarness(stateDir: string) {
+function createHarness(
+  stateDir: string,
+  options?: { completePersonality?: PersonalityCompleter },
+) {
   const handlers = new Map<string, EventHandler>();
   const commands = new Map<string, CommandHandler>();
   const statuses: Array<{ key: string; text: string | undefined }> = [];
@@ -106,8 +117,28 @@ function createHarness(stateDir: string) {
     },
   } satisfies OmpBuddyContext;
 
-  registerOmpBuddyExtension(extensionApi, { stateDir });
-  return { commands, context, handlers, notifications, statuses, widgets };
+  const storage = new OmpBuddyStorage(stateDir);
+  const identity = new OmpIdentityProvider(storage);
+  const logger = new OmpBuddyLogger(storage);
+  const service = new BuddyCommandService({
+    identity,
+    buddies: storage,
+    reactions: storage,
+    config: storage,
+    events: storage,
+  });
+  const ui = new OmpBuddyUI(storage);
+
+  registerOmpBuddyEvents(extensionApi, {
+    service,
+    storage,
+    ui,
+    logger,
+    completePersonality: options?.completePersonality,
+  });
+  registerBuddyCommands(extensionApi, { service, storage, ui });
+
+  return { commands, context, handlers, notifications, service, statuses, widgets };
 }
 
 async function emit(
@@ -993,4 +1024,249 @@ describe("OMP buddy command achievements", () => {
     expect(harness.notifications.some((n) => n.message.includes("Power User"))).toBe(true);
     expect(harness.notifications.some((n) => n.message.includes(storage.loadActive()?.name ?? ""))).toBe(true);
   });
+});
+function getTextFromUserMessage(request: CompletionContext): string {
+  const message = request.messages[0];
+  if (!message || message.role !== "user") return "";
+  if (typeof message.content === "string") return message.content;
+  const textBlock = message.content.find((block) => block.type === "text");
+  return textBlock?.type === "text" ? textBlock.text : "";
+}
+
+function buildOmpPersonalityContext(options: {
+  model?: Model;
+  apiKey?: string;
+  headers?: Record<string, string>;
+}) {
+  const model = options.model ?? getBundledModels("openai")[0];
+  if (!model) throw new Error("Expected an OMP model fixture.");
+  return {
+    ui: { notify() {}, setStatus() {}, setWidget() {} },
+    model,
+    modelRegistry: {
+      find() {
+        return model;
+      },
+      async getApiKeyForProvider() {
+        return options.apiKey;
+      },
+      getProviderHeaders() {
+        return options.headers;
+      },
+    },
+    sessionManager: { getBranch() { return []; } },
+  } satisfies OmpBuddyContext;
+}
+
+describe("generatePersonality", () => {
+  test("returns a generated personality and exercises the prompt helper", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    let capturedRequest: CompletionContext | undefined;
+    const completePersonality: PersonalityCompleter = async (_model, request) => {
+      capturedRequest = request;
+      return assistantMessage(JSON.stringify({ name: "Nimbus", personality: "A watchful owl." }));
+    };
+    const ctx = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+
+    const result = await generatePersonality(ctx, completionCompanion, { info() {}, warn() {}, error() {}, debug() {} }, completePersonality);
+
+    expect(result).toBe("A watchful owl.");
+    const promptText = getTextFromUserMessage(capturedRequest!);
+    expect(promptText).toContain(`Species: ${completionCompanion.bones.species}`);
+    expect(promptText).toContain(`Rarity: ${completionCompanion.bones.rarity.toUpperCase()}`);
+    expect(promptText).toContain("Stats:");
+    expect(promptText).toContain('"personality"');
+  });
+
+  test("prefers configured turnCommentModel and uses resolveTurnCommentModel", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    let findArgs: { provider: string; model: string } | undefined;
+    const base = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+    const ctx = {
+      ...base,
+      model: undefined,
+      modelRegistry: {
+        ...base.modelRegistry,
+        find(provider: string, modelId: string) {
+          findArgs = { provider, model: modelId };
+          return provider === "openai" && modelId === model.id ? model : undefined;
+        },
+      },
+    } satisfies OmpBuddyContext;
+    const completePersonality: PersonalityCompleter = async () =>
+      assistantMessage(JSON.stringify({ personality: "Config chosen." }));
+
+    const result = await generatePersonality(
+      ctx,
+      completionCompanion,
+      { info() {}, warn() {}, error() {}, debug() {} },
+      completePersonality,
+      { modelOverride: { provider: "openai", model: model.id } },
+    );
+
+    expect(result).toBe("Config chosen.");
+    expect(findArgs).toEqual({ provider: "openai", model: model.id });
+  });
+
+  test("falls back to session model when configured turnCommentModel is missing", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    const base = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+    const ctx = {
+      ...base,
+      modelRegistry: {
+        ...base.modelRegistry,
+        find(provider: string, modelId: string) {
+          return provider === "openai" && modelId === model.id ? model : undefined;
+        },
+      },
+    } satisfies OmpBuddyContext;
+    let receivedModel: Model | undefined;
+    const completePersonality: PersonalityCompleter = async (m) => {
+      receivedModel = m as Model;
+      return assistantMessage(JSON.stringify({ personality: "Fallback." }));
+    };
+
+    const result = await generatePersonality(
+      ctx,
+      completionCompanion,
+      { info() {}, warn() {}, error() {}, debug() {} },
+      completePersonality,
+      { modelOverride: { provider: "missing", model: "missing" } },
+    );
+
+    expect(result).toBe("Fallback.");
+    expect(receivedModel).toBe(model);
+  });
+
+
+  test("falls back to null for malformed or empty responses", async () => {
+    const cases: PersonalityCompleter[] = [
+      async () => assistantMessage("not json"),
+      async () => assistantMessage(JSON.stringify({ name: "Nimbus" })),
+      async () => assistantMessage(JSON.stringify({ personality: "" })),
+      async () => assistantMessage(JSON.stringify({ personality: "x".repeat(501) })),
+    ];
+    for (const completePersonality of cases) {
+      const ctx = buildOmpPersonalityContext({ apiKey: "secret-key" });
+      const result = await generatePersonality(ctx, completionCompanion, { info() {}, warn() {}, error() {}, debug() {} }, completePersonality);
+      expect(result).toBeNull();
+    }
+  });
+
+  test("falls back when there is no model, no auth, an abort, or a provider error", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    const logger = { info() {}, warn() {}, error() {}, debug() {} };
+
+    const noModelCtx = { ...buildOmpPersonalityContext({ model, apiKey: "secret-key" }), model: undefined } satisfies OmpBuddyContext;
+    expect(await generatePersonality(noModelCtx, completionCompanion, logger)).toBeNull();
+
+    const noAuthCtx = buildOmpPersonalityContext({ model, apiKey: undefined });
+    expect(await generatePersonality(noAuthCtx, completionCompanion, logger)).toBeNull();
+
+    const throwingAuthCtx = {
+      ...buildOmpPersonalityContext({ model }),
+      modelRegistry: {
+        find() { return model; },
+        async getApiKeyForProvider() { throw new Error("auth failed"); },
+        getProviderHeaders() { return {}; },
+      },
+    } satisfies OmpBuddyContext;
+    expect(await generatePersonality(throwingAuthCtx, completionCompanion, logger)).toBeNull();
+
+    const abortedCompleter: PersonalityCompleter = async () => ({ ...assistantMessage("anything"), stopReason: "aborted" as const });
+    expect(await generatePersonality(buildOmpPersonalityContext({ model, apiKey: "secret-key" }), completionCompanion, logger, abortedCompleter)).toBeNull();
+
+    const throwingCompleter: PersonalityCompleter = async () => {
+      throw new Error("provider down");
+    };
+    expect(await generatePersonality(buildOmpPersonalityContext({ model, apiKey: "secret-key" }), completionCompanion, logger, throwingCompleter)).toBeNull();
+  });
+
+  test("falls back to null when generation exceeds the timeout", async () => {
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    const logger = { info() {}, warn() {}, error() {}, debug() {} };
+    const { promise } = Promise.withResolvers<AssistantMessage>();
+    const neverCompleter: PersonalityCompleter = async () => promise;
+    const ctx = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+
+    const result = await generatePersonality(
+      ctx,
+      completionCompanion,
+      logger,
+      neverCompleter,
+      { timeoutMs: 10 },
+    );
+
+    expect(result).toBeNull();
+  });
+
+});
+
+describe("session_start personality generation", () => {
+  test("persists a generated personality for a newly created companion", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-personality-success-"));
+    temporaryDirectories.push(stateDir);
+    let capturedRequest: CompletionContext | undefined;
+    const completePersonality: PersonalityCompleter = async (_model, request) => {
+      capturedRequest = request;
+      return assistantMessage(JSON.stringify({ name: "Nimbus", personality: "A generated companion." }));
+    };
+    const harness = createHarness(stateDir, { completePersonality });
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    const ctx = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+
+    await emit(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const storage = new OmpBuddyStorage(stateDir);
+    const active = storage.loadActive();
+    expect(active).not.toBeNull();
+    expect(active?.personality).toBe("A generated companion.");
+    expect(getTextFromUserMessage(capturedRequest!)).toContain(`Species: ${active?.bones.species}`);
+  });
+
+  test("keeps the generic fallback when generation fails", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-personality-fallback-"));
+    temporaryDirectories.push(stateDir);
+    const completePersonality: PersonalityCompleter = async () => assistantMessage("not json");
+    const harness = createHarness(stateDir, { completePersonality });
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+    const ctx = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+
+    await emit(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const storage = new OmpBuddyStorage(stateDir);
+    const active = storage.loadActive();
+    expect(active).not.toBeNull();
+    expect(active?.personality).toContain(active?.bones.species);
+  });
+
+  test("does not overwrite a personality edited while generating", async () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "omp-buddy-personality-concurrent-"));
+    temporaryDirectories.push(stateDir);
+    const model = getBundledModels("openai")[0];
+    if (!model) throw new Error("Expected an OMP model fixture.");
+
+    const harness = createHarness(stateDir, {
+      completePersonality: async () => {
+        harness.service.setPersonality("User edited");
+        return assistantMessage(JSON.stringify({ name: "Nimbus", personality: "A generated companion." }));
+      },
+    });
+    const ctx = buildOmpPersonalityContext({ model, apiKey: "secret-key" });
+
+    await emit(harness.handlers, "session_start", { type: "session_start" } as SessionStartEvent, ctx);
+
+    const storage = new OmpBuddyStorage(stateDir);
+    const active = storage.loadActive();
+    expect(active).not.toBeNull();
+    expect(active?.personality).toBe("User edited");
+  });
+
 });

@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { configuredSharedUserId } from "../../core/identity.ts";
 import {
   EMPTY_GLOBAL,
   EMPTY_SLOT,
@@ -313,6 +314,22 @@ export class FileBuddyStorage
     });
   }
 
+  updateSlot(
+    slot: string,
+    transform: (companion: Companion) => Companion | null,
+  ): Companion | null {
+    return this.withLock(() => {
+      const manifest = this.loadManifest();
+      const existing = manifest.companions[slot];
+      if (!existing) return null;
+      const updated = transform(existing);
+      if (!updated) return null;
+      manifest.companions[slot] = updated;
+      this.saveManifest(manifest);
+      return updated;
+    });
+  }
+
   loadSlot(slot: string): Companion | null {
     return this.loadManifest().companions[slot] ?? null;
   }
@@ -506,6 +523,9 @@ export class FileBuddyStorage
   }
 
   ensureStableIdentity(): string {
+    const sharedUserId = configuredSharedUserId();
+    if (sharedUserId) return sharedUserId;
+
     return this.withLock(() => {
       this.ensureDir();
       try {

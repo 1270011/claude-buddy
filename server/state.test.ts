@@ -93,6 +93,17 @@ describe("normalizeConfig", () => {
     expect(normalizeConfig({ subStatusRefreshSeconds: "30" }).subStatusRefreshSeconds).toBe(15);
     expect(normalizeConfig({ subStatusRefreshSeconds: 0 }).subStatusRefreshSeconds).toBe(15);
   });
+
+  test("defaults reaction TTL to a finite lifetime", () => {
+    expect(normalizeConfig({}).reactionTTL).toBe(900);
+    expect(normalizeConfig({ reactionTTL: 0 }).reactionTTL).toBe(0);
+  });
+
+  test("accepts signed statusline width adjustments and rejects non-integers", () => {
+    expect(normalizeConfig({ statuslineWidthAdjust: -4 }).statuslineWidthAdjust).toBe(-4);
+    expect(normalizeConfig({ statuslineWidthAdjust: 6 }).statuslineWidthAdjust).toBe(6);
+    expect(normalizeConfig({ statuslineWidthAdjust: "6" }).statuslineWidthAdjust).toBe(0);
+  });
 });
 
 describe("slugify", () => {

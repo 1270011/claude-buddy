@@ -44,9 +44,17 @@ EMOJI_PRES_2600="$(grep -v '^#' "$EMOJI_WIDTHS_DATA" 2>/dev/null | tr -d '\n' ||
 
 dwidth() {
   printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4 -v | awk -v pres="$EMOJI_PRES_2600" '
+    function load_ranges(value, target,    n, i, count, bounds, start, end, cp) {
+      n = split(value, ranges, ",")
+      for (i = 1; i <= n; i++) {
+        count = split(ranges[i], bounds, "-")
+        start = bounds[1] + 0
+        end = (count == 2) ? bounds[2] + 0 : start
+        for (cp = start; cp <= end; cp++) target[cp] = 1
+      }
+    }
     BEGIN {
-      n = split(pres, arr)
-      for (k = 1; k <= n; k++) wide[arr[k] + 0] = 1
+      load_ranges(pres, wide)
     }
     function char_width(cp) {
       if (cp >= 126976) return 2
@@ -90,7 +98,16 @@ render_at() {
   local cols="$2"
   local rendered errfile
   errfile=$(mktemp)
+  # The fixtures write reaction.default.json, but paths.sh derives the
+  # per-session filename from CLAUDE_CODE_SESSION_ID / TMUX_PANE. Whichever of
+  # those happens to be set in the ambient environment decides which reaction
+  # file is read, so the check passed locally and failed on CI (no bubble
+  # rendered, because the reaction was looked up under a different session id).
+  # Pin them empty so the session id is always "default" and the result does
+  # not depend on where the check runs.
   rendered="$(
+    CLAUDE_CODE_SESSION_ID="" \
+    TMUX_PANE="" \
     STATUSLINE_PAYLOAD="$payload" \
       python3 "$pty_helper" \
         "$cols" \
@@ -248,7 +265,8 @@ writeFileSync(process.argv[1], JSON.stringify({
 }));
 " "$cjk_dir/buddy-state/status.json"
 
-printf '%s\n' '{"reaction":"编译通过了 你好世界","timestamp":0,"reason":"turn"}' \
+_ts=$(now_ms)
+printf '{"reaction":"编译通过了 你好世界","timestamp":%s,"reason":"turn"}\n' "$_ts" \
   > "$cjk_dir/buddy-state/reaction.default.json"
 
 # Bubble rows use INNER_W=44 (box ~48 cols) today; the resize worker owns
@@ -266,7 +284,8 @@ emoji_dir=$(mktemp -d)
 mkdir -p "$emoji_dir/buddy-state"
 cp "$cjk_dir/buddy-state/status.json" "$emoji_dir/buddy-state/status.json"
 cp "$fixture_dir/buddy-state/config.json" "$emoji_dir/buddy-state/config.json"
-printf '%s\n' '{"reaction":"ship it 🎉 ❤️ ✨","timestamp":0,"reason":"success"}' \
+_ts=$(now_ms)
+printf '{"reaction":"ship it 🎉 ❤️ ✨","timestamp":%s,"reason":"success"}\n' "$_ts" \
   > "$emoji_dir/buddy-state/reaction.default.json"
 
 for cols in 80 93 120 200; do

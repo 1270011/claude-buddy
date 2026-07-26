@@ -1,8 +1,9 @@
 import { describe, test, expect } from "bun:test";
 import {
-  getReaction,
+  extractGeneratedPersonality,
   generateFallbackName,
   generatePersonalityPrompt,
+  getReaction,
   isNameMentioned,
   REACTIONS,
   type ReactionReason,
@@ -335,6 +336,35 @@ describe("generatePersonalityPrompt", () => {
     for (const n of STAT_NAMES) {
       expect(prompt).toContain(`${n}:50`);
     }
+  });
+});
+
+describe("extractGeneratedPersonality", () => {
+  test("extracts and trims a valid personality", () => {
+    const json = JSON.stringify({ name: "Spark", personality: "  A curious coder.  " });
+    expect(extractGeneratedPersonality(json)).toBe("A curious coder.");
+  });
+
+  test("extracts personality from JSON embedded in prose", () => {
+    const wrapped = `Here is the result:\n\`\`\`json\n${JSON.stringify({ personality: "Embedded." })}\n\`\`\``;
+    expect(extractGeneratedPersonality(wrapped)).toBe("Embedded.");
+  });
+
+  test("returns null for non-JSON or missing personality", () => {
+    expect(extractGeneratedPersonality("not json")).toBeNull();
+    expect(extractGeneratedPersonality(JSON.stringify({ name: "Spark" }))).toBeNull();
+    expect(extractGeneratedPersonality(JSON.stringify({ personality: "" }))).toBeNull();
+    expect(extractGeneratedPersonality(JSON.stringify({ personality: "   " }))).toBeNull();
+  });
+
+  test("rejects personalities that exceed the limit", () => {
+    const long = "x".repeat(501);
+    expect(extractGeneratedPersonality(JSON.stringify({ personality: long }))).toBeNull();
+  });
+
+  test("rejects non-string or wrongly typed personality", () => {
+    expect(extractGeneratedPersonality(JSON.stringify({ personality: 42 }))).toBeNull();
+    expect(extractGeneratedPersonality("[1, 2, 3]")).toBeNull();
   });
 });
 

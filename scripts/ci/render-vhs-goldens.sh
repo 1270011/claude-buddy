@@ -145,10 +145,10 @@ const status = {
 writeFileSync(process.argv[1], JSON.stringify(status));
 writeFileSync(process.argv[2], JSON.stringify(status));
 writeFileSync(process.argv[3], JSON.stringify({
-  reaction: '编译通过了 你好世界', timestamp: 0, reason: 'turn',
+  reaction: '编译通过了 你好世界', timestamp: Date.now(), reason: 'turn',
 }));
 writeFileSync(process.argv[4], JSON.stringify({
-  reaction: 'ship it 🎉 ❤️ ✨', timestamp: 0, reason: 'success',
+  reaction: 'ship it 🎉 ❤️ ✨', timestamp: Date.now(), reason: 'success',
 }));
 " \
   "$gen_dir/cjk/buddy-state/status.json" \
