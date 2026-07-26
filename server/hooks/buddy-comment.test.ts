@@ -35,11 +35,12 @@ describe("buddy comment Stop hook", () => {
       },
     );
 
-    expect(result).toEqual({ comment: "ship it", updated: true });
+    expect(result).toEqual({ comment: "ship it", source: "comment", updated: true });
     expect(JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"))).toEqual({
       reaction: "ship it",
       timestamp: 1_700_000_000_123,
       reason: "turn",
+      source: "comment",
     });
     expect(JSON.parse(readFileSync(join(stateDir, "events.json"), "utf8"))).toMatchObject({
       turns: 3,
@@ -63,7 +64,7 @@ describe("buddy comment Stop hook", () => {
       stateDir,
     });
 
-    expect(result).toEqual({ updated: false });
+    expect(result).toEqual({ source: "none", updated: false });
     expect(existsSync(join(stateDir, "reaction.default.json"))).toBe(false);
   });
 
@@ -75,7 +76,179 @@ describe("buddy comment Stop hook", () => {
       { stateDir },
     );
 
-    expect(result).toEqual({ updated: false });
+    expect(result).toEqual({ source: "none", updated: false });
     expect(existsSync(stateDir)).toBe(false);
+  });
+
+  test("F1: a fresh buddy_react tool reaction is not clobbered", () => {
+    const stateDir = makeStateDir();
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), "{}");
+    writeFileSync(join(stateDir, "events.json"), "{}");
+    const toolTs = 1_700_000_000_000;
+    writeFileSync(
+      join(stateDir, "reaction.session1.json"),
+      JSON.stringify({
+        reaction: "*tool wrote this*",
+        timestamp: toolTs,
+        reason: "turn",
+        source: "tool",
+      }),
+    );
+    const originalFile = readFileSync(join(stateDir, "reaction.session1.json"), "utf8");
+
+    const spawned: Array<{ script: string; args: string[] }> = [];
+    const result = handleBuddyComment(
+      JSON.stringify({
+        last_assistant_message: "no comment here, just an empty reply",
+        last_user_message: "go",
+      }),
+      {
+        now: () => toolTs + 5_000,
+        sessionId: "session1",
+        spawnDetached: (script, args) => spawned.push({ script, args }),
+        stateDir,
+      },
+    );
+
+    // F5: bookkeeping does NOT run when the tool already wrote a reaction
+    // this turn. Main never credited a turn without a comment, and we
+    // do not silently change that economy.
+    expect(result.updated).toBe(false);
+    expect(spawned).toEqual([]);
+    // File is byte-for-byte unchanged.
+    expect(readFileSync(join(stateDir, "reaction.session1.json"), "utf8")).toBe(originalFile);
+  });
+
+  test("falls back to a canned pool line when no comment is emitted", () => {
+    const stateDir = makeStateDir();
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ species: "blob" }));
+    writeFileSync(join(stateDir, "events.json"), "{}");
+
+    const result = handleBuddyComment(
+      JSON.stringify({
+        last_assistant_message: "a perfectly ordinary reply with no comment",
+        last_user_message: "go",
+      }),
+      {
+        now: () => 1_700_000_000_000,
+        random: () => 0,
+        sessionId: "session1",
+        spawnDetached: () => {},
+        stateDir,
+      },
+    );
+
+    expect(result.source).toBe("fallback");
+    expect(result.updated).toBe(true);
+    expect(result.comment).toBeString();
+    const onDisk = JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"));
+    expect(onDisk.source).toBe("fallback");
+    expect(onDisk.reaction).toBe(result.comment);
+    expect(onDisk.reason).toBe("turn");
+  });
+
+  // F1: a tool reaction from a LONG turn (>5min) survives the stop hook.
+  // Old wall-clock freshness design clobbered this; the per-turn sentinel
+  // design does not.
+  test("F1 long-turn: tool reaction from t=0 still on disk at t=5min", () => {
+    const stateDir = makeStateDir();
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ species: "blob" }));
+    const toolTs = 1_700_000_000_000;
+    writeFileSync(
+      join(stateDir, "reaction.session1.json"),
+      JSON.stringify({
+        reaction: "*tool wrote this on a long turn*",
+        timestamp: toolTs,
+        reason: "turn",
+        source: "tool",
+      }),
+    );
+    const original = readFileSync(join(stateDir, "reaction.session1.json"), "utf8");
+
+    const result = handleBuddyComment(
+      JSON.stringify({
+        last_assistant_message: "no comment here",
+        last_user_message: "go",
+      }),
+      {
+        now: () => toolTs + 5 * 60_000,
+        sessionId: "session1",
+        spawnDetached: () => {},
+        stateDir,
+      },
+    );
+
+    expect(result.updated).toBe(false);
+    expect(readFileSync(join(stateDir, "reaction.session1.json"), "utf8")).toBe(original);
+  });
+
+  // F2: a future-dated tool timestamp is treated as untrusted (clock-skewed
+  // garbage) and the pool writes over it.
+  test("F2 future-clock: 5-min future tool timestamp is clobbered", () => {
+    const stateDir = makeStateDir();
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ species: "blob" }));
+    const now = 1_700_000_000_000;
+    const future = now + 5 * 60_000;
+    writeFileSync(
+      join(stateDir, "reaction.session1.json"),
+      JSON.stringify({
+        reaction: "*future-dated tool*",
+        timestamp: future,
+        reason: "turn",
+        source: "tool",
+      }),
+    );
+
+    const result = handleBuddyComment(
+      JSON.stringify({
+        last_assistant_message: "no comment",
+        last_user_message: "go",
+      }),
+      {
+        now: () => now,
+        random: () => 0,
+        sessionId: "session1",
+        spawnDetached: () => {},
+        stateDir,
+      },
+    );
+
+    expect(result.source).toBe("fallback");
+    expect(result.updated).toBe(true);
+    const onDisk = JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"));
+    expect(onDisk.source).toBe("fallback");
+    expect(onDisk.timestamp).toBe(now);
+  });
+
+  // F5: 10 short turns inside a 30s cooldown window produce ONE
+  // turn-counter increment, not 10. Main's contract.
+  test("F5 cooldown: 10 rapid-fire turns yield events.turns === 1", () => {
+    const stateDir = makeStateDir();
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ species: "blob" }));
+    writeFileSync(join(stateDir, "events.json"), JSON.stringify({ turns: 0 }));
+
+    const base = 1_700_000_000_000;
+    for (let i = 0; i < 10; i++) {
+      handleBuddyComment(
+        JSON.stringify({
+          last_assistant_message: "turn " + i + " no comment",
+          last_user_message: "go",
+        }),
+        {
+          now: () => base + i * 1_000,
+          random: () => 0,
+          sessionId: "session1",
+          spawnDetached: () => {},
+          stateDir,
+        },
+      );
+    }
+    const events = JSON.parse(readFileSync(join(stateDir, "events.json"), "utf8"));
+    expect(events.turns).toBe(1);
   });
 });

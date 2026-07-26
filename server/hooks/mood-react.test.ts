@@ -32,5 +32,10 @@ describe("mood-react UserPromptSubmit hook", () => {
     expect(JSON.parse(readFileSync(join(stateDir, "events.json"), "utf8"))).toEqual({
       mood_frustrated: 1,
     });
+    expect(JSON.parse(readFileSync(join(stateDir, "reaction.session1.json"), "utf8"))).toMatchObject({
+      source: "fallback",
+      reason: "frustrated",
+      timestamp: 1_700_000_000_000,
+    });
   });
 });

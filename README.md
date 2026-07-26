@@ -53,7 +53,7 @@
 <td align="center" width="25%">
 <h3>💬</h3>
 <b>Speech Bubbles</b><br>
-<sub>Your buddy comments on your code in real time. Invisible, contextual, alive.</sub>
+<sub>End-of-turn reactions come from the model by default (MCP tool call). When that doesn't fire — older Claude Code, no MCP, a turn where the model didn't react — a Stop hook falls back to a tagged canned pool line so the bubble is never silent.</sub>
 </td>
 <td align="center" width="25%">
 <h3>⚡</h3>
@@ -233,11 +233,11 @@ Five integration points, zero binary dependencies. When Claude Code, Pi, or Oh M
              └─────────────────────┘
 ```
 
-- **MCP Server** — companion tools + system prompt that instructs Claude to write buddy comments
+- **MCP Server** — companion tools + system prompt that tells Claude to call `buddy_react` at the end of every turn. The tool call writes the reaction with `source: "tool"` — model-authored, renders nowhere in the transcript.
 - **Skill** — routes `/buddy`, `/buddy pet`, `/buddy stats`, `/buddy off`, `/buddy rename`
 - **Status Line** — animated ASCII art, right-aligned, with rarity color and speech bubble
 - **PostToolUse Hook** — detects errors, test failures, large diffs in Bash output
-- **Stop Hook** — extracts invisible `<!-- buddy: ... -->` comments from Claude's responses
+- **Stop Hook** — backward-compat fallback chain. Skips if a fresh `buddy_react` (primary channel) just ran; otherwise extracts a legacy `<!-- buddy: ... -->` comment if Claude happens to emit one (older Claude Code builds), and otherwise picks a canned pool line via `server/turn-reaction.ts`. Every write carries a `source` tag (`tool`/`comment`/`fallback`) so `/buddy stats` can prove what produced the bubble.
 
 ### Why MCP Instead of Binary Patching?
 

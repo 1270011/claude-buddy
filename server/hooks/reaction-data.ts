@@ -1918,15 +1918,22 @@ export const DEFAULT_REACTION_POOLS: Readonly<Record<string, ReactionPool>> = {
   ],
   "large-diff": [
     "that's... a lot of changes.",
-    "might want to split that PR.",
-    "bold move. let's see if CI agrees.",
-    "*counts lines nervously*"
+    "*counts lines* are you refactoring or rewriting?",
+    "bold move. let's see if CI agrees."
   ],
   "success": [
     "*nods*",
     "nice.",
     "*quiet approval*",
     "clean."
+  ],
+  "turn": [
+    "*watches quietly*",
+    "*takes notes*",
+    "*nods*",
+    "*adjusts hat*",
+    "...",
+    "*tilts head*"
   ]
 };
 

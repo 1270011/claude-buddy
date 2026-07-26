@@ -86,7 +86,7 @@ The MCP tools return pre-formatted ASCII art with ANSI colors, box-drawing chara
 
 **Just output the raw text content from the tool result. Nothing else.** The ASCII art IS the response.
 
-If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason "turn" and display the result verbatim.
+If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason "turn". Do NOT echo or quote the tool result — the reaction reaches the user only via the statusline speech bubble.
 
 ## Uninstall Orchestration
 

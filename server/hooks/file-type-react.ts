@@ -130,7 +130,7 @@ export function handleFileTypeReact(rawInput: string, runtime: HookRuntime = {})
   writeFileSync(join(stateDir, `.last_reaction.${sid}`), String(Math.floor(now / 1000)));
   writeFileSync(
     join(stateDir, `reaction.${sid}.json`),
-    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: fileType }),
+    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: fileType, source: "fallback" }),
   );
   if (parsedStatus) writeFileSync(statusFile, JSON.stringify({ ...status, reaction }, null, 2));
 

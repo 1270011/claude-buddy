@@ -82,7 +82,7 @@ export function handleNameReact(rawInput: string, runtime: HookRuntime = {}): Na
   if (parsedStatus) writeFileSync(statusFile, JSON.stringify({ ...status, reaction }, null, 2));
   writeFileSync(
     join(stateDir, `reaction.${sid}.json`),
-    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: "name" }),
+    JSON.stringify({ reaction, timestamp: Math.floor(now / 1000) * 1000, reason: "name", source: "fallback" }),
   );
 
   return { reaction, updated: true };

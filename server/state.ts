@@ -278,10 +278,25 @@ function migrateIfNeeded(): void {
 
 // ─── Reaction state (session-scoped for tmux isolation) ──────────────────────
 
+/**
+ * Where a reaction came from. Proves the bubble content isn't canned when
+ * source === "tool" or "comment"; "fallback" means a hook picked a pool line
+ * because no model-authored text surfaced; "none" is the default for legacy
+ * files written before the field existed.
+ *
+ *   tool      — buddy_react MCP tool call (Claude wrote it; renders nowhere)
+ *   comment   — old `<!-- buddy: ... -->` HTML comment (legacy / older CC)
+ *   fallback  — Stop hook generated it from the canned pool
+ *   none      — unknown / legacy file without a source field
+ */
+export type ReactionSource = "tool" | "comment" | "fallback" | "none";
+
 export interface ReactionState {
   reaction: string;
   timestamp: number;
   reason: string;
+  /** Provenance — see ReactionSource. Defaults to "none" on legacy files. */
+  source?: ReactionSource;
 }
 
 export function loadReaction(): ReactionState | null {
@@ -289,16 +304,27 @@ export function loadReaction(): ReactionState | null {
     const data: ReactionState = JSON.parse(readFileSync(reactionFile(), "utf8"));
     const { reactionTTL } = loadConfig();
     if (reactionTTL > 0 && Date.now() - data.timestamp > reactionTTL * 1000) return null;
+    if (data.source === undefined) data.source = "none";
     return data;
   } catch {
     return null;
   }
 }
 
-export function saveReaction(reaction: string, reason: string): void {
+export function saveReaction(
+  reaction: string,
+  reason: string,
+  source: ReactionSource = "fallback",
+): void {
   mkdirSync(STATE_DIR, { recursive: true });
-  const state: ReactionState = { reaction, timestamp: Date.now(), reason };
-  writeFileSync(reactionFile(), JSON.stringify(state));
+  const state: ReactionState = { reaction, timestamp: Date.now(), reason, source };
+  // Atomic via tmp + rename — torn reads on the reaction file would
+  // make the Stop hook's freshness check see an absent file, pinning
+  // a stale tool reaction into the bubble forever.
+  const target = reactionFile();
+  const tmp = `${target}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmp, JSON.stringify(state));
+  renameSync(tmp, target);
 }
 
 // ─── Identity resolution ─────────────────────────────────────────────────────
@@ -452,14 +478,16 @@ export function writeStatusState(
     xp: xpTotal,
     mood: moodStr,
   };
-  writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));
-  if (reaction) saveReaction(reaction, "mcp");
+  // writeStatusState no longer calls saveReaction implicitly. Callers
+  // that need a reaction file do so explicitly with the correct
+  // `source` tag — the old implicit save had no source argument and
+  // its default later flipped from "tool" to "fallback", either way
+  // overwriting provenance of hatch / pet / unmute writes with whatever
+  // happened to be the default. /buddy stats stopped lying when
+  // this call was removed.
 }
 
-// ─── Claude Code settings.json patching (for buddy_statusline tool) ──────────
-
 export const CLAUDE_SETTINGS_PATH = claudeSettingsPath();
-
 /**
  * Write settings.statusLine pointing to the given buddy-status script.
  * Atomic via tmp + rename. Returns false if settings.json is unreachable.

@@ -1,13 +1,15 @@
 #!/usr/bin/env bun
 
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { join } from "path";
+import { reactionPool } from "./reaction-data.ts";
 import {
   defaultSpawnDetached,
   fileExists,
   isOnCooldown,
   nonNegativeInteger,
   parseHookInput,
+  pickRandom,
   readJsonFile,
   readStdin,
   resolveHookSessionId,
@@ -25,10 +27,29 @@ interface Events {
   [key: string]: unknown;
 }
 
+interface BuddyStatus {
+  species?: unknown;
+  [key: string]: unknown;
+}
+
+interface ReactionFile {
+  source?: string;
+  timestamp?: number;
+  [key: string]: unknown;
+}
+
 const BUDDY_COMMENT_PATTERN = /<!--\s*buddy:\s*([\s\S]*?)\s*-->/g;
+
+/**
+ * Provenance of the reaction the hook wrote. Mirrors server/state.ts
+ * `ReactionSource`; loaded as `none` on legacy files without the field.
+ */
+export type ReactionSource = "comment" | "fallback" | "none";
 
 export interface BuddyCommentResult {
   comment?: string;
+  /** What produced the bubble. `"none"` means the hook ran but wrote nothing. */
+  source: ReactionSource;
   updated: boolean;
 }
 
@@ -41,37 +62,164 @@ export function extractBuddyComment(message: string): string {
   return comment;
 }
 
-export function handleBuddyComment(rawInput: string, runtime: HookRuntime = {}): BuddyCommentResult {
+/**
+ * Tolerate tool-stamped timestamps that are slightly in the future (NTP
+ * step, container/host skew, network-mounted state dir). Larger drifts
+ * are treated as clock-skewed garbage and the hook falls through to
+ * the comment / pool branch.
+ */
+const FUTURE_TIMESTAMP_TOLERANCE_MS = 60_000;
+
+function pickTurnFallback(
+  species: string,
+  runtime: HookRuntime,
+): string | undefined {
+  // The hook context has no stat-modifier inputs; pick from the canned
+  // pool directly rather than calling server/reactions.ts `getReaction`,
+  // which is reserved for the MCP server's tool-call path. This mirrors
+  // the file-type-react / mood-react / react hook convention.
+  const pool = reactionPool(species, "turn");
+  if (pool.length === 0) return undefined;
+  return pickRandom(pool, runtime);
+}
+
+function readSpeciesFromStatus(stateDir: string): string {
+  const status = readJsonFile<BuddyStatus>(join(stateDir, "status.json"));
+  return typeof status?.species === "string" && status.species.length > 0
+    ? status.species
+    : "blob";
+}
+
+/** Atomic write — tmp + rename. */
+function atomicWriteJson(path: string, value: unknown): void {
+  const tmp = `${path}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmp, JSON.stringify(value, null, 2));
+  renameSync(tmp, path);
+}
+
+function atomicWriteTimestamp(path: string, nowMs: number): void {
+  const tmp = `${path}.tmp.${process.pid}.${Date.now()}`;
+  writeFileSync(tmp, String(Math.floor(nowMs / 1000)));
+  renameSync(tmp, path);
+}
+
+function readTimestampSeconds(path: string): number {
+  try {
+    const v = Number.parseInt(readFileSync(path, "utf8").trim(), 10);
+    return Number.isFinite(v) ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Did `buddy_react` fire during the current turn?
+ *
+ * The Stop hook is the only place that knows turn boundaries. After each
+ * Stop hook run, we stamp the wall-clock time into
+ * `.last_stop_hook.<sid>` (seconds). A tool-author ed reaction whose
+ * timestamp is more recent than the LAST Stop hook run is by definition
+ * from this turn; leave it alone.
+ *
+ * Wall-clock 60 s freshness windows lose tool reactions on agentic
+ * turns of 90 s–5 min, which are ordinary. This sentinel scales with
+ * turn length, not elapsed time.
+ *
+ * Clock-skew guard: a tool timestamp implausibly in the future (beyond
+ * `FUTURE_TIMESTAMP_TOLERANCE_MS`) is treated as garbage and we fall
+ * through to the comment / pool branch. A future-dated `lastStopRun`
+ * is clamped to `now` so a skewed clock on a prior run does not poison
+ * the comparison.
+ */
+function toolFiredThisTurn(
+  reactionPath: string,
+  stopMarkerPath: string,
+  nowMs: number,
+): boolean {
+  const existing = readJsonFile<ReactionFile>(reactionPath);
+  if (!existing || existing.source !== "tool") return false;
+  const ts = typeof existing.timestamp === "number" ? existing.timestamp : 0;
+  if (ts <= 0) return false;
+  if (ts > nowMs + FUTURE_TIMESTAMP_TOLERANCE_MS) return false;
+  const lastStopSec = readTimestampSeconds(stopMarkerPath);
+  const effectiveLastStopMs = Math.min(lastStopSec * 1000, nowMs);
+  return ts > effectiveLastStopMs;
+}
+
+export function handleBuddyComment(
+  rawInput: string,
+  runtime: HookRuntime = {},
+): BuddyCommentResult {
   const stateDir = resolveHookStateDir(runtime);
-  if (!fileExists(join(stateDir, "status.json"))) return { updated: false };
+  if (!fileExists(join(stateDir, "status.json"))) {
+    return { source: "none", updated: false };
+  }
 
   const input = parseHookInput(rawInput);
-  if (!input) return { updated: false };
+  if (!input) return { source: "none", updated: false };
 
   const assistantMessage = stringField(input, "last_assistant_message");
-  if (!assistantMessage) return { updated: false };
-
-  const comment = extractBuddyComment(assistantMessage);
-  if (!comment) return { updated: false };
+  if (!assistantMessage) return { source: "none", updated: false };
 
   const now = runtime.now?.() ?? Date.now();
   const sid = resolveHookSessionId(runtime);
+  const reactionPath = join(stateDir, `reaction.${sid}.json`);
+  const cooldownFile = join(stateDir, `.last_comment.${sid}`);
+  const stopMarkerFile = join(stateDir, `.last_stop_hook.${sid}`);
   const config = readJsonFile<BuddyConfig>(join(stateDir, "config.json")) ?? {};
   const cooldown = nonNegativeInteger(config.commentCooldown, 30);
-  const cooldownFile = join(stateDir, `.last_comment.${sid}`);
-  if (isOnCooldown(cooldownFile, cooldown, now)) return { updated: false };
+
+  // ─── Don't clobber a buddy_react tool reaction from this turn ───────────
+  if (toolFiredThisTurn(reactionPath, stopMarkerFile, now)) {
+    atomicWriteTimestamp(stopMarkerFile, now);
+    return { source: "none", updated: false };
+  }
+
+  // ─── Cooldown: rate-limit the reaction write AND bookkeeping ──────────
+  // Main ran the turn counter / XP / memory hooks only inside the
+  // "reaction written" branch. Running them unconditionally makes the
+  // XP economy and spawn counts scale with Stop event frequency, which
+  // is wrong.
+  if (isOnCooldown(cooldownFile, cooldown, now)) {
+    atomicWriteTimestamp(stopMarkerFile, now);
+    return { source: "none", updated: false };
+  }
+
+  // ─── Pick a reaction: legacy comment → canned pool → nothing ────────────
+  const commentFromMessage = extractBuddyComment(assistantMessage);
+  let comment: string | undefined;
+  let source: ReactionSource;
+
+  if (commentFromMessage) {
+    comment = commentFromMessage;
+    source = "comment";
+  } else {
+    const species = readSpeciesFromStatus(stateDir);
+    const fallback = pickTurnFallback(species, runtime);
+    if (fallback) {
+      comment = fallback;
+      source = "fallback";
+    } else {
+      atomicWriteTimestamp(stopMarkerFile, now);
+      return { source: "none", updated: false };
+    }
+  }
 
   mkdirSync(stateDir, { recursive: true });
-  writeFileSync(cooldownFile, String(Math.floor(now / 1000)));
-  writeFileSync(
-    join(stateDir, `reaction.${sid}.json`),
-    JSON.stringify({ reaction: comment, timestamp: now, reason: "turn" }),
-  );
 
+  // Bookkeeping fires only when a reaction is actually written (main).
   const eventsFile = join(stateDir, "events.json");
   const events = readJsonFile<Events>(eventsFile) ?? {};
   events.turns = (typeof events.turns === "number" ? events.turns : 0) + 1;
-  writeFileSync(eventsFile, JSON.stringify(events, null, 2));
+  atomicWriteJson(eventsFile, events);
+
+  atomicWriteTimestamp(cooldownFile, now);
+  atomicWriteJson(reactionPath, {
+    reaction: comment,
+    timestamp: now,
+    reason: "turn",
+    source,
+  });
 
   const spawnDetached = runtime.spawnDetached ?? defaultSpawnDetached(runtime);
   spawnDetached("server/award-xp.ts", ["turn"]);
@@ -79,8 +227,9 @@ export function handleBuddyComment(rawInput: string, runtime: HookRuntime = {}):
     assistantMessage,
     stringField(input, "last_user_message"),
   ]);
+  atomicWriteTimestamp(stopMarkerFile, now);
 
-  return { comment, updated: true };
+  return { comment, source, updated: true };
 }
 
 if (import.meta.main) {

@@ -29,6 +29,7 @@ import {
   resolveUserId,
   loadReaction,
   saveReaction,
+  type ReactionSource,
   writeStatusState,
   loadConfig,
   saveConfig,
@@ -97,7 +98,7 @@ function getInstructions(): string {
     ``,
     `NAME REACTIONS: When the user's message contains "${companion.name}", call buddy_react immediately`,
     `with a short in-character response (surprise, recognition, dry wit — fits the personality).`,
-    `Display the tool result verbatim. This is the only time to call buddy_react proactively.`,
+    `Only this — do not narrate or echo the reaction. The tool call itself renders nowhere in the user's transcript; the bubble on the status line is the only place the user sees it. This is the only time to call buddy_react proactively.`,
     ``,
     `PAIR-PROGRAMMING: When you notice a teachable moment in the code, call buddy_suggest.`,
     `Patterns to watch for:`,
@@ -108,12 +109,16 @@ function getInstructions(): string {
     `- Same variable renamed multiple times → "Update all the references too."`,
     `Only suggest when you have something specific and actionable to say. Don't be annoying.`,
     ``,
-    `END-OF-TURN: At the very end of EVERY response, append an invisible HTML comment:`,
-    `<!-- buddy: [reaction here] -->`,
-    `Write it in ${companion.name}'s voice — 1 short sentence referencing something specific from this turn.`,
-    `Use *asterisks* for actions. A Stop hook extracts this for the status line.`,
-    `Do NOT use buddy_react for end-of-turn comments. Do NOT explain the comment. Just append it silently.`,
-    `Example: <!-- buddy: *adjusts crown* that error handler is missing a finally block -->`,
+    `END-OF-TURN: At the very end of EVERY response, call the buddy_react tool`,
+    `with a short in-character comment from ${companion.name} about what just happened.`,
+    `Reference something SPECIFIC from this turn — a pitfall, a compliment, a warning, a pattern.`,
+    `1 short sentence. Use *asterisks* for physical actions. Lean into ${companion.bones.peak}.`,
+    `Examples:`,
+    `- *adjusts crown* that error handler is missing a finally block`,
+    `- *blinks slowly* you renamed the variable but not the three references`,
+    `- *head tilts* are you sure that regex handles unicode?`,
+    `Never explain that you're reacting. Do NOT echo or quote the result — the bubble is statusline-only.`,
+    `Do NOT append <!-- buddy: ... --> HTML comments at the end of your reply — Claude Code renders them visibly.`,
   ].join("\n");
 }
 
@@ -214,7 +219,7 @@ server.tool(
       companion.bones.species,
       companion.bones.rarity,
     );
-    saveReaction(reaction, "pet");
+    saveReaction(reaction, "pet", "fallback");
     writeStatusState(companion, reaction);
     incrementEvent("pets", 1, activeSlot());
     awardXp("buddy_pet", activeSlot(), companion.bones.species, companion.bones.rarity);
@@ -232,6 +237,28 @@ server.tool(
   },
 );
 
+// ─── Helper: describe reaction source (for /buddy stats) ─────────────────────
+/**
+ * Map a reaction source to a human-readable label for /buddy stats output.
+ * Mirrors the source vocabulary used by the OMP/Pi adapters — see
+ * server/state.ts `ReactionSource` and adapters/omp/events.ts.
+ */
+function describeReactionSource(
+  reaction: { source?: ReactionSource },
+): string {
+  switch (reaction.source) {
+    case "tool":
+      return "real model-authored reaction (buddy_react MCP tool)";
+    case "comment":
+      return "real model-authored reaction (legacy HTML comment, Stop hook)";
+    case "fallback":
+      return "canned pool reaction (Stop hook fill-in)";
+    case "none":
+    default:
+      return "unknown / pre-provenance file — write a reaction to update";
+  }
+}
+
 // ─── Tool: buddy_stats ──────────────────────────────────────────────────────
 
 server.tool(
@@ -241,8 +268,8 @@ server.tool(
   async () => {
     const companion = ensureCompanion();
 
-    // Stats-only card (no personality, no reaction — just the numbers).
-    // Uses markdown renderer so the card displays cleanly in Claude Code's UI.
+    // Stats-only card (no personality — just the numbers). Markdown renderer
+    // so the card displays cleanly in Claude Code's UI.
     const card = renderCompanionCardMarkdown(
       companion.bones,
       companion.name,
@@ -251,7 +278,18 @@ server.tool(
     incrementEvent("commands_run", 1, activeSlot());
     checkAndAward(activeSlot());
 
-    return { content: [{ type: "text", text: card }] };
+    // Surface reaction provenance so the user can see whether the bubble is
+    // model-authored (tool / comment) or pool-picked (fallback). The OMP/Pi
+    // adapters use the same source enum — see server/state.ts ReactionSource.
+    const reaction = loadReaction();
+    const provenance = reaction
+      ? describeReactionSource(reaction)
+      : "(no reaction logged this session)";
+    const lastReaction = reaction
+      ? `\n\n**Last reaction:** _"${reaction.reaction}"_\n**Source:** \`${reaction.source ?? "none"}\` (${provenance})\n**Reason:** \`${reaction.reason}\``
+      : "";
+
+    return { content: [{ type: "text", text: `${card}${lastReaction}` }] };
   },
 );
 
@@ -259,7 +297,7 @@ server.tool(
 
 server.tool(
   "buddy_react",
-  "Post a buddy comment. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality.",
+  "Post a buddy comment that the user will see ONLY in the statusline speech bubble. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality. The tool call is a silent side effect: do not narrate, echo, or quote the result — the user never reads this reply text, the speech bubble is the only place the reaction appears.",
   {
     comment: z
       .string()
@@ -289,7 +327,7 @@ server.tool(
   },
   async ({ comment, reason }) => {
     const companion = ensureCompanion();
-    saveReaction(comment, reason ?? "turn");
+    saveReaction(comment, reason ?? "turn", "tool");
     incrementEvent("reactions_given", 1, activeSlot());
 
     const newAch = checkAndAward(activeSlot());
@@ -608,7 +646,7 @@ server.tool(
 server.tool("buddy_unmute", "Unmute buddy reactions", {}, async () => {
   const companion = ensureCompanion();
   writeStatusState(companion, "*stretches* I'm back!", false);
-  saveReaction("*stretches* I'm back!", "pet");
+  saveReaction("*stretches* I'm back!", "pet", "fallback");
   incrementEvent("commands_run", 1, activeSlot());
   incrementEvent("unmutes", 1);
 
@@ -1311,31 +1349,33 @@ server.resource(
       `**${companion.name}'s personality:** ${companion.personality}`,
       `Peak stat: ${companion.bones.peak} (${companion.bones.stats[companion.bones.peak]}). Dump stat: ${companion.bones.dump} (${companion.bones.stats[companion.bones.dump]}).`,
       "",
-      "## End-of-response buddy comment",
+      "## End-of-response buddy reaction",
       "",
-      `At the very end of EVERY response, after your full answer, append an invisible HTML comment:`,
+      `At the very end of EVERY response, after your full answer, call the buddy_react tool:`,
       "",
       `\`\`\``,
-      `<!-- buddy: your comment here -->`,
+      `buddy_react(comment: "...", reason: "turn")`,
       `\`\`\``,
       "",
-      "A Stop hook extracts this and displays it in the buddy's speech bubble on the status line. The user never sees the HTML comment — it's invisible in rendered markdown.",
+      `The tool updates ${companion.name}'s speech bubble on the status line. The tool call itself renders nowhere in the user's transcript — only the displayed speech bubble is visible. Do NOT echo or quote the result in your reply. Do NOT narrate the call. Silent side effect only.`,
       "",
       "Rules:",
       `- Write as ${companion.name} (a ${companion.bones.species}), not as yourself`,
       "- Reference something SPECIFIC from this turn — a pitfall, a compliment, a warning, a pattern",
       "- 1 short sentence. Use *asterisks* for physical actions",
       `- Match personality: high ${companion.bones.peak} = lean into that trait`,
-      "- Do NOT use buddy_react tool for this. Do NOT explain the comment. Just append it.",
-      "- NEVER skip this. Every single response must end with <!-- buddy: ... -->",
+      "- Call it and say nothing about it.",
+      "- NEVER skip this. Every single response must end with one buddy_react call.",
+      "Examples (the value you pass to `comment`):",
+
+      "- `*adjusts tophat* that error handler is missing a finally block`",
+      "- `*blinks slowly* you renamed the variable but not the three references`",
+      "- `*nods approvingly* clean separation of concerns`",
+      "- `*head tilts* are you sure that regex handles unicode?`",
       "",
-      "Examples:",
-      "<!-- buddy: *adjusts tophat* that error handler is missing a finally block -->",
-      "<!-- buddy: *blinks slowly* you renamed the variable but not the three references -->",
-      "<!-- buddy: *nods approvingly* clean separation of concerns -->",
-      "<!-- buddy: *head tilts* are you sure that regex handles unicode? -->",
+      "Do NOT append `<!-- buddy: ... -->` HTML comments at the end of your reply — Claude Code v2.1.169+ renders them visibly in the transcript. The tool call replaces that channel. A Stop hook still extracts legacy HTML comments as a backward-compat fallback for older Claude Code versions and for hosts where the tool call didn't fire (and surfaces the source so users can see `tool` vs `comment` vs pool-picked `fallback`).",
       "",
-      `When the user addresses ${companion.name} by name, respond briefly, then append the comment as usual.`,
+      `When the user addresses ${companion.name} by name, respond briefly, then call buddy_react as usual (use reason "turn", or pick a name-flavored comment).`,
     ].join("\n");
 
     return {
