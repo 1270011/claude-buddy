@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import type { Companion, ReactionState } from "../../core/model.ts";
-import { displayWidth, renderCompanionWidget, stripAnsi, subscribeToWidgetResize } from "./widget-layout.ts";
+import { BuddyWidget, displayWidth, renderCompanionWidget, stripAnsi, subscribeToWidgetResize } from "./widget-layout.ts";
 
 const companion: Companion = {
   name: "Nimbus",
@@ -92,5 +92,173 @@ describe("east-asian width parity with the shell renderer", () => {
     for (const line of lines) {
       expect(displayWidth(line)).toBeLessThanOrEqual(width);
     }
+  });
+});
+
+function createFakeScheduler() {
+  let nextId = 1;
+  const timers: Array<{ id: number; fn: () => void; ms?: number }> = [];
+
+  class FakeTimer implements Timer {
+    constructor(private readonly id: number) {}
+    ref(): Timer {
+      return this;
+    }
+    unref(): Timer {
+      return this;
+    }
+    hasRef(): boolean {
+      return true;
+    }
+    refresh(): Timer {
+      return this;
+    }
+    [Symbol.toPrimitive](): number {
+      return this.id;
+    }
+  }
+
+
+  return {
+    setTimeout: (fn: () => void, ms?: number): Timer => {
+      const id = nextId++;
+      timers.push({ id, fn, ms });
+      return new FakeTimer(id);
+    },
+    clearTimer: (timer: Timer): void => {
+      const id = Number(timer);
+      const index = timers.findIndex((t) => t.id === id);
+      if (index >= 0) timers.splice(index, 1);
+    },
+    runAll: (): void => {
+      while (timers.length) {
+        const t = timers.shift()!;
+        t.fn();
+      }
+    },
+    pendingCount: (): number => timers.length,
+  };
+}
+
+function hasBubble(lines: string[]): boolean {
+  const plain = lines.map(stripAnsi).join("\n");
+  return /^ *\.[-]{12,}\.\s*$/m.test(plain) && /\|--\s+\S/.test(plain);
+}
+
+describe("BuddyWidget resize behavior", () => {
+  const activeWidgets: BuddyWidget[] = [];
+
+  afterEach(() => {
+    for (const widget of activeWidgets) widget.dispose();
+    activeWidgets.length = 0;
+  });
+
+  function makeWidget(widthRef: { width: number }) {
+    const scheduler = createFakeScheduler();
+    const captures: string[][] = [];
+    const widget = new BuddyWidget({
+      getWidth: () => widthRef.width,
+      scheduler,
+      coalesceMs: 10,
+    });
+    activeWidgets.push(widget);
+    return { widget, scheduler, captures, setWidget: (lines: string[]) => captures.push(lines) };
+  }
+
+  test("coalesces a burst of resize events into one re-render", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler, captures, setWidget } = makeWidget(widthRef);
+
+    widget.refresh(setWidget, companion, reaction, []);
+    expect(captures).toHaveLength(1);
+
+    widthRef.width = 64;
+    process.stdout.emit("resize");
+    widthRef.width = 40;
+    process.stdout.emit("resize");
+    widthRef.width = 24;
+    process.stdout.emit("resize");
+    expect(scheduler.pendingCount()).toBe(1);
+
+    scheduler.runAll();
+    expect(captures).toHaveLength(2);
+    expect(captures[1]!.every((line) => displayWidth(line) <= 24)).toBe(true);
+  });
+
+  test("re-renders with the new width after a resize settles", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler, captures, setWidget } = makeWidget(widthRef);
+
+    widget.refresh(setWidget, companion, reaction, []);
+    const first = captures[0]!;
+    expect(first.every((line) => displayWidth(line) <= 80)).toBe(true);
+
+    widthRef.width = 24;
+    process.stdout.emit("resize");
+    scheduler.runAll();
+    const last = captures.at(-1)!;
+    expect(last).not.toEqual(first);
+    expect(last.every((line) => displayWidth(line) <= 24)).toBe(true);
+  });
+
+  test("reads the width when the coalesced timer fires, not at the event time", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler, captures, setWidget } = makeWidget(widthRef);
+
+    widget.refresh(setWidget, companion, reaction, []);
+    process.stdout.emit("resize");
+    widthRef.width = 24;
+    scheduler.runAll();
+    const last = captures.at(-1)!;
+    expect(last.every((line) => displayWidth(line) <= 24)).toBe(true);
+  });
+
+  test("drops the bubble at tiny widths and restores it when growing back", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler, captures, setWidget } = makeWidget(widthRef);
+
+    widget.refresh(setWidget, companion, reaction, []);
+    expect(hasBubble(captures[0]!)).toBe(true);
+
+    widthRef.width = 24;
+    process.stdout.emit("resize");
+    scheduler.runAll();
+    expect(captures).toHaveLength(2);
+    expect(hasBubble(captures[1]!)).toBe(false);
+
+    widthRef.width = 80;
+    process.stdout.emit("resize");
+    scheduler.runAll();
+    expect(captures).toHaveLength(3);
+    expect(hasBubble(captures[2]!)).toBe(true);
+  });
+  test("cancels a pending resize before replacing its scheduler", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler: firstScheduler, captures, setWidget } = makeWidget(widthRef);
+    const secondScheduler = createFakeScheduler();
+
+    widget.refresh(setWidget, companion, reaction, [], firstScheduler);
+    process.stdout.emit("resize");
+    expect(firstScheduler.pendingCount()).toBe(1);
+
+    widget.refresh(setWidget, { ...companion, name: "Current" }, reaction, [], secondScheduler);
+    expect(firstScheduler.pendingCount()).toBe(0);
+
+    widthRef.width = 24;
+    process.stdout.emit("resize");
+    expect(secondScheduler.pendingCount()).toBe(1);
+    secondScheduler.runAll();
+    expect(captures.at(-1)!.every((line) => displayWidth(line) <= 24)).toBe(true);
+  });
+
+  test("does not schedule work after the widget is cleared", () => {
+    const widthRef = { width: 80 };
+    const { widget, scheduler, setWidget } = makeWidget(widthRef);
+
+    widget.refresh(setWidget, companion, reaction, []);
+    widget.clear();
+    process.stdout.emit("resize");
+
+    expect(scheduler.pendingCount()).toBe(0);
   });
 });

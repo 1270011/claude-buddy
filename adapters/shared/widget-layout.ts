@@ -226,3 +226,105 @@ export function renderCompanionWidget(
     return `${" ".repeat(Math.max(0, safeWidth - cardWidth))}${body}`;
   });
 }
+
+export interface BuddyWidgetScheduler {
+  setTimeout(callback: () => void, ms?: number): Timer;
+  clearTimer(timer: Timer): void;
+}
+
+/**
+ * Width-aware buddy widget manager.
+ *
+ * Renders once when state arrives, then re-renders with the current terminal
+ * width after coalescing rapid process.stdout resize events. Callers supply
+ * only their harness `setWidget` and the current state; this class owns the
+ * resize subscription, debounce, and re-render logic.
+ */
+export class BuddyWidget {
+  private readonly getWidth: () => number;
+  private scheduler: BuddyWidgetScheduler;
+  private readonly coalesceMs: number;
+  private setWidget: ((lines: string[]) => void) | null = null;
+  private state: { companion: Companion; reaction: ReactionState | null; achievements: Achievement[] } | null = null;
+  private resizeUnsubscribe: (() => void) | null = null;
+  private timer: Timer | null = null;
+
+  constructor(options?: {
+    getWidth?: () => number;
+    scheduler?: BuddyWidgetScheduler;
+    coalesceMs?: number;
+  }) {
+    this.getWidth = options?.getWidth ?? getWidgetWidth;
+    this.scheduler = options?.scheduler ?? {
+      setTimeout: globalThis.setTimeout.bind(globalThis),
+      clearTimer: globalThis.clearTimeout.bind(globalThis),
+    };
+    this.coalesceMs = options?.coalesceMs ?? 50;
+  }
+
+  /**
+   * Render immediately with the current state and start (or renew) the shared
+   * resize subscription. The `setWidget` callback is the adapter's harness
+   * setter bound to the current UI context.
+   */
+  refresh(
+    setWidget: (lines: string[]) => void,
+    companion: Companion,
+    reaction: ReactionState | null,
+    achievements: Achievement[] = [],
+    scheduler?: BuddyWidgetScheduler,
+  ): void {
+    // Cancel any pending resize timer before swapping the scheduler or state
+    // so clearTimer is always paired with the scheduler that created the timer.
+    this.cancelTimer();
+    this.setWidget = setWidget;
+    if (scheduler) this.scheduler = scheduler;
+    this.state = { companion, reaction, achievements };
+    this.renderAndSet();
+    this.subscribe();
+  }
+
+  /** Stop reacting to resizes without unsubscribing from the shared listener. */
+  clear(): void {
+    this.cancelTimer();
+    this.state = null;
+  }
+
+  /** Tear down timers and the shared resize listener. */
+  dispose(): void {
+    this.cancelTimer();
+    this.resizeUnsubscribe?.();
+    this.resizeUnsubscribe = null;
+    this.state = null;
+    this.setWidget = null;
+  }
+
+  private subscribe(): void {
+    if (this.resizeUnsubscribe) return;
+    this.resizeUnsubscribe = subscribeToWidgetResize(() => this.onResize());
+  }
+
+  private onResize(): void {
+    // A cleared widget has no state/setter to render; don't schedule work.
+    if (!this.state || !this.setWidget) return;
+    this.cancelTimer();
+    this.timer = this.scheduler.setTimeout(() => {
+      this.timer = null;
+      this.renderAndSet();
+    }, this.coalesceMs);
+  }
+
+  private renderAndSet(): void {
+    if (!this.state || !this.setWidget) return;
+    const width = this.getWidth();
+    const lines = renderCompanionWidget(this.state.companion, this.state.reaction, this.state.achievements, width);
+    this.setWidget(lines);
+  }
+
+  private cancelTimer(): void {
+    if (this.timer !== null) {
+      this.scheduler.clearTimer(this.timer);
+      this.timer = null;
+    }
+  }
+}
