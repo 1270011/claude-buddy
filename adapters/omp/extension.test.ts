@@ -14,6 +14,7 @@ import { getBundledModels } from "@oh-my-pi/pi-catalog";
 import { BuddyCommandService } from "../../core/command-service.ts";
 import type { Companion } from "../../core/model.ts";
 import { registerBuddyCommands } from "./commands.ts";
+import registerOmpBuddyExtension from "./index.ts";
 import {
   deriveTurnComment,
   generatePersonality,
@@ -1046,7 +1047,7 @@ function buildOmpPersonalityContext(options: {
       find() {
         return model;
       },
-      async getApiKey() {
+      async getApiKeyForProvider() {
         return options.apiKey;
       },
       getProviderHeaders() {
@@ -1170,7 +1171,7 @@ describe("generatePersonality", () => {
       ...buildOmpPersonalityContext({ model }),
       modelRegistry: {
         find() { return model; },
-        async getApiKey() { throw new Error("auth failed"); },
+        async getApiKeyForProvider() { throw new Error("auth failed"); },
         getProviderHeaders() { return {}; },
       },
     } satisfies OmpBuddyContext;

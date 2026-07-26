@@ -543,7 +543,11 @@ export async function generatePersonality(
   const workPromise = (async (): Promise<string | null> => {
     let apiKey: string | undefined;
     try {
-      apiKey = await ctx.modelRegistry.getApiKey(model);
+      apiKey = await ctx.modelRegistry.getApiKeyForProvider(
+        model.provider,
+        undefined,
+        { baseUrl: model.baseUrl, modelId: model.id, signal: controller.signal },
+      );
     } catch (error) {
       logger.warn("personality_generation_auth_unavailable", {
         message: error instanceof Error ? error.message : String(error),
