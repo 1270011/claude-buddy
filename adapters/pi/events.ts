@@ -29,6 +29,7 @@ interface RegisterBuddyEventsDeps {
   storage: PiBuddyStorage;
   ui: PiBuddyUI;
   logger: PiBuddyLog;
+  completeTurnComment?: TurnCommentCompleter;
 }
 
 export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsDeps): void {
@@ -152,14 +153,17 @@ export function registerBuddyEvents(pi: ExtensionAPI, deps: RegisterBuddyEventsD
       deps.ui.refresh(ctx, progress.companion, null, progress.achievements);
       return;
     }
-
+    const config = deps.storage.loadPiConfig();
     const generated = await generateTurnComment(
       ctx,
       progress.companion,
       event,
       deps.logger,
-      complete,
-      deps.storage.loadPiConfig().turnCommentModel,
+      deps.completeTurnComment ?? complete,
+      {
+        modelOverride: config.turnCommentModel,
+        timeoutMs: config.turnCommentTimeoutMs,
+      },
     );
     if (!generated.comment) {
       const assistantLength = isAssistantMessage(event.message) ? getAssistantText(event.message).length : 0;
@@ -283,19 +287,26 @@ function getAssistantText(message: AssistantMessage): string {
     .join("\n");
 }
 
-type TurnCommentCompleter = (
+export type TurnCommentCompleter = (
   model: Parameters<typeof complete>[0],
   context: Parameters<typeof complete>[1],
   options: Parameters<typeof complete>[2],
 ) => Promise<AssistantMessage>;
+
+/** Well under typical harness handler budgets; cosmetic reactions must never stall a turn. */
+export const TURN_COMMENT_TIMEOUT_MS = 5_000;
 export async function generateTurnComment(
   ctx: ExtensionContext,
   companion: Companion,
   event: TurnEndEvent,
   logger: PiBuddyLog,
   completeTurnComment: TurnCommentCompleter = complete,
-  modelOverride?: BuddyTurnCommentModelConfig,
+  options: {
+    modelOverride?: BuddyTurnCommentModelConfig;
+    timeoutMs?: number;
+  } = {},
 ): Promise<{ comment: string | null; source: "llm" | "fallback" | "none" }> {
+  const { modelOverride, timeoutMs = TURN_COMMENT_TIMEOUT_MS } = options;
   const assistantText = isAssistantMessage(event.message) ? getAssistantText(event.message) : "";
   if (!assistantText.trim()) {
     logger.warn("turn_comment_skipped", { reason: "empty_assistant_text" });
@@ -317,6 +328,7 @@ export async function generateTurnComment(
       promptLength: promptText.length,
       systemPromptLength: systemPrompt.length,
       toolResultCount: event.toolResults.length,
+      timeoutMs,
     });
     const promptDebugData: Record<string, unknown> = {
       assistantLength: assistantText.length,
@@ -344,7 +356,18 @@ export async function generateTurnComment(
         timestamp: Date.now(),
       };
 
-      try {
+      const controller = new AbortController();
+      let timedOut = false;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          timedOut = true;
+          controller.abort(new Error("Turn comment generation timed out"));
+          reject(new Error("Turn comment generation timed out"));
+        }, timeoutMs);
+      });
+
+      const workPromise = (async (): Promise<string | null> => {
         const response = await completeTurnComment(
           turnCommentModel,
           {
@@ -354,31 +377,55 @@ export async function generateTurnComment(
           {
             apiKey: auth.apiKey,
             headers: auth.headers,
+            signal: controller.signal,
           },
         );
 
-        if (response.stopReason !== "aborted") {
-          const text = response.content
-            .filter((block): block is TextContent => block.type === "text")
-            .map((block) => block.text)
-            .join("\n");
-          const normalized = normalizeBuddyComment(text);
-          logger.info("turn_comment_llm_result", {
-            stopReason: response.stopReason,
-            errorMessage: "errorMessage" in response ? (response as { errorMessage?: string }).errorMessage : undefined,
-            contentTypes: response.content.map((block) => block.type),
-            contentCount: response.content.length,
-            rawLength: text.length,
-            normalizedLength: normalized.length,
+        if (response.stopReason === "aborted") {
+          logger.warn("turn_comment_llm_aborted", {
+            errorMessage: "errorMessage" in response ? response.errorMessage : undefined,
           });
-          if (normalized) return { comment: normalized, source: "llm" };
-          logger.warn("turn_comment_llm_empty", { rawLength: text.length });
+          return null;
         }
-      } catch (error) {
-        logger.error("turn_comment_llm_error", {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
+
+        const text = response.content
+          .filter((block): block is TextContent => block.type === "text")
+          .map((block) => block.text)
+          .join("\n");
+        const normalized = normalizeBuddyComment(text);
+        logger.info("turn_comment_llm_result", {
+          stopReason: response.stopReason,
+          errorMessage: "errorMessage" in response ? response.errorMessage : undefined,
+          contentTypes: response.content.map((block) => block.type),
+          contentCount: response.content.length,
+          rawLength: text.length,
+          normalizedLength: normalized.length,
         });
+        if (normalized) return normalized;
+        logger.warn("turn_comment_llm_empty", { rawLength: text.length });
+        return null;
+      })();
+
+      // Prevent unhandled rejection if timeout wins the race first.
+      workPromise.catch(() => {});
+
+      try {
+        const comment = await Promise.race([workPromise, timeoutPromise]);
+        clearTimeout(timeoutId);
+        if (comment) return { comment, source: "llm" };
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (timedOut) {
+          logger.warn("turn_comment_llm_timeout", {
+            timeoutMs,
+            message: error instanceof Error ? error.message : String(error),
+          });
+        } else {
+          logger.error("turn_comment_llm_error", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+        }
       }
     } else {
       logger.warn("turn_comment_auth_unavailable", {

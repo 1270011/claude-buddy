@@ -3,12 +3,13 @@ import { BuddyCommandService } from "../../core/command-service.ts";
 import { PiIdentityProvider } from "./identity.ts";
 import { PiBuddyLogger } from "./logger.ts";
 import { registerBuddyCommands } from "./commands.ts";
-import { registerBuddyEvents } from "./events.ts";
+import { registerBuddyEvents, type TurnCommentCompleter } from "./events.ts";
 import { PiBuddyStorage } from "./storage.ts";
 import { PiBuddyUI } from "./ui.ts";
 
 export interface PiBuddyExtensionOptions {
   stateDir?: string;
+  completeTurnComment?: TurnCommentCompleter;
 }
 
 export default function registerPiBuddyExtension(
@@ -28,5 +29,11 @@ export default function registerPiBuddyExtension(
   const ui = new PiBuddyUI(storage);
 
   registerBuddyCommands(pi, { service, storage, ui });
-  registerBuddyEvents(pi, { service, storage, ui, logger });
+  registerBuddyEvents(pi, {
+    service,
+    storage,
+    ui,
+    logger,
+    completeTurnComment: options.completeTurnComment,
+  });
 }
