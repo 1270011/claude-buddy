@@ -31,6 +31,8 @@ import {
 } from "fs";
 import { join } from "path";
 import type { Companion } from "../core/engine.ts"
+import type * as CoreEngine from "../core/engine.ts";
+import type * as Art from "./art.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -438,10 +440,11 @@ export function writeStatusState(
   xp?: number,
 ): void {
   mkdirSync(STATE_DIR, { recursive: true });
-  const { renderFace, RARITY_STARS } =
-    require("../core/engine.ts") as typeof import("../core/engine.ts");
-  const { getStatusFrames, resolveEyeGlyph } =
-    require("./art.ts") as typeof import("./art.ts");
+  const { renderFace, RARITY_STARS, resolveEyeGlyph } =
+    require("../core/engine.ts") as typeof CoreEngine;
+  const { getStatusFrames } =
+    require("./art.ts") as typeof Art;
+  const safeEye = resolveEyeGlyph(companion.bones.eye);
   const { frames, frameSequence } = getStatusFrames(companion.bones);
   let xpLevel = level ?? 1;
   let xpTotal = xp ?? 0;
@@ -460,14 +463,13 @@ export function writeStatusState(
   } catch {
     // Mood state is optional during first install / version skew.
   }
-  const eye = resolveEyeGlyph(companion.bones.eye);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
     rarity: companion.bones.rarity,
     stars: RARITY_STARS[companion.bones.rarity],
-    face: renderFace(companion.bones.species, eye),
-    eye,
+    face: renderFace(companion.bones.species, safeEye),
+    eye: safeEye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
     reaction: "",

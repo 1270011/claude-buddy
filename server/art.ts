@@ -6,7 +6,8 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import { EYES, type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "../core/engine.ts"
+import { resolveEyeGlyph, type Species, type Hat, type Rarity, type StatName, type BuddyBones } from "../core/engine.ts"
+export { resolveEyeGlyph };
 import { HAT_ART } from "../core/art-data.ts";
 import { getRarityColor } from "./theme.ts";
 export { HAT_ART };
@@ -216,25 +217,9 @@ function dpad(s: string, targetW: number): string {
   const w = displayWidth(s);
   return w < targetW ? s + " ".repeat(targetW - w) : s;
 }
-
-/** Fallback eye when bones.eye is a non-glyph descriptor (e.g. "normal"). */
-const DEFAULT_EYE: Eye = "\u00b0";
-
-/**
- * Eyes are single display glyphs substituted into `{E}` art slots.
- * A free-form word like "normal" must never reach those slots — it shears
- * the sprite (duck `<(° )___` becomes `<(normal )___`).
- */
-export function resolveEyeGlyph(eye: string | null | undefined): Eye {
-  if (typeof eye === "string" && (EYES as readonly string[]).includes(eye)) {
-    return eye as Eye;
-  }
-  return DEFAULT_EYE;
-}
-
 // ─── Render functions ───────────────────────────────────────────────────────
 
-export function getArtFrame(species: Species, eye: Eye | string, frame: number = 0): string[] {
+export function getArtFrame(species: Species, eye: string, frame: number = 0): string[] {
   const frames = SPECIES_ART[species];
   const f = frames[frame % frames.length];
   const glyph = resolveEyeGlyph(eye);
@@ -460,7 +445,7 @@ export function renderStatusLine(
   name: string,
   reaction?: string,
 ): string {
-  const face = SPECIES_ART[bones.species][0][2]?.replace(/\{E\}/g, bones.eye).trim() || "(?)";
+  const face = SPECIES_ART[bones.species][0][2]?.replace(/\{E\}/g, resolveEyeGlyph(bones.eye)).trim() || "(?)";
   const color = getRarityColor(bones.rarity);
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? "\u2728" : "";
