@@ -17,7 +17,6 @@
     "coding-buddy": "cli/index.ts"
   },
   "scripts": {
-    "postinstall": "node scripts/postinstall.cjs",
     "server": "bun run server/index.ts",
     "pick": "bun run cli/pick.ts",
     "hunt": "bun run cli/hunt.ts",
