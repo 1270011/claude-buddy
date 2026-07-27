@@ -278,3 +278,28 @@ describe("cross-session buddy_react adoption", () => {
     rmSync(stateDir, { recursive: true, force: true });
   });
 });
+
+describe("duplicate Stop hook invocations", () => {
+  test("a second invocation in the same turn does not clobber the adopted reaction", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-dup-"));
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    writeFileSync(
+      join(stateDir, "reaction.MYSID.json"),
+      JSON.stringify({ reaction: "*ears flick*", timestamp: Date.now(), reason: "turn", source: "tool" }),
+    );
+
+    const input = JSON.stringify({ last_assistant_message: "hi", session_id: "MYSID" });
+    const runtime = { stateDir, sessionId: "MYSID", now: () => Date.now(), spawnDetached: () => {} } as never;
+
+    // Duplicate registrations mean the hook runs several times per turn.
+    handleBuddyComment(input, runtime);
+    handleBuddyComment(input, runtime);
+    const third = handleBuddyComment(input, runtime);
+
+    expect(third.source).toBe("tool");
+    const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
+    expect(own.reaction).toBe("*ears flick*");
+    expect(own.source).toBe("tool");
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+});

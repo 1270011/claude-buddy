@@ -133,6 +133,18 @@ function readTimestampSeconds(path: string): number {
  * is clamped to `now` so a skewed clock on a prior run does not poison
  * the comparison.
  */
+/**
+ * How long after a stop marker a tool reaction still counts as "this turn".
+ *
+ * The Stop hook can legitimately fire more than once per turn — duplicate
+ * registrations accumulate in settings.json, and one dogfooding machine was
+ * observed with EIGHT Stop entries. Without this grace window the first
+ * invocation adopts the buddy_react reaction and stamps the marker, and every
+ * subsequent invocation then judges that same reaction stale and overwrites
+ * the bubble with a canned pool line. The user only ever sees the last write.
+ */
+const SAME_TURN_GRACE_MS = 10_000;
+
 function isFreshToolReaction(
   candidate: ReactionFile | null,
   stopMarkerPath: string,
@@ -144,7 +156,7 @@ function isFreshToolReaction(
   if (ts > nowMs + FUTURE_TIMESTAMP_TOLERANCE_MS) return false;
   const lastStopSec = readTimestampSeconds(stopMarkerPath);
   const effectiveLastStopMs = Math.min(lastStopSec * 1000, nowMs);
-  return ts > effectiveLastStopMs;
+  return ts > effectiveLastStopMs - SAME_TURN_GRACE_MS;
 }
 
 /**
