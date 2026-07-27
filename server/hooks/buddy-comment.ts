@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { join } from "path";
 import { reactionPool } from "./reaction-data.ts";
 import {
@@ -44,7 +44,9 @@ const BUDDY_COMMENT_PATTERN = /<!--\s*buddy:\s*([\s\S]*?)\s*-->/g;
  * Provenance of the reaction the hook wrote. Mirrors server/state.ts
  * `ReactionSource`; loaded as `none` on legacy files without the field.
  */
-export type ReactionSource = "comment" | "fallback" | "none";
+// "tool" is returned when a buddy_react reaction was adopted rather than
+// written by this hook; it mirrors server/state.ts's ReactionSource.
+export type ReactionSource = "tool" | "comment" | "fallback" | "none";
 
 export interface BuddyCommentResult {
   comment?: string;
@@ -131,19 +133,59 @@ function readTimestampSeconds(path: string): number {
  * is clamped to `now` so a skewed clock on a prior run does not poison
  * the comparison.
  */
-function toolFiredThisTurn(
-  reactionPath: string,
+function isFreshToolReaction(
+  candidate: ReactionFile | null,
   stopMarkerPath: string,
   nowMs: number,
 ): boolean {
-  const existing = readJsonFile<ReactionFile>(reactionPath);
-  if (!existing || existing.source !== "tool") return false;
-  const ts = typeof existing.timestamp === "number" ? existing.timestamp : 0;
+  if (!candidate || candidate.source !== "tool") return false;
+  const ts = typeof candidate.timestamp === "number" ? candidate.timestamp : 0;
   if (ts <= 0) return false;
   if (ts > nowMs + FUTURE_TIMESTAMP_TOLERANCE_MS) return false;
   const lastStopSec = readTimestampSeconds(stopMarkerPath);
   const effectiveLastStopMs = Math.min(lastStopSec * 1000, nowMs);
   return ts > effectiveLastStopMs;
+}
+
+/**
+ * The MCP server and this hook do not always agree on the session id: the
+ * server is long-lived and resolves BUDDY_SID once at launch, while the hook
+ * and the statusline resolve it per invocation. When they diverge,
+ * `buddy_react` writes a real model-authored reaction into a file nothing
+ * renders, this hook sees an empty file for *its* session, and overwrites the
+ * bubble with a canned pool line — which looks exactly like the reactions
+ * being fake.
+ *
+ * So look for a fresh tool reaction across every session file, not just ours,
+ * and adopt it. Ours still wins when both are fresh.
+ */
+function findFreshToolReaction(
+  stateDir: string,
+  ownReactionPath: string,
+  stopMarkerPath: string,
+  nowMs: number,
+): ReactionFile | null {
+  const own = readJsonFile<ReactionFile>(ownReactionPath);
+  if (isFreshToolReaction(own, stopMarkerPath, nowMs)) return own;
+
+  let best: ReactionFile | null = null;
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(stateDir);
+  } catch {
+    return null;
+  }
+  for (const entry of entries) {
+    if (!entry.startsWith("reaction.") || !entry.endsWith(".json")) continue;
+    const path = join(stateDir, entry);
+    if (path === ownReactionPath) continue;
+    const candidate = readJsonFile<ReactionFile>(path);
+    if (!isFreshToolReaction(candidate, stopMarkerPath, nowMs)) continue;
+    const bestTs = typeof best?.timestamp === "number" ? best.timestamp : 0;
+    const candidateTs = typeof candidate?.timestamp === "number" ? candidate.timestamp : 0;
+    if (!best || candidateTs > bestTs) best = candidate;
+  }
+  return best;
 }
 
 export function handleBuddyComment(
@@ -170,9 +212,18 @@ export function handleBuddyComment(
   const cooldown = nonNegativeInteger(config.commentCooldown, 30);
 
   // ─── Don't clobber a buddy_react tool reaction from this turn ───────────
-  if (toolFiredThisTurn(reactionPath, stopMarkerFile, now)) {
+  // Checked across all session files: see findFreshToolReaction for why.
+  const freshTool = findFreshToolReaction(stateDir, reactionPath, stopMarkerFile, now);
+  if (freshTool) {
+    // Adopt it into this session's file so the statusline — which reads only
+    // its own session — actually renders the model-authored line.
+    const own = readJsonFile<ReactionFile>(reactionPath);
+    if (own?.reaction !== freshTool.reaction || own?.source !== "tool") {
+      mkdirSync(stateDir, { recursive: true });
+      atomicWriteJson(reactionPath, freshTool);
+    }
     atomicWriteTimestamp(stopMarkerFile, now);
-    return { source: "none", updated: false };
+    return { source: "tool", updated: false };
   }
 
   // ─── Cooldown: rate-limit the reaction write AND bookkeeping ──────────

@@ -252,3 +252,29 @@ describe("buddy comment Stop hook", () => {
     expect(events.turns).toBe(1);
   });
 });
+
+describe("cross-session buddy_react adoption", () => {
+  test("adopts a fresh tool reaction written under a different session id", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-xsession-"));
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    // buddy_react wrote here (MCP server's session id)
+    writeFileSync(
+      join(stateDir, "reaction.OTHERSID.json"),
+      JSON.stringify({ reaction: "*ears twitch*", timestamp: Date.now(), reason: "turn", source: "tool" }),
+    );
+
+    const result = handleBuddyComment(
+      JSON.stringify({ last_assistant_message: "hello", session_id: "MYSID" }),
+      { stateDir, sessionId: "MYSID", now: () => Date.now(), spawnDetached: () => {} } as never,
+    );
+
+    // The pool must NOT have clobbered it...
+    expect(result.source).toBe("tool");
+    // ...and it must be readable from THIS session's file, which the
+    // statusline is the only thing that reads.
+    const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
+    expect(own.reaction).toBe("*ears twitch*");
+    expect(own.source).toBe("tool");
+    rmSync(stateDir, { recursive: true, force: true });
+  });
+});
