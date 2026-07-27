@@ -53,6 +53,7 @@ function runStatusline(
       TMUX_PANE: "",
       BUDDY_STATUSLINE_ROWS: "50",
       BUDDY_STATUSLINE_COLS: columns,
+        BUDDY_STATUSLINE_ROWS: "50",
       TERM: "xterm-256color",
       NO_COLOR: "",
       BUDDY_SHELL: "",
@@ -110,6 +111,7 @@ describe("buddy statusline colors", () => {
         TMUX_PANE: "",
         BUDDY_FAKE_NOW: "0",
         BUDDY_STATUSLINE_COLS: "80",
+        BUDDY_STATUSLINE_ROWS: "50",
         TERM: "xterm-256color",
         NO_COLOR: "",
         BUDDY_SHELL: "",
@@ -233,6 +235,7 @@ describe("buddy statusline colors", () => {
       TMUX_PANE: "",
       BUDDY_FAKE_NOW: "0",
       BUDDY_STATUSLINE_COLS: process.stdin.isTTY ? "" : "60",
+        BUDDY_STATUSLINE_ROWS: "50",
       COLUMNS: "60",
       TERM: "xterm-256color",
       LC_ALL: "C",
@@ -283,6 +286,7 @@ describe("buddy statusline colors", () => {
     for (const override of ["0", "abc"]) {
       const result = runStatusline(configDir, "{}\n", "60", {
         BUDDY_STATUSLINE_COLS: override,
+        BUDDY_STATUSLINE_ROWS: "50",
         COLUMNS: "60",
       });
       const lines = result.stdout.toString().split("\n").filter(Boolean);
