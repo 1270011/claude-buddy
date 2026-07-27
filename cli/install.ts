@@ -24,6 +24,17 @@ import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from ".
 import { generateFallbackName } from "../core/reactions.ts"
 import { copyRuntimeApp, stableRuntimePaths } from "./runtime-app.ts";
 
+/** Recognise any buddy-owned hook command, however it is pathed. */
+function isBuddyHookCommand(command: unknown): boolean {
+  if (typeof command !== "string") return false;
+  return (
+    command.includes("coding-buddy") ||
+    command.includes("claude-buddy") ||
+    command.includes("buddy-state") ||
+    /\/(buddy-comment|suggest|react|mood-react|name-react|file-type-react)\.(sh|ts)\b/.test(command)
+  );
+}
+
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
 const YELLOW = "\x1b[33m";
@@ -203,7 +214,7 @@ function installHooks(settings: Record<string, any>, appDir: string) {
   // plus file-type specific reactions on Write/Edit.
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
   settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => isBuddyHookCommand(hh.command)),
   );
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
@@ -216,8 +227,15 @@ function installHooks(settings: Record<string, any>, appDir: string) {
 
   // Stop: extract <!-- buddy: --> comment from Claude's response
   if (!settings.hooks.Stop) settings.hooks.Stop = [];
+  // Match on the hook script filenames, not the package name: the installed
+  // path is <state>/app/hooks/buddy-comment.sh, which contains neither
+  // "coding-buddy" nor "claude-buddy". The old filter therefore never matched
+  // and every install appended another pair — observed at 8 Stop entries on a
+  // dogfooding machine. Duplicates are not harmless: the first invocation
+  // adopts a buddy_react reaction and stamps the stop marker, then the rest
+  // see it as stale and overwrite the bubble with a canned pool line.
   settings.hooks.Stop = settings.hooks.Stop.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => isBuddyHookCommand(hh.command)),
   );
   settings.hooks.Stop.push({
     hooks: [commandHook(commentHook)],
@@ -230,7 +248,7 @@ function installHooks(settings: Record<string, any>, appDir: string) {
   // reaction, plus mood-react based on prompt content.
   if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
   settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("coding-buddy") || hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => isBuddyHookCommand(hh.command)),
   );
   settings.hooks.UserPromptSubmit.push({
     hooks: [commandHook(nameHook)],

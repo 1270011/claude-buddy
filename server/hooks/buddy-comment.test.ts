@@ -252,3 +252,83 @@ describe("buddy comment Stop hook", () => {
     expect(events.turns).toBe(1);
   });
 });
+
+describe("cross-session buddy_react adoption", () => {
+  test("adopts a fresh tool reaction written under a different session id", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-xsession-"));
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    // buddy_react wrote here (MCP server's session id)
+    writeFileSync(
+      join(stateDir, "reaction.OTHERSID.json"),
+      JSON.stringify({ reaction: "*ears twitch*", timestamp: Date.now(), reason: "turn", source: "tool" }),
+    );
+
+    const result = handleBuddyComment(
+      JSON.stringify({ last_assistant_message: "hello", session_id: "MYSID" }),
+      { stateDir, sessionId: "MYSID", now: () => Date.now(), spawnDetached: () => {} } as never,
+    );
+
+    // The pool must NOT have clobbered it...
+    expect(result.source).toBe("tool");
+    // ...and it must be readable from THIS session's file, which the
+    // statusline is the only thing that reads.
+    const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
+    expect(own.reaction).toBe("*ears twitch*");
+    expect(own.source).toBe("tool");
+  });
+});
+
+describe("duplicate Stop hook invocations", () => {
+  test("a second invocation in the same turn does not clobber the adopted reaction", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-dup-"));
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    writeFileSync(
+      join(stateDir, "reaction.MYSID.json"),
+      JSON.stringify({ reaction: "*ears flick*", timestamp: Date.now(), reason: "turn", source: "tool" }),
+    );
+
+    const input = JSON.stringify({ last_assistant_message: "hi", session_id: "MYSID" });
+    const runtime = { stateDir, sessionId: "MYSID", now: () => Date.now(), spawnDetached: () => {} } as never;
+
+    // Duplicate registrations mean the hook runs several times per turn.
+    handleBuddyComment(input, runtime);
+    handleBuddyComment(input, runtime);
+    const third = handleBuddyComment(input, runtime);
+
+    expect(third.source).toBe("tool");
+    const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
+    expect(own.reaction).toBe("*ears flick*");
+    expect(own.source).toBe("tool");
+  });
+});
+
+describe("adoption age ceiling", () => {
+  test("does not adopt a stale cross-session tool reaction on a fresh session", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-stale-"));
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    // Older than the statusline would ever render, and from another session.
+    writeFileSync(
+      join(stateDir, "reaction.OTHERSID.json"),
+      JSON.stringify({
+        reaction: "*from an ancient turn*",
+        timestamp: Date.now() - 3_600_000,
+        reason: "turn",
+        source: "tool",
+      }),
+    );
+
+    // Brand-new session: no .last_stop_hook marker exists yet.
+    const result = handleBuddyComment(
+      JSON.stringify({ last_assistant_message: "hi", session_id: "NEWSID" }),
+      { stateDir, sessionId: "NEWSID", now: () => Date.now(), spawnDetached: () => {} } as never,
+    );
+
+    expect(result.source).not.toBe("tool");
+    expect(existsSync(join(stateDir, "reaction.NEWSID.json")) &&
+      JSON.parse(readFileSync(join(stateDir, "reaction.NEWSID.json"), "utf8")).reaction)
+      .not.toBe("*from an ancient turn*");
+  });
+});
