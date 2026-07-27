@@ -51,7 +51,7 @@ function runStatusline(
       CLAUDE_CONFIG_DIR: configDir,
       CLAUDE_CODE_SESSION_ID: "",
       TMUX_PANE: "",
-      BUDDY_FAKE_NOW: "0",
+      BUDDY_STATUSLINE_ROWS: "50",
       BUDDY_STATUSLINE_COLS: columns,
       TERM: "xterm-256color",
       NO_COLOR: "",
@@ -465,5 +465,118 @@ describe("buddy sub-status cache", () => {
     }));
     expect(runStatusline(configDir).status).toBe(0);
     await waitFor(() => readFileSync(cacheFile, "utf8") === "refreshed");
+  });
+});
+
+describe("statusline density", () => {
+  function createDensityFixture(
+    density: string,
+    overrides: Record<string, unknown> = {},
+    statusOverrides: Record<string, unknown> = {},
+  ) {
+    const { configDir, stateDir } = createStatuslineFixture({
+      statuslineDensity: density,
+      ...overrides,
+    });
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({
+      name: "Nimbus",
+      rarity: "common",
+      stars: "",
+      shiny: false,
+      reaction: (statusOverrides.reaction as string) ?? "",
+      achievement: "",
+      level: 1,
+      mood: "focused",
+      frames: statusOverrides.frames ?? ["l0\nl1\nl2\nl3\nl4"],
+      compactFrames: statusOverrides.compactFrames ?? ["c0\nc1\nc2"],
+      minimalFrames: statusOverrides.minimalFrames ?? ["face"],
+      frameSequence: [0],
+    }));
+    return { configDir, stateDir };
+  }
+
+
+  test("auto tier selects full when rows >= 40", () => {
+    const { configDir } = createDensityFixture("auto");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "50" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBeGreaterThanOrEqual(6);
+    expect(result.stdout.toString()).toContain("Nimbus");
+  });
+
+  test("auto tier selects compact when rows are 20-39", () => {
+    const { configDir } = createDensityFixture("auto");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "30" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(4);
+    expect(result.stdout.toString()).toContain("Nimbus");
+  });
+
+  test("auto tier selects minimal when rows < 20", () => {
+    const { configDir } = createDensityFixture("auto");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "10" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(1);
+    expect(result.stdout.toString()).toContain("Nimbus");
+  });
+
+  test("auto tier selects minimal for very narrow terminal width", () => {
+    const { configDir } = createDensityFixture("auto");
+    const result = runStatusline(configDir, "{}\n", "30", { BUDDY_STATUSLINE_ROWS: "50" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(1);
+    expect(result.stdout.toString()).toContain("Nimbus");
+  });
+
+  test("BUDDY_STATUSLINE_ROWS overrides PTY rows and pins compact", () => {
+    const { configDir } = createDensityFixture("auto");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "25" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(4);
+  });
+
+  test("explicit full overrides row-driven minimal", () => {
+    const { configDir } = createDensityFixture("full");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "10" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBeGreaterThanOrEqual(6);
+  });
+
+  test("explicit compact overrides row-driven full", () => {
+    const { configDir } = createDensityFixture("compact");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "50" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(4);
+  });
+
+  test("explicit minimal overrides row-driven full", () => {
+    const { configDir } = createDensityFixture("minimal");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "50" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(1);
+  });
+
+  test("invalid density config falls back to auto behavior", () => {
+    const { configDir } = createDensityFixture("banana");
+    const result = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "30" });
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString().split("\n").filter((line) => line.trim().length > 0).length).toBe(4);
+  });
+
+  test("minimal shows reaction only when it fits", () => {
+    const { configDir, stateDir } = createDensityFixture("minimal", {}, {
+      minimalFrames: ["(°°)"],
+    });
+    writeFileSync(join(stateDir, "reaction.default.json"), JSON.stringify({
+      reaction: "long-reaction-text",
+      timestamp: 9999999999999,
+      reason: "tool",
+    }));
+    const wide = runStatusline(configDir, "{}\n", "80", { BUDDY_STATUSLINE_ROWS: "10" });
+    expect(wide.stdout.toString()).toContain("long-reaction-text");
+
+    const narrow = runStatusline(configDir, "{}\n", "20", { BUDDY_STATUSLINE_ROWS: "10" });
+    expect(narrow.stdout.toString()).toContain("Nimbus");
+    expect(narrow.stdout.toString()).not.toContain("long-reaction-text");
   });
 });

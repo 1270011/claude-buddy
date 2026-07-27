@@ -118,6 +118,9 @@ mkdir -p "$OUT_DIR"
 env_ci_was="${CI-}"
 unset CI || true
 export COLORTERM=truecolor
+# Pin rows so VHS golden renders stay at full density even when the terminal
+# emulator reports a smaller size. vhs-run-statusline.sh falls back to 50 too.
+export BUDDY_STATUSLINE_ROWS=50
 
 # Fixture generation uses only in-repo modules (server/art.ts). Never touch
 # the developer's live ~/.config/claude/buddy-state — CLAUDE_CONFIG_DIR is
@@ -127,32 +130,20 @@ mkdir -p "$gen_dir/cjk/buddy-state" "$gen_dir/emoji/buddy-state"
 cp scripts/ci/statusline-fixture/buddy-state/config.json "$gen_dir/cjk/buddy-state/config.json"
 cp scripts/ci/statusline-fixture/buddy-state/config.json "$gen_dir/emoji/buddy-state/config.json"
 
+bun "$ROOT/scripts/ci/write-density-status.ts" "$gen_dir/cjk/buddy-state/status.json" <<'JSON'
+{"name":"Daffodil","species":"duck","rarity":"common","stars":"★","face":"(°>","eye":"°","shiny":false,"hat":"none","reaction":"","muted":false,"achievement":"","level":1,"xp":0,"mood":"focused"}
+JSON
+cp "$gen_dir/cjk/buddy-state/status.json" "$gen_dir/emoji/buddy-state/status.json"
+
 bun -e "
 import { writeFileSync } from 'fs';
-import { getStatusFrames } from './server/art.ts';
-const bones = {
-  rarity: 'common', species: 'duck', eye: '°', hat: 'none', shiny: false,
-  stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
-  peak: 'DEBUGGING', dump: 'PATIENCE',
-};
-const { frames, frameSequence } = getStatusFrames(bones);
-const status = {
-  name: 'Daffodil', species: 'duck', rarity: 'common', stars: '★',
-  face: '(°>', eye: '°', shiny: false, hat: 'none', reaction: '',
-  muted: false, achievement: '', frames, frameSequence,
-  level: 1, xp: 0, mood: 'focused',
-};
-writeFileSync(process.argv[1], JSON.stringify(status));
-writeFileSync(process.argv[2], JSON.stringify(status));
-writeFileSync(process.argv[3], JSON.stringify({
+writeFileSync(process.argv[1], JSON.stringify({
   reaction: '编译通过了 你好世界', timestamp: Date.now(), reason: 'turn',
 }));
-writeFileSync(process.argv[4], JSON.stringify({
+writeFileSync(process.argv[2], JSON.stringify({
   reaction: 'ship it 🎉 ❤️ ✨', timestamp: Date.now(), reason: 'success',
 }));
 " \
-  "$gen_dir/cjk/buddy-state/status.json" \
-  "$gen_dir/emoji/buddy-state/status.json" \
   "$gen_dir/cjk/buddy-state/reaction.default.json" \
   "$gen_dir/emoji/buddy-state/reaction.default.json"
 

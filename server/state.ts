@@ -30,10 +30,12 @@ import {
   rmSync,
 } from "fs";
 import { join } from "path";
-import type { Companion } from "../core/engine.ts"
+import { configuredSharedUserId } from "../core/identity.ts";
+import type { BuddyBones, Companion } from "../core/engine.ts"
 import type * as CoreEngine from "../core/engine.ts";
 import type * as Art from "./art.ts";
-import { configuredSharedUserId } from "../core/identity.ts";
+import type * as MoodModule from "./mood.ts";
+import type * as XpModule from "./xp.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -41,9 +43,17 @@ import {
   toUnixPath,
 } from "./path.ts";
 
-export const STATE_DIR = buddyStateDir();
-const MANIFEST_FILE = join(STATE_DIR, "menagerie.json");
-const CONFIG_FILE = join(STATE_DIR, "config.json");
+// Resolved per call, never captured at import. ES modules are cached, so a
+// module-level `buddyStateDir()` pinned these paths to whatever
+// CLAUDE_CONFIG_DIR happened to be at *first* import. Once any file in a test
+// process had imported this module, every later redirect was silently ignored —
+// which is how `bun test` came to overwrite a user's live companion with a test
+// fixture. Individually the test files were clean; only running them together
+// leaked. A lazy lookup makes that class of bug impossible.
+const stateDir = () => buddyStateDir();
+const MANIFEST_FILE = () => join(stateDir(), "menagerie.json");
+const CONFIG_FILE = () => join(stateDir(), "config.json");
+const STATUS_FILE = () => join(stateDir(), "status.json");
 
 // ─── Session ID (Claude Code session isolation, tmux pane fallback) ─────────
 //
@@ -65,7 +75,7 @@ function sessionId(): string {
 }
 
 function reactionFile(): string {
-  return join(STATE_DIR, `reaction.${sessionId()}.json`);
+  return join(stateDir(), `reaction.${sessionId()}.json`);
 }
 
 // ─── Manifest schema ─────────────────────────────────────────────────────────
@@ -83,7 +93,7 @@ function emptyManifest(): Manifest {
 
 function loadManifest(): Manifest {
   try {
-    const raw = readFileSync(MANIFEST_FILE, "utf8");
+    const raw = readFileSync(MANIFEST_FILE(), "utf8");
     const m = JSON.parse(raw) as Manifest;
     if (!m.companions) m.companions = {};
     return m;
@@ -93,10 +103,10 @@ function loadManifest(): Manifest {
 }
 
 function saveManifest(m: Manifest): void {
-  mkdirSync(STATE_DIR, { recursive: true });
-  const tmp = MANIFEST_FILE + ".tmp";
+  mkdirSync(stateDir(), { recursive: true });
+  const tmp = MANIFEST_FILE() + ".tmp";
   writeFileSync(tmp, JSON.stringify(m, null, 2));
-  renameSync(tmp, MANIFEST_FILE); // atomic on same filesystem
+  renameSync(tmp, MANIFEST_FILE()); // atomic on same filesystem
 }
 
 // ─── Slot helpers ────────────────────────────────────────────────────────────
@@ -222,13 +232,13 @@ export function saveCompanion(companion: Companion): void {
 // ─── Migration: legacy companion.json -> single manifest ────────────────────
 
 function migrateIfNeeded(): void {
-  if (existsSync(MANIFEST_FILE)) return;
+  if (existsSync(MANIFEST_FILE())) return;
 
   const companions: Record<string, Companion> = {};
   let active = "buddy";
 
   // Absorb menagerie/<slot>.json files
-  const menagerieDir = join(STATE_DIR, "menagerie");
+  const menagerieDir = join(stateDir(), "menagerie");
   if (existsSync(menagerieDir)) {
     try {
       for (const f of readdirSync(menagerieDir).filter((f) =>
@@ -249,7 +259,7 @@ function migrateIfNeeded(): void {
   }
 
   // Absorb legacy companion.json
-  const legacyFile = join(STATE_DIR, "companion.json");
+  const legacyFile = join(stateDir(), "companion.json");
   if (existsSync(legacyFile) && Object.keys(companions).length === 0) {
     try {
       const c: Companion = JSON.parse(readFileSync(legacyFile, "utf8"));
@@ -262,7 +272,7 @@ function migrateIfNeeded(): void {
   }
 
   // Read active pointer if it exists
-  const activeFile = join(STATE_DIR, "active");
+  const activeFile = join(stateDir(), "active");
   if (existsSync(activeFile)) {
     try {
       const a = readFileSync(activeFile, "utf8").trim();
@@ -322,7 +332,7 @@ export function saveReaction(
   reason: string,
   source: ReactionSource = "fallback",
 ): void {
-  mkdirSync(STATE_DIR, { recursive: true });
+  mkdirSync(stateDir(), { recursive: true });
   const state: ReactionState = { reaction, timestamp: Date.now(), reason, source };
   // Atomic via tmp + rename — torn reads on the reaction file would
   // make the Stop hook's freshness check see an absent file, pinning
@@ -353,6 +363,7 @@ export interface BuddyConfig {
   bubblePosition: "top" | "left";
   showRarity: boolean;
   statusLineEnabled: boolean;
+  statuslineDensity: "auto" | "full" | "compact" | "minimal";
   statuslineWidthAdjust: number;
   bubbleWidth: number;
   bubbleMargin: number;
@@ -366,7 +377,6 @@ export interface BuddyConfig {
   suggestionsEnabled: boolean;
   suggestionCooldown: number;
 }
-
 const DEFAULT_CONFIG: BuddyConfig = {
   commentCooldown: 30,
   // Long enough that a reaction survives the turn you were reading when it was
@@ -377,6 +387,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
   bubblePosition: "top",
   showRarity: true,
   statusLineEnabled: false,
+  statuslineDensity: "auto",
   statuslineWidthAdjust: 0,
   bubbleWidth: 28,
   bubbleMargin: 8,
@@ -406,22 +417,26 @@ export function normalizeConfig(data: unknown): BuddyConfig {
   if (!Number.isInteger(config.statuslineWidthAdjust)) {
     config.statuslineWidthAdjust = DEFAULT_CONFIG.statuslineWidthAdjust;
   }
+  const allowedDensities: BuddyConfig["statuslineDensity"][] = ["auto", "full", "compact", "minimal"];
+  if (!allowedDensities.includes(config.statuslineDensity)) {
+    config.statuslineDensity = DEFAULT_CONFIG.statuslineDensity;
+  }
   return config;
 }
 
 export function loadConfig(): BuddyConfig {
   try {
-    return normalizeConfig(JSON.parse(readFileSync(CONFIG_FILE, "utf8")));
+    return normalizeConfig(JSON.parse(readFileSync(CONFIG_FILE(), "utf8")));
   } catch {
     return normalizeConfig({});
   }
 }
 
 export function saveConfig(config: Partial<BuddyConfig>): BuddyConfig {
-  mkdirSync(STATE_DIR, { recursive: true });
+  mkdirSync(stateDir(), { recursive: true });
   const current = loadConfig();
   const merged = { ...current, ...config };
-  writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2));
+  writeFileSync(CONFIG_FILE(), JSON.stringify(merged, null, 2));
   return merged;
 }
 
@@ -440,12 +455,36 @@ export interface StatusState {
   muted: boolean;
   achievement: string;
   frames: string[];
+  compactFrames: string[];
+  minimalFrames: string[];
   frameSequence: number[];
   level: number;
   xp: number;
   mood: string;
 }
 
+// Density frame fallbacks used when server/art.ts has not yet been updated
+// to emit compactFrames/minimalFrames. The art worker owns the pre-rendered
+// density frames; state.ts only derives a degraded fallback from the full
+// frames so old/new status.json remains renderable.
+function deriveCompactFrames(fullFrames: string[]): string[] {
+  return fullFrames.map((body) => {
+    const lines = body.split("\n");
+    const selected: string[] = [];
+    for (const line of lines) {
+      if (selected.length >= 3) break;
+      if (line.trim() !== "") selected.push(line);
+    }
+    while (selected.length < 3) selected.push("");
+    return selected.join("\n");
+  });
+}
+
+function deriveMinimalFrames(bones: BuddyBones, eye: string): string[] {
+  const { renderFace } = require("../core/engine.ts") as typeof CoreEngine;
+  const face = renderFace(bones.species, eye);
+  return Array.from({ length: 4 }, () => face);
+}
 export function writeStatusState(
   companion: Companion,
   reaction?: string,
@@ -454,18 +493,32 @@ export function writeStatusState(
   level?: number,
   xp?: number,
 ): void {
-  mkdirSync(STATE_DIR, { recursive: true });
+  mkdirSync(stateDir(), { recursive: true });
   const { renderFace, RARITY_STARS, resolveEyeGlyph } =
     require("../core/engine.ts") as typeof CoreEngine;
   const { getStatusFrames } =
     require("./art.ts") as typeof Art;
   const safeEye = resolveEyeGlyph(companion.bones.eye);
-  const { frames, frameSequence } = getStatusFrames(companion.bones);
+  const artResult = getStatusFrames(companion.bones) as {
+    frames: string[];
+    frameSequence: number[];
+    compactFrames?: string[];
+    minimalFrames?: string[];
+  };
+  const { frames, frameSequence } = artResult;
+  const compactFrames =
+    artResult.compactFrames && artResult.compactFrames.length > 0
+      ? artResult.compactFrames
+      : deriveCompactFrames(frames);
+  const minimalFrames =
+    artResult.minimalFrames && artResult.minimalFrames.length > 0
+      ? artResult.minimalFrames
+      : deriveMinimalFrames(companion.bones, safeEye);
   let xpLevel = level ?? 1;
   let xpTotal = xp ?? 0;
   let moodStr = "focused";
   try {
-    const { getXpState } = require("./xp.ts") as typeof import("./xp.ts");
+    const { getXpState } = require("./xp.ts") as typeof XpModule;
     const xpState = getXpState();
     xpLevel = xpState.level;
     xpTotal = xpState.totalXp;
@@ -473,7 +526,7 @@ export function writeStatusState(
     // XP state is optional during first install / version skew.
   }
   try {
-    const { getMood } = require("./mood.ts") as typeof import("./mood.ts");
+    const { getMood } = require("./mood.ts") as typeof MoodModule;
     moodStr = getMood().current;
   } catch {
     // Mood state is optional during first install / version skew.
@@ -491,11 +544,18 @@ export function writeStatusState(
     muted: muted ?? false,
     achievement: achievement ?? "",
     frames,
+    compactFrames,
+    minimalFrames,
     frameSequence,
     level: xpLevel,
     xp: xpTotal,
     mood: moodStr,
   };
+  // Atomic: the statusline reads this file on a timer, so a plain write can
+  // be observed half-flushed and blank the companion for a tick.
+  const statusTmp = `${STATUS_FILE()}.tmp`;
+  writeFileSync(statusTmp, JSON.stringify(state));
+  renameSync(statusTmp, STATUS_FILE());
   // writeStatusState no longer calls saveReaction implicitly. Callers
   // that need a reaction file do so explicitly with the correct
   // `source` tag — the old implicit save had no source argument and
@@ -580,11 +640,11 @@ const TRANSIENT_PREFIXES = [
  *
  * Companion data (menagerie.json, status.json, config.json) is intentionally
  * kept — users reinstalling get their buddy back. Call-sites that want a full
- * wipe should delete STATE_DIR themselves after calling this.
+ * wipe should delete stateDir() themselves after calling this.
  */
 export function cleanupPluginState(
   settingsPath: string = CLAUDE_SETTINGS_PATH,
-  stateDir: string = STATE_DIR,
+  stateDir: string = buddyStateDir(),
 ): CleanupResult {
   const statusLineRemoved = unsetBuddyStatusLine(settingsPath);
 

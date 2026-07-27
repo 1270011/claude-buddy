@@ -38,6 +38,7 @@ export interface BuddyConfig {
   bubblePosition: "top" | "left";
   showRarity: boolean;
   statusLineEnabled: boolean;
+  statuslineDensity?: "auto" | "full" | "compact" | "minimal";
   turnCommentModel?: BuddyTurnCommentModelConfig;
   /** Optional per-host bound for end-of-turn reaction LLM calls (ms). */
   turnCommentTimeoutMs?: number;

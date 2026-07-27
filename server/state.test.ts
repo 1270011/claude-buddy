@@ -1,18 +1,26 @@
 /**
  * Tests for state.ts — pure helpers (slugify, normalizeConfig) AND
  * the F3 reaction-provenance contract. The reaction-file I/O tests
- * below dynamically import `./state.ts` after setting `CLAUDE_CONFIG_DIR`,
- * because the module captures `STATE_DIR` at import time.
+ * below redirect `CLAUDE_CONFIG_DIR` before importing `./state.ts`, which now
+ * resolves its paths lazily (see the regression guard note below).
  */
 import { afterEach, describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import {
-  normalizeConfig,
-  slugify,
-} from "./state.ts";
 import type { Companion } from "../core/engine.ts";
+
+// REGRESSION GUARD. `state.ts` now resolves its paths lazily, but this file must
+// still redirect before importing it: a static import here previously pinned the
+// module to the *real* buddy state dir, and the later `await import(...)` handed
+// back that same cached instance. Not hypothetical: it silently overwrote the
+// user's live companion with this file's duck fixture on every `bun test` run.
+// Redirect CLAUDE_CONFIG_DIR BEFORE the first import, and never import the
+// module statically from this file.
+const GUARD_DIR = mkdtempSync(join(tmpdir(), "coding-buddy-state-guard-"));
+process.env.CLAUDE_CONFIG_DIR = GUARD_DIR;
+
+const { normalizeConfig, slugify } = await import("./state.ts");
 
 function makeTempStateDir(): string {
   return mkdtempSync(join(tmpdir(), "coding-buddy-state-"));
@@ -104,7 +112,18 @@ describe("normalizeConfig", () => {
     expect(normalizeConfig({ statuslineWidthAdjust: 6 }).statuslineWidthAdjust).toBe(6);
     expect(normalizeConfig({ statuslineWidthAdjust: "6" }).statuslineWidthAdjust).toBe(0);
   });
+
+  test("defaults and normalizes statuslineDensity", () => {
+    expect(normalizeConfig({}).statuslineDensity).toBe("auto");
+    expect(normalizeConfig({ statuslineDensity: "full" }).statuslineDensity).toBe("full");
+    expect(normalizeConfig({ statuslineDensity: "compact" }).statuslineDensity).toBe("compact");
+    expect(normalizeConfig({ statuslineDensity: "minimal" }).statuslineDensity).toBe("minimal");
+    expect(normalizeConfig({ statuslineDensity: "auto" }).statuslineDensity).toBe("auto");
+    expect(normalizeConfig({ statuslineDensity: "invalid" }).statuslineDensity).toBe("auto");
+    expect(normalizeConfig({ statuslineDensity: 123 }).statuslineDensity).toBe("auto");
+  });
 });
+
 
 describe("slugify", () => {
   test("lowercases input", () => {
