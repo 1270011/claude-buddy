@@ -256,6 +256,7 @@ describe("buddy comment Stop hook", () => {
 describe("cross-session buddy_react adoption", () => {
   test("adopts a fresh tool reaction written under a different session id", () => {
     const stateDir = mkdtempSync(join(tmpdir(), "buddy-xsession-"));
+    dirs.push(stateDir);
     writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
     // buddy_react wrote here (MCP server's session id)
     writeFileSync(
@@ -275,13 +276,13 @@ describe("cross-session buddy_react adoption", () => {
     const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
     expect(own.reaction).toBe("*ears twitch*");
     expect(own.source).toBe("tool");
-    rmSync(stateDir, { recursive: true, force: true });
   });
 });
 
 describe("duplicate Stop hook invocations", () => {
   test("a second invocation in the same turn does not clobber the adopted reaction", () => {
     const stateDir = mkdtempSync(join(tmpdir(), "buddy-dup-"));
+    dirs.push(stateDir);
     writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
     writeFileSync(
       join(stateDir, "reaction.MYSID.json"),
@@ -300,6 +301,34 @@ describe("duplicate Stop hook invocations", () => {
     const own = JSON.parse(readFileSync(join(stateDir, "reaction.MYSID.json"), "utf8"));
     expect(own.reaction).toBe("*ears flick*");
     expect(own.source).toBe("tool");
-    rmSync(stateDir, { recursive: true, force: true });
+  });
+});
+
+describe("adoption age ceiling", () => {
+  test("does not adopt a stale cross-session tool reaction on a fresh session", () => {
+    const stateDir = mkdtempSync(join(tmpdir(), "buddy-stale-"));
+    dirs.push(stateDir);
+    writeFileSync(join(stateDir, "status.json"), JSON.stringify({ name: "Cobalt", species: "pikachu" }));
+    // Older than the statusline would ever render, and from another session.
+    writeFileSync(
+      join(stateDir, "reaction.OTHERSID.json"),
+      JSON.stringify({
+        reaction: "*from an ancient turn*",
+        timestamp: Date.now() - 3_600_000,
+        reason: "turn",
+        source: "tool",
+      }),
+    );
+
+    // Brand-new session: no .last_stop_hook marker exists yet.
+    const result = handleBuddyComment(
+      JSON.stringify({ last_assistant_message: "hi", session_id: "NEWSID" }),
+      { stateDir, sessionId: "NEWSID", now: () => Date.now(), spawnDetached: () => {} } as never,
+    );
+
+    expect(result.source).not.toBe("tool");
+    expect(existsSync(join(stateDir, "reaction.NEWSID.json")) &&
+      JSON.parse(readFileSync(join(stateDir, "reaction.NEWSID.json"), "utf8")).reaction)
+      .not.toBe("*from an ancient turn*");
   });
 });

@@ -145,6 +145,17 @@ function readTimestampSeconds(path: string): number {
  */
 const SAME_TURN_GRACE_MS = 10_000;
 
+/**
+ * Hard ceiling on how old an adopted tool reaction may be.
+ *
+ * A brand-new session has no stop marker, so `readTimestampSeconds` returns 0
+ * and every positive timestamp would otherwise look "fresh" — letting a
+ * leftover reaction from an unrelated session surface on the first turn.
+ * Bounded to the statusline's default reactionTTL: never adopt something the
+ * statusline would already treat as expired.
+ */
+const MAX_ADOPTION_AGE_MS = 900_000;
+
 function isFreshToolReaction(
   candidate: ReactionFile | null,
   stopMarkerPath: string,
@@ -154,6 +165,7 @@ function isFreshToolReaction(
   const ts = typeof candidate.timestamp === "number" ? candidate.timestamp : 0;
   if (ts <= 0) return false;
   if (ts > nowMs + FUTURE_TIMESTAMP_TOLERANCE_MS) return false;
+  if (nowMs - ts > MAX_ADOPTION_AGE_MS) return false;
   const lastStopSec = readTimestampSeconds(stopMarkerPath);
   const effectiveLastStopMs = Math.min(lastStopSec * 1000, nowMs);
   return ts > effectiveLastStopMs - SAME_TURN_GRACE_MS;
@@ -230,12 +242,16 @@ export function handleBuddyComment(
     // Adopt it into this session's file so the statusline — which reads only
     // its own session — actually renders the model-authored line.
     const own = readJsonFile<ReactionFile>(reactionPath);
+    let wrote = false;
     if (own?.reaction !== freshTool.reaction || own?.source !== "tool") {
       mkdirSync(stateDir, { recursive: true });
       atomicWriteJson(reactionPath, freshTool);
+      wrote = true;
     }
     atomicWriteTimestamp(stopMarkerFile, now);
-    return { source: "tool", updated: false };
+    // `updated` reports whether this invocation wrote the bubble, so adoption
+    // counts — a consumer using it to trigger a re-render must see the write.
+    return { source: "tool", updated: wrote };
   }
 
   // ─── Cooldown: rate-limit the reaction write AND bookkeeping ──────────
