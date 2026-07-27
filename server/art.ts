@@ -6,11 +6,12 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import { resolveEyeGlyph, type Species, type Hat, type Rarity, type StatName, type BuddyBones } from "../core/engine.ts"
+import { renderFace, resolveEyeGlyph, type Species, type Hat, type Rarity, type StatName, type BuddyBones } from "../core/engine.ts"
 export { resolveEyeGlyph };
 import { HAT_ART } from "../core/art-data.ts";
-import { getRarityColor } from "./theme.ts";
+
 export { HAT_ART };
+import { getRarityColor } from "./theme.ts";
 
 // ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
 
@@ -265,6 +266,8 @@ export const STATUS_FRAME_SEQUENCE: readonly number[] = [
 // \n-joined 5-line string (one jq call + mapfile in bash).
 export function getStatusFrames(bones: BuddyBones): {
   frames: string[];
+  compactFrames: string[];
+  minimalFrames: string[];
   frameSequence: number[];
 } {
   const resolveFrame = (frameIdx: number, eyeGlyph: string): string => {
@@ -277,16 +280,34 @@ export function getStatusFrames(bones: BuddyBones): {
     return art.join("\n");
   };
 
+  // Compact: keep the first three non-empty rows of each full frame. This
+  // preserves a hat if it occupies the top row, otherwise it drops the blank
+  // placeholder and shows the face/body.
+  const deriveCompactFrames = (fullFrames: string[]): string[] =>
+    fullFrames.map((body) => {
+      const lines = body.split("\n");
+      const selected: string[] = [];
+      for (const line of lines) {
+        if (selected.length >= 3) break;
+        if (line.trim() !== "") selected.push(line);
+      }
+      while (selected.length < 3) selected.push("");
+      return selected.join("\n");
+    });
+
   // Sanitize once at the boundary. Blink uses a literal "-" eye, which is
   // intentionally outside EYES and must not pass through resolveEyeGlyph.
   const eye = resolveEyeGlyph(bones.eye);
+  const frames = [
+    resolveFrame(0, eye),
+    resolveFrame(1, eye),
+    resolveFrame(2, eye),
+    resolveFrame(0, "-"),
+  ];
   return {
-    frames: [
-      resolveFrame(0, eye),
-      resolveFrame(1, eye),
-      resolveFrame(2, eye),
-      resolveFrame(0, "-"),
-    ],
+    frames,
+    compactFrames: deriveCompactFrames(frames),
+    minimalFrames: Array.from({ length: frames.length }, () => renderFace(bones.species, eye)),
     frameSequence: [...STATUS_FRAME_SEQUENCE],
   };
 }

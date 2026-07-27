@@ -16,6 +16,7 @@
 # controlling PTY after startup. Snapshot the exported value before any
 # sourced helper or external command can trigger that refresh.
 _INHERITED_COLUMNS="${COLUMNS:-}"
+_INHERITED_ROWS="${LINES:-}"
 # Width math and substring slicing must agree on UTF-8 codepoints. Claude Code
 # emits Unicode art even when a caller inherited the POSIX C locale.
 _LOCALE_HINT="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
@@ -62,24 +63,9 @@ MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 
 BUDDY_STATUSLINE_INPUT=$(cat)
 
-# ─── Animation: pick current frame from server-rendered frames ──────────────
+# ─── Animation timing ───────────────────────────────────────────────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(jq -r --argjson now "$NOW" '
-    .frameSequence[$now % (.frameSequence | length)] as $idx
-    | .frames[$idx] // ""
-' "$STATE" 2>/dev/null)
-
-# Fallback when status.json lacks .frames — e.g. server/bash version skew
-# during install or while the MCP server hasn't rewritten the file yet. Keep
-# the buddy visible in a degraded form instead of emitting an empty block.
-if [ -z "$FRAME_BODY" ]; then
-    FRAME_BODY=$'            \n    (°°)    \n    (  )    \n            \n            '
-fi
-
-ART_LINES=()
-while IFS= read -r line; do
-    ART_LINES+=("$line")
-done <<< "$FRAME_BODY"
+# The actual frame body is selected later once density/rows are known.
 
 # ─── Rarity color (theme-aware) ─────────────────────────────────────────────
 _THEME="dark"
@@ -139,7 +125,7 @@ COLOR_ENABLED=1
 RAINBOW_LEN=${#RAINBOW[@]}
 RAINBOW_OFFSET=$(( NOW % RAINBOW_LEN ))
 
-_is_positive_cols() {
+_is_positive_int() {
     case "$1" in
         ''|*[!0-9]*) return 1 ;;
     esac
@@ -147,8 +133,9 @@ _is_positive_cols() {
     return 1
 }
 
-# ─── Terminal width ──────────────────────────────────────────────────────────
+# ─── Terminal size (rows + columns from the same stty size probe) ─────────────
 COLS=0
+ROWS=0
 
 # Claude Code renders this command inside a content box, not across the full
 # terminal. Reserve two columns for settings.json padding (1 per side) and
@@ -159,18 +146,32 @@ COLS=0
 CHROME_RESERVE=14
 STATUSLINE_WIDTH_ADJUST=0
 
-# Width resolution precedence (real use):
-#   1. BUDDY_STATUSLINE_COLS (validated positive integer)
-#   2. exported COLUMNS (validated positive integer)
-#   3. Linux: /proc/$PID/fd/0 PTY via stty size
-#   4. macOS: ps + stty on /dev/$TTY_NAME
-#   5. Windows: PowerShell (Get-Host).UI.RawUI.WindowSize.Width
-#   6. final default 125
-if _is_positive_cols "${BUDDY_STATUSLINE_COLS:-}"; then
+ROWS=0
+COLS=0
+
+# Rows/cols resolution precedence (real use):
+#   1. BUDDY_STATUSLINE_ROWS / BUDDY_STATUSLINE_COLS (validated positive ints)
+#   2. exported LINES / COLUMNS (validated positive ints)
+#   3. Linux: /proc/$PID/fd/0 PTY via stty size (captures both values)
+#   4. macOS: ps + stty on /dev/$TTY_NAME (captures both values)
+#   5. Windows: PowerShell (Get-Host).UI.RawUI.WindowSize.Height/Width
+#   6. final defaults: ROWS 999 (full), COLS 125
+if _is_positive_int "${BUDDY_STATUSLINE_ROWS:-}"; then
+    ROWS=$((10#${BUDDY_STATUSLINE_ROWS}))
+elif _is_positive_int "$_INHERITED_ROWS"; then
+    ROWS=$((10#$_INHERITED_ROWS))
+fi
+
+if _is_positive_int "${BUDDY_STATUSLINE_COLS:-}"; then
     COLS=$((10#${BUDDY_STATUSLINE_COLS}))
-elif _is_positive_cols "$_INHERITED_COLUMNS"; then
+elif _is_positive_int "$_INHERITED_COLUMNS"; then
     COLS=$((10#$_INHERITED_COLUMNS))
-else
+fi
+
+# If either dimension is still unknown, walk the process tree and read the
+# PTY dimensions once. stty size returns "rows cols"; parse both from the same
+# probe so rows and cols are consistent and no extra detection pass is needed.
+if [ "$ROWS" -lt 1 ] 2>/dev/null || [ "$COLS" -lt 1 ] 2>/dev/null; then
     PID=$$
     for _ in 1 2 3 4 5; do
         PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
@@ -179,8 +180,14 @@ else
         # Linux: read PTY device from /proc
         PTY=$(readlink "/proc/${PID}/fd/0" 2>/dev/null)
         if [ -c "$PTY" ] 2>/dev/null; then
-            COLS=$(stty size < "$PTY" 2>/dev/null | awk '{print $2}')
-            _is_positive_cols "${COLS:-}" && break
+            _stty=$(stty size < "$PTY" 2>/dev/null)
+            if [ -n "$_stty" ]; then
+                _rows=${_stty%% *}
+                _cols=${_stty##* }
+                [ "$ROWS" -lt 1 ] 2>/dev/null && _is_positive_int "$_rows" && ROWS=$((10#$_rows))
+                [ "$COLS" -lt 1 ] 2>/dev/null && _is_positive_int "$_cols" && COLS=$((10#$_cols))
+                [ "$ROWS" -gt 0 ] 2>/dev/null && [ "$COLS" -gt 0 ] 2>/dev/null && break
+            fi
         fi
 
         # macOS: /proc doesn't exist — get TTY name from process table
@@ -188,24 +195,38 @@ else
         if [ -n "$TTY_NAME" ] && [ "$TTY_NAME" != "??" ] && [ "$TTY_NAME" != "?" ]; then
             TTY_DEV="/dev/$TTY_NAME"
             if [ -c "$TTY_DEV" ] 2>/dev/null; then
-                COLS=$(stty size < "$TTY_DEV" 2>/dev/null | awk '{print $2}')
-                _is_positive_cols "${COLS:-}" && break
+                _stty=$(stty size < "$TTY_DEV" 2>/dev/null)
+                if [ -n "$_stty" ]; then
+                    _rows=${_stty%% *}
+                    _cols=${_stty##* }
+                    [ "$ROWS" -lt 1 ] 2>/dev/null && _is_positive_int "$_rows" && ROWS=$((10#$_rows))
+                    [ "$COLS" -lt 1 ] 2>/dev/null && _is_positive_int "$_cols" && COLS=$((10#$_cols))
+                    [ "$ROWS" -gt 0 ] 2>/dev/null && [ "$COLS" -gt 0 ] 2>/dev/null && break
+                fi
             fi
         fi
     done
-
-    [ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=0
-    # Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
-    if [ "${COLS:-0}" -lt 1 ] 2>/dev/null; then
-        _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
-        if _is_positive_cols "$_ps_cols"; then
-            [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$((10#$_ps_cols))
-        fi
-    fi
-    [ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=125
 fi
+
+[ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=0
+# Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
+if [ "${COLS:-0}" -lt 1 ] 2>/dev/null; then
+    _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
+    if _is_positive_int "$_ps_cols"; then
+        [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$((10#$_ps_cols))
+    fi
+fi
+if [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
+    _ps_rows=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r\n')
+    _is_positive_int "$_ps_rows" && ROWS=$((10#$_ps_rows))
+fi
+
+[ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=125
+[ "${ROWS:-0}" -lt 1 ] 2>/dev/null && ROWS=999
+
 COLS=$((10#$COLS))
 DETECTED_COLS="$COLS"
+DETECTED_ROWS="$ROWS"
 
 # ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
@@ -215,6 +236,7 @@ fi
 REACTION_TTL=900
 INNER_W=44
 MARGIN=8
+DENSITY="auto"
 if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 900' "$CONFIG_FILE" 2>/dev/null || echo 900)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
@@ -230,7 +252,34 @@ if [ -f "$CONFIG_FILE" ]; then
             *)  STATUSLINE_WIDTH_ADJUST=$((10#$_wa)) ;;
         esac
     fi
+    _density=$(jq -r '.statuslineDensity // "auto"' "$CONFIG_FILE" 2>/dev/null || echo "auto")
+    case "$_density" in
+        auto|full|compact|minimal) DENSITY="$_density" ;;
+        *) DENSITY="auto" ;;
+    esac
 fi
+# ─── Statusline density tier ─────────────────────────────────────────────────
+# Explicit config/env density overrides pin the tier; otherwise rows drive it:
+#   full >= 40, compact 20-39, minimal < 20. Very narrow terminals also force minimal.
+if [ -n "${BUDDY_STATUSLINE_DENSITY:-}" ]; then
+    DENSITY="${BUDDY_STATUSLINE_DENSITY}"
+fi
+case "$DENSITY" in
+    full|compact|minimal) TIER="$DENSITY" ;;
+    *)
+        TIER="full"
+        if [ "$DETECTED_ROWS" -lt 40 ] 2>/dev/null; then
+            TIER="compact"
+        fi
+        if [ "$DETECTED_ROWS" -lt 20 ] 2>/dev/null; then
+            TIER="minimal"
+        fi
+        if [ "$DETECTED_COLS" -lt 40 ] 2>/dev/null; then
+            TIER="minimal"
+        fi
+        ;;
+esac
+
 _sweep_expired_reactions() {
     [ "$REACTION_TTL" -gt 0 ] 2>/dev/null || return 0
     local now cutoff_ms cutoff_seconds file ts
@@ -281,6 +330,28 @@ if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; the
         rm -f "$REACTION_FILE" 2>/dev/null
     fi
 fi
+
+# ─── Animation: pick current density frame from server-rendered frames ───────
+NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
+FRAME_BODY=$(jq -r --argjson now "$NOW" --arg tier "$TIER" '
+    .frameSequence[$now % (.frameSequence | length)] as $idx
+    | if $tier == "compact" then ((.compactFrames? // .frames) | .[$idx] // .frames[$idx])
+      elif $tier == "minimal" then ((.minimalFrames? // .frames) | .[$idx] // .frames[$idx])
+      else .frames[$idx]
+      end // ""
+' "$STATE" 2>/dev/null)
+
+# Fallback when status.json lacks .frames — e.g. server/bash version skew
+# during install or while the MCP server hasn't rewritten the file yet. Keep
+# the buddy visible in a degraded form instead of emitting an empty block.
+if [ -z "$FRAME_BODY" ]; then
+    FRAME_BODY=$'            \n    (°°)    \n    (  )    \n            \n            '
+fi
+
+ART_LINES=()
+while IFS= read -r line; do
+    ART_LINES+=("$line")
+done <<< "$FRAME_BODY"
 
 # ─── Build all art lines ──────────────────────────────────────────────────────
 # ART_LINES comes from the pre-rendered frame (already includes hat + blink).
@@ -478,6 +549,44 @@ if [ "$STATUSLINE_BUDGET" -lt "$ART_W" ]; then
 fi
 COLS="$STATUSLINE_BUDGET"
 
+# ─── Density branch: compact drops the bubble; minimal is a single line. ─────
+if [ "$TIER" = "minimal" ]; then
+    _face_plain="${ART_LINES[0]:-}"
+    if [ -z "$_face_plain" ]; then
+        for _fline in "${ART_LINES[@]}"; do
+            [ -n "$_fline" ] && _face_plain="$_fline" && break
+        done
+    fi
+    [ -z "$_face_plain" ] && _face_plain=$'    (°°)    '
+    _min_plain="${_face_plain} ${NAME_WITH_LEVEL}"
+    _min_w=$(dwidth "$_min_plain")
+    if [ -n "$REACTION" ]; then
+        _react_plain=" │ \"${REACTION}\""
+        _react_w=$(dwidth "$_react_plain")
+        if [ $((_min_w + _react_w)) -le "$STATUSLINE_BUDGET" ]; then
+            _min_plain="${_min_plain}${_react_plain}"
+            _min_w=$(dwidth "$_min_plain")
+        fi
+    fi
+    if [ "$STATUSLINE_BUDGET" -lt "$_min_w" ]; then
+        STATUSLINE_BUDGET="$DETECTED_COLS"
+    fi
+    if [ "$STATUSLINE_BUDGET" -lt "$_min_w" ]; then
+        STATUSLINE_BUDGET=125
+    fi
+    COLS="$STATUSLINE_BUDGET"
+    ART_LINES=("$_min_plain")
+    ALL_COLORS=("$C")
+    ALL_LINES=("$_min_plain")
+    ART_COUNT=1
+    ART_W="$_min_w"
+    BUBBLE=""
+    BUBBLE_TEXT=""
+elif [ "$TIER" = "compact" ]; then
+    BUBBLE=""
+    BUBBLE_TEXT=""
+fi
+
 # The bubble, tail, and sprite are one unit. At narrow widths, drop the
 # bubble rather than allowing a partial border or tail to escape the panel.
 MIN_BUBBLE_INNER=12
@@ -556,6 +665,14 @@ case "$(uname -s)" in
     MINGW*|CYGWIN*|MSYS*) SPACER=$(printf '%*s' "$PAD" '') ;;
     *)                     SPACER=$(printf "${B}%${PAD}s" "") ;;
 esac
+
+# Minimal tier uses plain spaces so the one-line sprite + name fits without
+# sacrificing a Braille Blank column on narrow terminals.
+if [ "$TIER" = "minimal" ]; then
+    PAD=$(( COLS - ART_W ))
+    [ "$PAD" -lt 0 ] && PAD=0
+    SPACER=$(printf '%*s' "$PAD" '')
+fi
 
 # Vertically center bubble box on the art
 BUBBLE_START=0

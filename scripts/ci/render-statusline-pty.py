@@ -24,6 +24,14 @@ import termios
 import time
 
 
+def _positive_int(env_name: str, default: int) -> int:
+    value = os.environ.get(env_name, "")
+    if value and value.isdigit():
+        parsed = int(value)
+        if parsed > 0:
+            return parsed
+    return default
+
 def main() -> int:
     if len(sys.argv) != 5:
         print(
@@ -36,7 +44,7 @@ def main() -> int:
     root = sys.argv[2]
     config_dir = sys.argv[3]
     script = sys.argv[4]
-    rows = 30
+    rows = _positive_int("BUDDY_STATUSLINE_ROWS", 30)
     payload = os.environ.get(
         "STATUSLINE_PAYLOAD",
         '{"session_id":"ci","model":{"display_name":"CI"},"workspace":{"current_dir":"."}}',
@@ -47,7 +55,7 @@ def main() -> int:
         "printf %s "
         + repr(payload)
         + " | "
-        + f"COLUMNS={cols} BUDDY_FAKE_NOW=0 "
+        + f"COLUMNS={cols} BUDDY_FAKE_NOW=0 BUDDY_STATUSLINE_ROWS={rows} "
         + f"CLAUDE_CONFIG_DIR={config_dir!r} "
         + "CLAUDE_CODE_SESSION_ID= TMUX_PANE= BUDDY_SHELL= "
         + f"bash {script!r}"
@@ -57,11 +65,11 @@ def main() -> int:
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(root)
-        os.execvp("bash", ["bash", "-lc", cmd])
+        os.execvp("bash", ["bash", "-c", cmd])
 
     fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
     out = bytearray()
-    deadline = time.time() + 5.0
+    deadline = time.time() + 15.0
     while time.time() < deadline:
         readable, _, _ = select.select([fd], [], [], 0.1)
         if fd in readable:
