@@ -357,7 +357,7 @@ cat <<'JSON' | bun "$ROOT/scripts/ci/write-density-status.ts" "$cjk_dir/buddy-st
 JSON
 
 _ts=$(now_ms)
-printf '{\"reaction\":\"编译通过了 你好世界\",\"timestamp\":%s,\"reason\":\"turn\"}\n' "$_ts" \
+printf '{"reaction":"编译通过了 你好世界","timestamp":%s,"reason":"turn"}\n' "$_ts" \
   > "$cjk_dir/buddy-state/reaction.default.json"
 
 # Full width CJK/emoji bubble checks.
@@ -379,7 +379,7 @@ mkdir -p "$emoji_dir/buddy-state"
 cp "$cjk_dir/buddy-state/status.json" "$emoji_dir/buddy-state/status.json"
 cp "$fixture_dir/buddy-state/config.json" "$emoji_dir/buddy-state/config.json"
 _ts=$(now_ms)
-printf '{\"reaction\":\"ship it 🎉 ❤️ ✨\",\"timestamp\":%s,\"reason\":\"success\"}\n' "$_ts" \
+printf '{"reaction":"ship it 🎉 ❤️ ✨","timestamp":%s,"reason":"success"}\n' "$_ts" \
   > "$emoji_dir/buddy-state/reaction.default.json"
 
 for cols in 80 93 120 200; do

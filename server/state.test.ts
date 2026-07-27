@@ -1,8 +1,8 @@
 /**
  * Tests for state.ts — pure helpers (slugify, normalizeConfig) AND
  * the F3 reaction-provenance contract. The reaction-file I/O tests
- * below dynamically import `./state.ts` after setting `CLAUDE_CONFIG_DIR`,
- * because the module captures `STATE_DIR` at import time.
+ * below redirect `CLAUDE_CONFIG_DIR` before importing `./state.ts`, which now
+ * resolves its paths lazily (see the regression guard note below).
  */
 import { afterEach, describe, test, expect } from "bun:test";
 import { mkdtempSync, rmSync } from "fs";
@@ -10,10 +10,10 @@ import { tmpdir } from "os";
 import { join } from "path";
 import type { Companion } from "../core/engine.ts";
 
-// `state.ts` captures STATE_DIR at import time and ES modules are cached, so a
-// static import here pinned the module to the *real* buddy state dir before any
-// test could redirect it — and the later `await import("./state.ts")` handed
-// back that same cached instance. Not hypothetical: this silently overwrote the
+// REGRESSION GUARD. `state.ts` now resolves its paths lazily, but this file must
+// still redirect before importing it: a static import here previously pinned the
+// module to the *real* buddy state dir, and the later `await import(...)` handed
+// back that same cached instance. Not hypothetical: it silently overwrote the
 // user's live companion with this file's duck fixture on every `bun test` run.
 // Redirect CLAUDE_CONFIG_DIR BEFORE the first import, and never import the
 // module statically from this file.

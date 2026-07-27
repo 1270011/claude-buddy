@@ -551,7 +551,11 @@ export function writeStatusState(
     xp: xpTotal,
     mood: moodStr,
   };
-  writeFileSync(STATUS_FILE(), JSON.stringify(state));
+  // Atomic: the statusline reads this file on a timer, so a plain write can
+  // be observed half-flushed and blank the companion for a tick.
+  const statusTmp = `${STATUS_FILE()}.tmp`;
+  writeFileSync(statusTmp, JSON.stringify(state));
+  renameSync(statusTmp, STATUS_FILE());
   // writeStatusState no longer calls saveReaction implicitly. Callers
   // that need a reaction file do so explicitly with the correct
   // `source` tag — the old implicit save had no source argument and

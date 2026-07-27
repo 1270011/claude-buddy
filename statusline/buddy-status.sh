@@ -571,8 +571,11 @@ if [ "$TIER" = "minimal" ]; then
     if [ "$STATUSLINE_BUDGET" -lt "$_min_w" ]; then
         STATUSLINE_BUDGET="$DETECTED_COLS"
     fi
+    # Never widen past the real terminal: a hard-coded fallback here would
+    # defeat ansi_truncate below and emit rows wider than the pane, wrapping
+    # and clobbering the prompt on genuinely narrow terminals.
     if [ "$STATUSLINE_BUDGET" -lt "$_min_w" ]; then
-        STATUSLINE_BUDGET=125
+        STATUSLINE_BUDGET="$DETECTED_COLS"
     fi
     COLS="$STATUSLINE_BUDGET"
     ART_LINES=("$_min_plain")
