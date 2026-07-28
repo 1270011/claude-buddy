@@ -11,6 +11,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { existsSync } from "fs";
 import { join, resolve, dirname } from "path";
+// The version advertised in the MCP handshake. Imported rather than written
+// as a literal so it cannot drift from the published package (it had, to 0.6.0).
+import pkg from "../package.json" with { type: "json" };
 
 import { generateBones,
 generatePersonality,
@@ -125,7 +128,7 @@ function getInstructions(): string {
 const server = new McpServer(
   {
     name: "coding-buddy",
-    version: "0.9.3",
+    version: pkg.version,
   },
   {
     instructions: getInstructions(),
