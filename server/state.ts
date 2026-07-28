@@ -454,6 +454,10 @@ export interface StatusState {
   reaction: string;
   muted: boolean;
   achievement: string;
+  /** Epoch ms the achievement was awarded; 0 when none. The statusline expires
+   *  the trophy banner on this, otherwise it latches into the shared
+   *  status.json and pins every session's bubble to the last unlock. */
+  achievementAt: number;
   frames: string[];
   compactFrames: string[];
   minimalFrames: string[];
@@ -543,6 +547,7 @@ export function writeStatusState(
     reaction: "",
     muted: muted ?? false,
     achievement: achievement ?? "",
+    achievementAt: achievement ? Date.now() : 0,
     frames,
     compactFrames,
     minimalFrames,

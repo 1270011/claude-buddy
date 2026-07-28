@@ -58,6 +58,9 @@ STARS=$(jq -r '.stars // ""' "$STATE" 2>/dev/null)
 SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
+# "absent" distinguishes a legacy status.json (no field at all) from an explicit
+# 0, which means "no achievement pending" and must not render.
+ACHIEVEMENT_AT=$(jq -r 'if has("achievementAt") then (.achievementAt // 0) else "absent" end' "$STATE" 2>/dev/null)
 LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
 MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 
@@ -229,10 +232,10 @@ DETECTED_COLS="$COLS"
 DETECTED_ROWS="$ROWS"
 
 # ─── Reaction bubble (with TTL check) ────────────────────────────────────────
+# The achievement banner is resolved further down, once REACTION_TTL is known —
+# it expires on the same clock as a reaction. Without that it latches into the
+# shared status.json and pins every session's bubble to the last trophy.
 BUBBLE=""
-if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != "" ]; then
-    BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
-fi
 REACTION_TTL=900
 INNER_W=44
 MARGIN=8
@@ -307,6 +310,31 @@ _sweep_expired_reactions() {
 }
 
 _sweep_expired_reactions
+
+# Achievement banner: shown only while fresh. ACHIEVEMENT_AT is epoch ms, written
+# alongside the name by writeStatusState. A legacy status.json without the field
+# (pre-upgrade, or a snapshot fixture) is treated as fresh — the next write from
+# the server backfills it.
+#
+# Validity and age are separate gates on purpose. A zeroed or malformed
+# achievementAt means "nothing pending" and must never render, including under
+# reactionTTL=0 — that opt-out disables *expiry*, not the field's meaning.
+if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ]; then
+    ACH_FRESH=1
+    if [ "$ACHIEVEMENT_AT" != "absent" ]; then
+        case "$ACHIEVEMENT_AT" in
+            ''|0|*[!0-9]*) ACH_FRESH=0 ;;
+            *)
+                if [ "$REACTION_TTL" -gt 0 ] 2>/dev/null; then
+                    ACH_AGE=$(( ($(date +%s) * 1000 - ACHIEVEMENT_AT) / 1000 ))
+                    [ "$ACH_AGE" -ge "$REACTION_TTL" ] && ACH_FRESH=0
+                fi
+                ;;
+        esac
+    fi
+    [ "$ACH_FRESH" -eq 1 ] && BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
+fi
+
 REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null)
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
