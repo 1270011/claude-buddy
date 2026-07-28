@@ -32,8 +32,12 @@ describe("sync-version", () => {
 
   test("the MCP handshake version is imported, never a literal", () => {
     const source = readFileSync(join(ROOT, "server/index.ts"), "utf8");
+    // Scoped to the new McpServer(...) options object — a semver literal
+    // elsewhere in the file is none of this test's business.
+    const options = source.match(/new McpServer\(\s*\{([\s\S]*?)\}/);
 
-    expect(source).toContain("version: pkg.version,");
-    expect(source).not.toMatch(/version:\s*"\d+\.\d+\.\d+"/);
+    expect(options).not.toBeNull();
+    expect(options![1]).toContain("version: pkg.version,");
+    expect(options![1]).not.toMatch(/version:\s*"\d+\.\d+\.\d+"/);
   });
 });

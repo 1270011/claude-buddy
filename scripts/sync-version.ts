@@ -52,7 +52,12 @@ const TARGETS: Target[] = [
       {
         label: "metadata.version",
         get: () => doc.metadata?.version,
-        set: () => { if (doc.metadata) doc.metadata.version = version; },
+        // Creates metadata if absent. Guarding the write instead would let
+        // --check report drift that the fixer could never resolve.
+        set: () => {
+          doc.metadata ??= {};
+          doc.metadata.version = version;
+        },
       },
       ...(doc.plugins ?? []).map((plugin: any, i: number) => ({
         label: `plugins[${i}].version`,
