@@ -315,14 +315,20 @@ _sweep_expired_reactions
 # alongside the name by writeStatusState. A legacy status.json without the field
 # (pre-upgrade, or a snapshot fixture) is treated as fresh — the next write from
 # the server backfills it.
+#
+# Validity and age are separate gates on purpose. A zeroed or malformed
+# achievementAt means "nothing pending" and must never render, including under
+# reactionTTL=0 — that opt-out disables *expiry*, not the field's meaning.
 if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ]; then
     ACH_FRESH=1
-    if [ "$REACTION_TTL" -gt 0 ] 2>/dev/null && [ "$ACHIEVEMENT_AT" != "absent" ]; then
+    if [ "$ACHIEVEMENT_AT" != "absent" ]; then
         case "$ACHIEVEMENT_AT" in
-            ''|*[!0-9]*) ACH_FRESH=0 ;;
+            ''|0|*[!0-9]*) ACH_FRESH=0 ;;
             *)
-                ACH_AGE=$(( ($(date +%s) * 1000 - ACHIEVEMENT_AT) / 1000 ))
-                [ "$ACH_AGE" -ge "$REACTION_TTL" ] && ACH_FRESH=0
+                if [ "$REACTION_TTL" -gt 0 ] 2>/dev/null; then
+                    ACH_AGE=$(( ($(date +%s) * 1000 - ACHIEVEMENT_AT) / 1000 ))
+                    [ "$ACH_AGE" -ge "$REACTION_TTL" ] && ACH_FRESH=0
+                fi
                 ;;
         esac
     fi

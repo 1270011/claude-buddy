@@ -634,6 +634,29 @@ describe("achievement banner expiry", () => {
     expect(result.stdout.toString()).not.toContain("Diplomat");
   });
 
+  test("never renders a zeroed achievementAt even when reactionTTL disables expiry", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    writeStatus(stateDir, { achievement: "\u{1F54A}\uFE0F Diplomat", achievementAt: 0 });
+
+    const result = runStatusline(configDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString()).not.toContain("Diplomat");
+  });
+
+  test("reactionTTL=0 keeps a validly stamped achievement from expiring", () => {
+    const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 0 });
+    writeStatus(stateDir, {
+      achievement: "\u{1F54A}\uFE0F Diplomat",
+      achievementAt: Date.now() - 86_400_000,
+    });
+
+    const result = runStatusline(configDir);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout.toString()).toContain("Diplomat");
+  });
+
   test("treats a legacy status.json without achievementAt as fresh", () => {
     const { configDir, stateDir } = createStatuslineFixture({ reactionTTL: 900 });
     writeStatus(stateDir, { achievement: "🕊️ Diplomat" });
