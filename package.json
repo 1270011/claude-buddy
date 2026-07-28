@@ -36,6 +36,8 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "gen:emoji-widths": "bun run scripts/gen-emoji-widths.ts",
+    "sync-version": "bun run scripts/sync-version.ts",
+    "version": "bun run sync-version && git add .claude-plugin",
     "ci:statusline": "bash scripts/ci/check-statusline.sh",
     "ci:vhs:render": "bash scripts/ci/render-vhs-goldens.sh",
     "ci:vhs:update": "bash scripts/ci/render-vhs-goldens.sh --update",
