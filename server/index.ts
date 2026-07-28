@@ -125,7 +125,7 @@ function getInstructions(): string {
 const server = new McpServer(
   {
     name: "coding-buddy",
-    version: "0.6.0",
+    version: "0.9.3",
   },
   {
     instructions: getInstructions(),
