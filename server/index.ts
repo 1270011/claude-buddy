@@ -412,7 +412,7 @@ server.tool(
       "  /buddy theme     Set color theme: dark (bright) or light (dark colors)",
       "",
       "CLI (run from the plugin directory — find it with:",
-      '         cd "$(ls -d ~/.claude/plugins/cache/claude-buddy/claude-buddy/*/ | tail -1)"):',
+      '         cd "$(ls -d ~/.claude/plugins/cache/coding-buddy/coding-buddy/*/ | tail -1)"):',
       "",
       "  bun run help            Show full CLI help",
       "  bun run show            Display buddy in terminal",
