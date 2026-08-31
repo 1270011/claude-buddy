@@ -78,7 +78,7 @@ Different buddy tools return different shapes of output. The rules below keep th
 
 ### Visual-card outputs — strict verbatim
 
-These tools return pre-formatted ASCII art with ANSI colors, box-drawing characters, stat bars, and species art: `buddy_show`, `buddy_stats`, `buddy_pet`, `buddy_achievements`. This is the companion's visual identity.
+These tools return pre-formatted ASCII art with ANSI colors, box-drawing characters, stat bars, and species art: `buddy_show`, `buddy_stats`, `buddy_pet`, `buddy_achievements`, `buddy_summon`, `buddy_pick`. This is the companion's visual identity.
 
 **You MUST output the tool result text EXACTLY as returned — character for character, line for line.** Do NOT:
 
