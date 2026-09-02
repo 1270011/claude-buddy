@@ -425,7 +425,7 @@ FRAME_BODY=$(_bt 3 jq -r --argjson now "$NOW" --arg tier "$TIER" '
       elif $tier == "minimal" then ((.minimalFrames? // .frames) | .[$idx] // .frames[$idx])
       else .frames[$idx]
       end // ""
-' "$STATE" 2>/dev/null)
+' "$STATE" 2>/dev/null | tr -d '\r')
 
 # Fallback when status.json lacks .frames — e.g. server/bash version skew
 # during install or while the MCP server hasn't rewritten the file yet. Keep
