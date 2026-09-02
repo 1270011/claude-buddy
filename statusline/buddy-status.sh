@@ -1101,7 +1101,17 @@ ansi_truncate() {
     [ "$max_width" -lt 0 ] && max_width=0
 
     case "$text" in *$'\033'*) saw_sgr=1 ;; esac
-    [ -n "$widths_str" ] && read -r -a widths <<< "$widths_str"
+    if [ -n "$widths_str" ]; then
+        read -r -a widths <<< "$widths_str"
+    elif [ -n "$text" ]; then
+        # Callers outside this script's own render loop (e.g. substatus.sh's
+        # append_substatus, which calls statusline_output_line with just one
+        # argument) don't have a precomputed profile. Fall back to computing
+        # it here instead of silently treating every character as width 1.
+        while IFS= read -r char_width; do
+            widths+=("$char_width")
+        done < <(dwidth_profile "$(_strip_ansi "$text")")
+    fi
 
     while [ "$i" -lt "$text_len" ]; do
         char="${text:$i:1}"
