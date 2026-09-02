@@ -121,8 +121,23 @@ NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
 
 # ─── Rarity color (theme-aware) ─────────────────────────────────────────────
 _THEME="dark"
+_CFG_RAINBOW_TSV=""
 if [ -f "$CONFIG_FILE" ]; then
-    _cfg_theme=$(_bt 3 jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
+    # One jq process for every config field instead of three separate reads
+    # (theme, rainbowColors, bubble/reaction settings) -- each spawn has real
+    # cost, especially on Windows (see the status.json consolidation note above).
+    # Command substitution + here-string, not read < <(...): on this
+    # Windows/MSYS setup, `read` fed via process substitution has been
+    # observed to leave a stray trailing CR on the last field even though
+    # `tr -d '\r'` runs cleanly under command substitution -- see the CR
+    # note on the status.json read above for the general class of bug.
+    _cfg_raw=$(_bt 3 jq -r '
+                def clean: tostring | gsub("[\n\u001f]"; " ");
+                [((.theme // "auto") | clean), ((.rainbowColors // []) | @tsv),
+                ((.reactionTTL // 900) | clean), ((.bubbleWidth // 44) | clean), ((.bubbleMargin // 8) | clean),
+                ((.statuslineWidthAdjust // 0) | clean), ((.statuslineDensity // "auto") | clean)] | join("")' \
+            "$CONFIG_FILE" 2>/dev/null | tr -d '')
+    IFS=$'' read -r _cfg_theme _CFG_RAINBOW_TSV _ttl _bw _bm _wa _density <<< "$_cfg_raw"
     [ "$_cfg_theme" = "light" ] && _THEME="light"
 fi
 
@@ -161,14 +176,11 @@ RAINBOW=(
   $'\033[38;2;180;50;220m'
 )
 
-if [ -f "$CONFIG_FILE" ]; then
-    _custom=$(_bt 3 jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
-    if [ -n "$_custom" ]; then
-        RAINBOW=()
-        for _hex in $_custom; do
-            RAINBOW+=("$(_hex_to_ansi "$_hex")")
-        done
-    fi
+if [ -n "$_CFG_RAINBOW_TSV" ]; then
+    RAINBOW=()
+    for _hex in $_CFG_RAINBOW_TSV; do
+        RAINBOW+=("$(_hex_to_ansi "$_hex")")
+    done
 fi
 
 COLOR_ENABLED=1
@@ -317,34 +329,23 @@ REACTION_TTL=900
 INNER_W=44
 MARGIN=8
 DENSITY="auto"
-if [ -f "$CONFIG_FILE" ]; then
-    # One jq process for all five fields instead of five — see the note by the
-    # status.json read above on why per-call spawn cost matters here.
-    IFS=$'\x1f' read -r _ttl _bw _bm _wa _density < <(
-        _bt 3 jq -r '
-                def clean: tostring | gsub("[\n\u001f]"; " ");
-                [((.reactionTTL // 900) | clean), ((.bubbleWidth // 44) | clean), ((.bubbleMargin // 8) | clean),
-                ((.statuslineWidthAdjust // 0) | clean), ((.statuslineDensity // "auto") | clean)] | join("")' \
-            "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
-    )
-    # Each field defaults independently below by simply not overwriting its
-    # pre-set default when empty/invalid -- no need to (and no correctness
-    # reason to) reset every field just because one of them came back empty.
-    case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
-    case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
-    case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
-    if printf '%s' "$_wa" | grep -Eq '^[+-]?[0-9]+$'; then
-        case "$_wa" in
-            +*) STATUSLINE_WIDTH_ADJUST=$((10#${_wa#+})) ;;
-            -*) STATUSLINE_WIDTH_ADJUST=$((-10#${_wa#-})) ;;
-            *)  STATUSLINE_WIDTH_ADJUST=$((10#$_wa)) ;;
-        esac
-    fi
-    case "$_density" in
-        auto|full|compact|minimal) DENSITY="$_density" ;;
-        *) DENSITY="auto" ;;
+# Each field defaults independently below by simply not overwriting its
+# pre-set default when empty/invalid -- no need to (and no correctness
+# reason to) reset every field just because one of them came back empty.
+case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
+case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
+case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
+if printf '%s' "$_wa" | grep -Eq '^[+-]?[0-9]+$'; then
+    case "$_wa" in
+        +*) STATUSLINE_WIDTH_ADJUST=$((10#${_wa#+})) ;;
+        -*) STATUSLINE_WIDTH_ADJUST=$((-10#${_wa#-})) ;;
+        *)  STATUSLINE_WIDTH_ADJUST=$((10#$_wa)) ;;
     esac
 fi
+case "$_density" in
+    auto|full|compact|minimal) DENSITY="$_density" ;;
+    *) DENSITY="auto" ;;
+esac
 # ─── Statusline density tier ─────────────────────────────────────────────────
 # Explicit config/env density overrides pin the tier; otherwise rows drive it:
 #   full >= 40, compact 20-39, minimal < 20. Very narrow terminals also force minimal.
@@ -670,22 +671,172 @@ dwidth_profile() {
         for (j = 1; j <= idx; j++) print widths[j] + 0
     }'
 }
+# \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80 Batched width helpers \xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80\xe2\x94\x80
+# Same width rules as dwidth()/dwidth_profile() above, but for N strings at
+# once: joins whichever arguments actually contain non-ASCII characters with
+# the Unit Separator (already used elsewhere in this file as a safe
+# delimiter) and computes all of their codepoints/widths in a single
+# subprocess pair instead of one pair per string. Pure-ASCII arguments keep
+# using the same fast path dwidth()/dwidth_profile() use, at zero extra cost.
+
+# Fills the global _BATCH_PROFILES array: one space-separated per-character
+# width list per non-ASCII argument, in argument order.
+_batch_dwidth_profiles() {
+    _BATCH_PROFILES=()
+    local _joined="" _s _first=1 _raw _line
+    for _s in "$@"; do
+        if [ "$_first" -eq 1 ]; then
+            _joined="$_s"
+            _first=0
+        else
+            _joined="${_joined}"$'\x1f'"${_s}"
+        fi
+    done
+    _raw=$(_utf8_codepoints "$_joined" | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
+    function load_ranges(value, target,    n, i, count, piece, bounds, start, end, cp) {
+        n = split(value, ranges, ",")
+        for (i = 1; i <= n; i++) {
+            count = split(ranges[i], bounds, "-")
+            start = bounds[1] + 0
+            end = (count == 2) ? bounds[2] + 0 : start
+            for (cp = start; cp <= end; cp++) target[cp] = 1
+        }
+    }
+    BEGIN {
+        load_ranges(pres, wide)
+        load_ranges(text, text_default)
+    }
+    function char_width(cp) {
+        if (cp in wide) return 2
+        if (cp >= 9472 && cp <= 9631) return 1
+        if (cp >= 12288 && cp <= 40959) return 2
+        if (cp >= 65281 && cp <= 65376) return 2
+        return 1
+    }
+    function flush(    j, line) {
+        line = ""
+        for (j = 1; j <= idx; j++) line = line (j > 1 ? " " : "") (widths[j] + 0)
+        print line
+        idx = 0
+        upgradable = 0
+        delete widths
+    }
+    {
+        for (i = 1; i <= NF; i++) {
+            cp = $i + 0
+            if (cp == 31) { flush(); continue }
+            if (cp == 65039) {
+                if (upgradable && idx > 0) widths[idx] += 1
+                idx++
+                widths[idx] = 0
+                upgradable = 0
+                continue
+            }
+            if ((cp >= 65024 && cp <= 65038) || cp == 8205) {
+                idx++
+                widths[idx] = 0
+                upgradable = 0
+                continue
+            }
+            idx++
+            cw = char_width(cp)
+            widths[idx] = cw
+            upgradable = 0
+            if (cw == 1 && (cp in text_default)) upgradable = 1
+        }
+    }
+    END { flush() }')
+    while IFS= read -r _line; do
+        _BATCH_PROFILES+=("$_line")
+    done <<< "$_raw"
+}
+
+# Sum variant: fills the global _BATCH_WIDTHS array with one integer total
+# width per argument, applying the same per-argument ASCII fast path as
+# dwidth() so only the non-ASCII arguments pay for the batched subprocess.
+_batch_dwidth() {
+    _BATCH_WIDTHS=()
+    local -a _slow_idx=() _slow_strs=()
+    local _i=0 _s _k=0 _profile _sum _w
+    for _s in "$@"; do
+        case "$_s" in
+            *[![:ascii:]]*)
+                _slow_idx+=("$_i")
+                _slow_strs+=("$_s")
+                _BATCH_WIDTHS[_i]=0
+                ;;
+            *)
+                _BATCH_WIDTHS[_i]=${#_s}
+                ;;
+        esac
+        _i=$(( _i + 1 ))
+    done
+    if [ "${#_slow_strs[@]}" -gt 0 ]; then
+        _batch_dwidth_profiles "${_slow_strs[@]}"
+        for _profile in "${_BATCH_PROFILES[@]}"; do
+            _sum=0
+            for _w in $_profile; do _sum=$(( _sum + _w )); done
+            _BATCH_WIDTHS[${_slow_idx[$_k]}]=$_sum
+            _k=$(( _k + 1 ))
+        done
+    fi
+}
+
+# Profile variant used for the final render pass: fills the global
+# _LINE_WIDTHS array with one space-separated per-character width list per
+# argument (ASCII arguments get an all-1s list without touching the batch).
+_batch_dwidth_profiles_indexed() {
+    _LINE_WIDTHS=()
+    local -a _slow_idx=() _slow_strs=()
+    local _i=0 _s _n _c _w _k=0
+    for _s in "$@"; do
+        case "$_s" in
+            *[![:ascii:]]*)
+                _slow_idx+=("$_i")
+                _slow_strs+=("$_s")
+                _LINE_WIDTHS[_i]=""
+                ;;
+            *)
+                _n=${#_s}
+                _w=""
+                for (( _c = 0; _c < _n; _c++ )); do _w="${_w}1 "; done
+                _LINE_WIDTHS[_i]="$_w"
+                ;;
+        esac
+        _i=$(( _i + 1 ))
+    done
+    if [ "${#_slow_strs[@]}" -gt 0 ]; then
+        _batch_dwidth_profiles "${_slow_strs[@]}"
+        for _w in "${_BATCH_PROFILES[@]}"; do
+            _LINE_WIDTHS[${_slow_idx[$_k]}]="$_w"
+            _k=$(( _k + 1 ))
+        done
+    fi
+}
+
+# Batch every sizing dwidth() call (art rows + the name label) into a single
+# subprocess pair instead of one pair per non-ASCII string -- see the
+# _utf8_codepoints note above for why per-call spawn cost matters here.
+_batch_dwidth "${ART_LINES[@]}" "$NAME_WITH_LEVEL"
 ART_W=0
-for line in "${ART_LINES[@]}"; do
-    line_w=$(dwidth "$line")
+_art_line_count=${#ART_LINES[@]}
+for (( _wi = 0; _wi < _art_line_count; _wi++ )); do
+    line_w="${_BATCH_WIDTHS[$_wi]}"
     [ "$line_w" -gt "$ART_W" ] && ART_W="$line_w"
 done
 
 # Keep the label inside the same sprite column as the art. The exact Unicode
 # width rules live in dwidth(), so the shell and TS renderers agree on bounds.
-LABEL_W=$(dwidth "$NAME_WITH_LEVEL")
+LABEL_W="${_BATCH_WIDTHS[$_art_line_count]}"
 if [ "$LABEL_W" -gt "$ART_W" ] 2>/dev/null; then
     ART_W="$LABEL_W"
     NAME_PAD=$(( (ART_W - LABEL_W) / 2 ))
     NAME_LINE="$(printf '%*s%s' "$NAME_PAD" '' "$NAME_WITH_LEVEL")"
     ALL_LINES[$(( ART_COUNT - 1 ))]="$NAME_LINE"
 fi
-NAME_LINE_W=$(dwidth "$NAME_LINE")
+# NAME_LINE is NAME_PAD plain ASCII spaces (width 1 each) prepended to the
+# already-measured label, so its width is arithmetic -- no extra dwidth call.
+NAME_LINE_W=$(( NAME_PAD + LABEL_W ))
 # Centering the name against a short fixture frame can make the label wider
 # than every art row; include that width before sizing the card.
 [ "$NAME_LINE_W" -gt "$ART_W" ] && ART_W="$NAME_LINE_W"
@@ -890,34 +1041,31 @@ for (( i=0; i<MAX_LINES; i++ )); do
             fi
         else
             empty=$(printf '%*s' "$BOX_W" '')
-            OUTPUT_LINES+=("${SPACER}${empty}   ${art_part}")
+            # NC right after SPACER breaks up what would otherwise be one long
+            # unbroken run of literal space characters (SPACER + empty box +
+            # gap). Rows that DO have bubble content only ever have ~SPACER-
+            # length of contiguous spaces before hitting a color escape code,
+            # and render fine; rows using this placeholder branch had a much
+            # longer uninterrupted space run and were observed shifting left
+            # in VS Code's terminal specifically (not in this script's own
+            # captured stdout) -- NC is a no-op escape, it just breaks the run.
+            OUTPUT_LINES+=("${SPACER}${NC}${empty}   ${art_part}")
         fi
     else
         OUTPUT_LINES+=("${SPACER}${art_part}")
     fi
 done
 
-ansi_truncate() {
+# Precompute width profiles for every rendered row in one batched subprocess
+# pair instead of one pair per row inside ansi_truncate -- see the
+# _utf8_codepoints note above for why per-call spawn cost matters here.
+_strip_ansi() {
     local text="$1"
-    local max_width="$2"
-    local out=""
-    local plain=""
-    local i=0
+    local out="" i=0 char
     local text_len=${#text}
-    local char seq char_width truncated=0 saw_sgr=0
-    local visible_width=0
-    local -a widths
-    local visible_index=0
-
-    [ "$max_width" -lt 0 ] && max_width=0
-
-    # Strip SGR while building the one string sent to dwidth_profile. The
-    # profile uses one iconv/od/awk pass for the whole row; never spawn a
-    # subprocess for each Unicode character.
     while [ "$i" -lt "$text_len" ]; do
         char="${text:$i:1}"
         if [ "$char" = $'\033' ]; then
-            saw_sgr=1
             i=$(( i + 1 ))
             while [ "$i" -lt "$text_len" ]; do
                 char="${text:$i:1}"
@@ -926,18 +1074,35 @@ ansi_truncate() {
             done
             continue
         fi
-        plain="${plain}${char}"
+        out="${out}${char}"
         i=$(( i + 1 ))
     done
+    printf '%s' "$out"
+}
 
-    widths=()
-    if [ -n "$plain" ]; then
-        while IFS= read -r char_width; do
-            widths+=("$char_width")
-        done < <(dwidth_profile "$plain")
-    fi
+_LINE_PLAIN=()
+for line in "${OUTPUT_LINES[@]}"; do
+    _LINE_PLAIN+=("$(_strip_ansi "$line")")
+done
+_batch_dwidth_profiles_indexed "${_LINE_PLAIN[@]}"
 
-    i=0
+ansi_truncate() {
+    local text="$1"
+    local max_width="$2"
+    local widths_str="$3"
+    local out=""
+    local i=0
+    local text_len=${#text}
+    local char seq char_width truncated=0 saw_sgr=0
+    local visible_width=0
+    local -a widths=()
+    local visible_index=0
+
+    [ "$max_width" -lt 0 ] && max_width=0
+
+    case "$text" in *$'\033'*) saw_sgr=1 ;; esac
+    [ -n "$widths_str" ] && read -r -a widths <<< "$widths_str"
+
     while [ "$i" -lt "$text_len" ]; do
         char="${text:$i:1}"
         if [ "$char" = $'\033' ]; then
@@ -969,12 +1134,13 @@ ansi_truncate() {
 }
 
 statusline_output_line() {
-    ansi_truncate "$1" "$STATUSLINE_BUDGET"
+    ansi_truncate "$1" "$STATUSLINE_BUDGET" "$2"
     printf '\n'
 }
 
-for line in "${OUTPUT_LINES[@]}"; do
-    statusline_output_line "$line"
+_output_line_count=${#OUTPUT_LINES[@]}
+for (( _oi = 0; _oi < _output_line_count; _oi++ )); do
+    statusline_output_line "${OUTPUT_LINES[$_oi]}" "${_LINE_WIDTHS[$_oi]}"
 done
 
 # Append the last cached sub-status result below the buddy panel and refresh
