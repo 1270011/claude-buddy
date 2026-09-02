@@ -51,11 +51,25 @@ SID="$BUDDY_SID"
 # has real cost (antivirus/process-creation overhead on Windows especially),
 # and a slow statusline command risks the host's own watchdog killing it
 # before it produces output, silently freezing the display on stale content.
+#
+# Every jq/PowerShell call in this file is also wrapped in `timeout` on top
+# of that. On Windows, when the host kills a slow statusline invocation, it
+# force-kills the parent bash via taskkill /T /F — but MSYS-spawned
+# grandchildren (jq.exe launched from a Git-Bash-emulated fork/exec) don't
+# reliably get caught by that /T cascade, so a killed tick can leave its jq
+# calls running as permanently orphaned zombies instead of exiting. Found
+# 197 of them accumulated on one machine, choking the whole system (CPU
+# pinned near 100%, every new process spawn getting slower as a result,
+# which meant slower ticks, which meant more timeouts, which meant more
+# zombies). `timeout` makes every call self-terminating regardless of what
+# happens to its parent, which is the actual fix; being faster (below) just
+# makes the underlying kills less frequent.
+#
 # "absent" (for achievementAt) distinguishes a legacy status.json (no field at
 # all) from an explicit 0, which means "no achievement pending" and must not
 # render.
 IFS=$'\x1f' read -r MUTED NAME RARITY STARS SHINY ACHIEVEMENT ACHIEVEMENT_AT LEVEL MOOD < <(
-    jq -r '[(.muted // false), (.name // ""), (.rarity // "common"), (.stars // ""),
+    timeout 3 jq -r '[(.muted // false), (.name // ""), (.rarity // "common"), (.stars // ""),
             (.shiny // false), (.achievement // ""),
             (if has("achievementAt") then (.achievementAt // 0) else "absent" end),
             (.level // 1), (.mood // "focused")] | join("")' "$STATE" 2>/dev/null | tr -d '\r'
@@ -74,7 +88,7 @@ NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
 # ─── Rarity color (theme-aware) ─────────────────────────────────────────────
 _THEME="dark"
 if [ -f "$CONFIG_FILE" ]; then
-    _cfg_theme=$(jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
+    _cfg_theme=$(timeout 3 jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
     [ "$_cfg_theme" = "light" ] && _THEME="light"
 fi
 
@@ -114,7 +128,7 @@ RAINBOW=(
 )
 
 if [ -f "$CONFIG_FILE" ]; then
-    _custom=$(jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
+    _custom=$(timeout 3 jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
     if [ -n "$_custom" ]; then
         RAINBOW=()
         for _hex in $_custom; do
@@ -227,9 +241,11 @@ fi
 # fallback. One process for both dimensions instead of two — each PowerShell
 # spawn is a full host boot (~0.5-1s), not just an ordinary process spawn.
 if [ "${COLS:-0}" -lt 1 ] 2>/dev/null || [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
-    _ps_dims=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
-    _ps_cols=$(printf '%s\n' "$_ps_dims" | sed -n '1p')
-    _ps_rows=$(printf '%s\n' "$_ps_dims" | sed -n '2p')
+    _ps_dims=$(timeout 5 powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
+    # Pure parameter expansion, not sed -- two more process spawns just to
+    # split two lines would undercut the whole point of merging the calls.
+    _ps_cols="${_ps_dims%%$'\n'*}"
+    _ps_rows="${_ps_dims#*$'\n'}"
     if [ "${COLS:-0}" -lt 1 ] 2>/dev/null && _is_positive_int "$_ps_cols"; then
         [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$((10#$_ps_cols))
     fi
@@ -258,7 +274,7 @@ if [ -f "$CONFIG_FILE" ]; then
     # One jq process for all five fields instead of five — see the note by the
     # status.json read above on why per-call spawn cost matters here.
     IFS=$'\x1f' read -r _ttl _bw _bm _wa _density < <(
-        jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
+        timeout 3 jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
                 (.statuslineWidthAdjust // 0), (.statuslineDensity // "auto")] | join("")' \
             "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
     )
@@ -309,7 +325,7 @@ _sweep_expired_reactions() {
 
     for file in "$BUDDY_STATE_DIR"/reaction.*.json; do
         [ -f "$file" ] || continue
-        ts=$(jq -r '.timestamp // 0' "$file" 2>/dev/null || echo 0)
+        ts=$(timeout 3 jq -r '.timestamp // 0' "$file" 2>/dev/null || echo 0)
         case "$ts" in
             ''|*[!0-9]*) rm -f "$file" 2>/dev/null ;;
             *) [ "$ts" -le "$cutoff_ms" ] 2>/dev/null && rm -f "$file" 2>/dev/null ;;
@@ -355,7 +371,7 @@ fi
 # One jq process for reaction + timestamp instead of two (see the earlier
 # consolidation notes on why per-call spawn cost matters here).
 IFS=$'\x1f' read -r REACTION TS < <(
-    jq -r '[(.reaction // ""), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
+    timeout 3 jq -r '[(.reaction // ""), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
 )
 TS="${TS:-0}"
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
@@ -382,7 +398,7 @@ fi
 
 # ─── Animation: pick current density frame from server-rendered frames ───────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(jq -r --argjson now "$NOW" --arg tier "$TIER" '
+FRAME_BODY=$(timeout 3 jq -r --argjson now "$NOW" --arg tier "$TIER" '
     .frameSequence[$now % (.frameSequence | length)] as $idx
     | if $tier == "compact" then ((.compactFrames? // .frames) | .[$idx] // .frames[$idx])
       elif $tier == "minimal" then ((.minimalFrames? // .frames) | .[$idx] // .frames[$idx])
