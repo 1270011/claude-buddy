@@ -23,17 +23,19 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CI=
 
 # Pin exact Ubuntu 24.04 (noble) package versions for the packages that can
-# actually affect golden-image rendering: fonts, and the Cairo/Pango/GTK
-# stack the headless browser uses to rasterize them. Bump those deliberately
-# when re-baselining.
+# actually affect golden-image rendering: fonts, the Cairo/Pango/GTK stack
+# the headless browser uses to rasterize them, and ffmpeg/ttyd -- VHS's own
+# capture (ttyd) and frame-encoding (ffmpeg) pipeline, where a version float
+# could change encoder defaults or compression behavior and shift pixel
+# values even for identical input. Bump those deliberately when
+# re-baselining.
 #
-# Everything above that line is plain CLI tooling with no rendering impact
-# (TLS certs, an HTTP client, an archiver, jq, python3, ffmpeg, ttyd) --
-# pinning those to exact patch versions only pins this build to a specific
-# moment of the Ubuntu mirrors, which age out (a stale `curl` pin already
-# broke every build once the version it named left the noble mirrors).
-# Version-less installs here always resolve to whatever noble currently
-# ships, without touching a single byte that affects a rendered pixel.
+# Everything else below is plain CLI tooling with no rendering impact at all
+# (TLS certs, an HTTP client, an archiver, jq, python3) -- pinning those to
+# exact patch versions only pins this build to a specific moment of the
+# Ubuntu mirrors, which age out (a stale `curl` pin already broke every
+# build once the version it named left the noble mirrors). Version-less
+# installs for just these resolve to whatever noble currently ships.
 #
 # Includes Chromium shared libs for vhs/rod headless browser, plus the fonts
 # used by the tapes (DejaVu mono + Noto CJK/emoji).
@@ -45,10 +47,10 @@ RUN apt-get update -qq \
       unzip \
       jq \
       python3 \
-      ffmpeg \
-      ttyd \
       findutils \
       bash \
+      ffmpeg=7:6.1.1-3ubuntu5 \
+      ttyd=1.7.4-1build2 \
       fonts-dejavu-core=2.37-8 \
       fonts-noto-core=20201225-2 \
       fonts-noto-mono=20201225-2 \
