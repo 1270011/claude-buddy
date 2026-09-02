@@ -69,8 +69,10 @@ SID="$BUDDY_SID"
 # all) from an explicit 0, which means "no achievement pending" and must not
 # render.
 IFS=$'\x1f' read -r MUTED NAME RARITY STARS SHINY ACHIEVEMENT ACHIEVEMENT_AT LEVEL MOOD < <(
-    timeout 3 jq -r '[(.muted // false), (.name // ""), (.rarity // "common"), (.stars // ""),
-            (.shiny // false), (.achievement // ""),
+    timeout 3 jq -r '
+            def clean: gsub("[\n\u001f]"; " ");
+            [(.muted // false), ((.name // "") | clean), (.rarity // "common"), ((.stars // "") | clean),
+            (.shiny // false), ((.achievement // "") | clean),
             (if has("achievementAt") then (.achievementAt // 0) else "absent" end),
             (.level // 1), (.mood // "focused")] | join("")' "$STATE" 2>/dev/null | tr -d '\r'
 )
@@ -278,7 +280,9 @@ if [ -f "$CONFIG_FILE" ]; then
                 (.statuslineWidthAdjust // 0), (.statuslineDensity // "auto")] | join("")' \
             "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
     )
-    [ -z "$_ttl" ] && { _ttl=900; _bw=44; _bm=8; _wa=0; _density="auto"; }
+    # Each field defaults independently below by simply not overwriting its
+    # pre-set default when empty/invalid -- no need to (and no correctness
+    # reason to) reset every field just because one of them came back empty.
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
     case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
     case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
@@ -371,7 +375,7 @@ fi
 # One jq process for reaction + timestamp instead of two (see the earlier
 # consolidation notes on why per-call spawn cost matters here).
 IFS=$'\x1f' read -r REACTION TS < <(
-    timeout 3 jq -r '[(.reaction // ""), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
+    timeout 3 jq -r '[((.reaction // "") | gsub("[\n\u001f]"; " ")), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
 )
 TS="${TS:-0}"
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
