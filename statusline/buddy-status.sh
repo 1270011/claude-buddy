@@ -537,6 +537,31 @@ EMOJI_PRES_2600="$(grep -v '^#' "$EMOJI_WIDTHS_DATA" 2>/dev/null | tr -d '\n')"
 EMOJI_TEXT_DATA="$(dirname "${BASH_SOURCE[0]}")/emoji-text.data"
 EMOJI_TEXT="$(grep -v '^#' "$EMOJI_TEXT_DATA" 2>/dev/null | tr -d '\n')"
 
+# iconv is not guaranteed to exist even where it always has before: it is
+# genuinely absent on this machine right now (only the libiconv DLL other
+# tools link against is installed, not the standalone binary) despite having
+# worked earlier in the same environment, so this is not a platform check to
+# skip -- it is a real, observed runtime gap. python3 (already a hard
+# dependency of the wider install, per README/cli/install.ts) reads the same
+# UTF-8 bytes and emits the same "one decimal codepoint per token" shape
+# `od -An -tu4` does, so the awk scripts below don't need to know which one
+# ran. Without this fallback, every non-ASCII value (rarity stars, mood/
+# achievement glyphs) silently gets zero width data and whatever depends on
+# it -- truncation, centering -- breaks for exactly the buddies (rare/epic/
+# legendary, i.e. the ones with stars) most likely to need it.
+command -v iconv >/dev/null 2>&1 && _HAS_ICONV=1 || _HAS_ICONV=0
+_utf8_codepoints() {
+    if [ "$_HAS_ICONV" -eq 1 ]; then
+        printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4
+    else
+        printf '%s' "$1" | python3 -c '
+import sys
+data = sys.stdin.buffer.read().decode("utf-8", "replace")
+print(" ".join(str(ord(c)) for c in data))
+' 2>/dev/null
+    fi
+}
+
 dwidth() {
     # Fast path: every ASCII codepoint is width 1 under char_width() below (none
     # of the wide/CJK/fullwidth/box-drawing ranges are in 0-127), so for ASCII-only
@@ -549,7 +574,7 @@ dwidth() {
         *[![:ascii:]]*) ;;
         *) printf '%s' "${#1}"; return ;;
     esac
-    printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4 | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
+    _utf8_codepoints "$1" | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
     function load_ranges(value, target,    n, i, count, piece, bounds, start, end, cp) {
         n = split(value, ranges, ",")
         for (i = 1; i <= n; i++) {
@@ -599,7 +624,7 @@ dwidth_profile() {
             return
             ;;
     esac
-    printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4 | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
+    _utf8_codepoints "$1" | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
     function load_ranges(value, target,    n, i, count, piece, bounds, start, end, cp) {
         n = split(value, ranges, ",")
         for (i = 1; i <= n; i++) {
