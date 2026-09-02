@@ -133,7 +133,7 @@ if [ -f "$CONFIG_FILE" ]; then
     # note on the status.json read above for the general class of bug.
     _cfg_raw=$(_bt 3 jq -r '
                 def clean: tostring | gsub("[\n\u001f]"; " ");
-                [((.theme // "auto") | clean), ((.rainbowColors // []) | @tsv),
+                [((.theme // "auto") | clean), ((.rainbowColors // []) | if type == "array" then @tsv else "" end),
                 ((.reactionTTL // 900) | clean), ((.bubbleWidth // 44) | clean), ((.bubbleMargin // 8) | clean),
                 ((.statuslineWidthAdjust // 0) | clean), ((.statuslineDensity // "auto") | clean)] | join("")' \
             "$CONFIG_FILE" 2>/dev/null | tr -d '')
@@ -1059,6 +1059,9 @@ done
 # Precompute width profiles for every rendered row in one batched subprocess
 # pair instead of one pair per row inside ansi_truncate -- see the
 # _utf8_codepoints note above for why per-call spawn cost matters here.
+# Returns through the _STRIP_ANSI_OUT global rather than printf + command
+# substitution -- called once per rendered row, and a subshell fork per row
+# is exactly the per-call spawn cost this PR removes elsewhere.
 _strip_ansi() {
     local text="$1"
     local out="" i=0 char
@@ -1077,12 +1080,13 @@ _strip_ansi() {
         out="${out}${char}"
         i=$(( i + 1 ))
     done
-    printf '%s' "$out"
+    _STRIP_ANSI_OUT="$out"
 }
 
 _LINE_PLAIN=()
 for line in "${OUTPUT_LINES[@]}"; do
-    _LINE_PLAIN+=("$(_strip_ansi "$line")")
+    _strip_ansi "$line"
+    _LINE_PLAIN+=("$_STRIP_ANSI_OUT")
 done
 _batch_dwidth_profiles_indexed "${_LINE_PLAIN[@]}"
 
@@ -1108,9 +1112,10 @@ ansi_truncate() {
         # append_substatus, which calls statusline_output_line with just one
         # argument) don't have a precomputed profile. Fall back to computing
         # it here instead of silently treating every character as width 1.
+        _strip_ansi "$text"
         while IFS= read -r char_width; do
             widths+=("$char_width")
-        done < <(dwidth_profile "$(_strip_ansi "$text")")
+        done < <(dwidth_profile "$_STRIP_ANSI_OUT")
     fi
 
     while [ "$i" -lt "$text_len" ]; do
