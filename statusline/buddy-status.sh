@@ -41,9 +41,24 @@ esac
 # any system tool. Detect what's actually available; every subprocess call
 # below goes through _bt so it degrades to running unguarded rather than
 # failing outright on a platform that doesn't have either.
+#
+# Windows also ships its own native timeout.exe (System32), unrelated to GNU
+# coreutils and with completely different syntax (`/t <seconds>`, and it
+# never runs a trailing command at all). If PATH happens to resolve `timeout`
+# to that one instead of Git Bash's coreutils build, every _bt call below
+# would silently do nothing useful -- the very first jq read would come back
+# empty, and the script exits immediately at the empty-NAME guard, rendering
+# nothing. Confirm --version looks like GNU coreutils before trusting a match.
+_is_gnu_timeout() {
+    "$1" --version </dev/null 2>/dev/null | grep -qi "coreutils"
+}
 _TIMEOUT_BIN=""
-command -v timeout >/dev/null 2>&1 && _TIMEOUT_BIN="timeout"
-[ -z "$_TIMEOUT_BIN" ] && command -v gtimeout >/dev/null 2>&1 && _TIMEOUT_BIN="gtimeout"
+for _cand in timeout gtimeout; do
+    if command -v "$_cand" >/dev/null 2>&1 && _is_gnu_timeout "$_cand"; then
+        _TIMEOUT_BIN="$_cand"
+        break
+    fi
+done
 _bt() {
     local secs="$1"; shift
     if [ -n "$_TIMEOUT_BIN" ]; then
@@ -263,8 +278,21 @@ if [ "${COLS:-0}" -lt 1 ] 2>/dev/null || [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; the
     _ps_dims=$(_bt 5 powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
     # Pure parameter expansion, not sed -- two more process spawns just to
     # split two lines would undercut the whole point of merging the calls.
-    _ps_cols="${_ps_dims%%$'\n'*}"
-    _ps_rows="${_ps_dims#*$'\n'}"
+    # Only trust the split when both lines actually came back: if PowerShell
+    # printed just the width (a truncated/partial call), `${_ps_dims#*$'\n'}`
+    # with no newline in the string returns the string unchanged, so a lone
+    # width would get read as _ps_rows too -- accepted by _is_positive_int
+    # and selecting the wrong density tier.
+    case "$_ps_dims" in
+        *$'\n'*)
+            _ps_cols="${_ps_dims%%$'\n'*}"
+            _ps_rows="${_ps_dims#*$'\n'}"
+            ;;
+        *)
+            _ps_cols=""
+            _ps_rows=""
+            ;;
+    esac
     if [ "${COLS:-0}" -lt 1 ] 2>/dev/null && _is_positive_int "$_ps_cols"; then
         [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$((10#$_ps_cols))
     fi
@@ -293,8 +321,10 @@ if [ -f "$CONFIG_FILE" ]; then
     # One jq process for all five fields instead of five — see the note by the
     # status.json read above on why per-call spawn cost matters here.
     IFS=$'\x1f' read -r _ttl _bw _bm _wa _density < <(
-        _bt 3 jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
-                (.statuslineWidthAdjust // 0), (.statuslineDensity // "auto")] | join("")' \
+        _bt 3 jq -r '
+                def clean: tostring | gsub("[\n\u001f]"; " ");
+                [((.reactionTTL // 900) | clean), ((.bubbleWidth // 44) | clean), ((.bubbleMargin // 8) | clean),
+                ((.statuslineWidthAdjust // 0) | clean), ((.statuslineDensity // "auto") | clean)] | join("")' \
             "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
     )
     # Each field defaults independently below by simply not overwriting its
