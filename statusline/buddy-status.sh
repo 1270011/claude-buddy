@@ -36,6 +36,23 @@ esac
 
 [ "$BUDDY_SHELL" = "1" ] && exit 0
 
+# `timeout` isn't part of macOS's default BSD userland -- it only exists there
+# via Homebrew coreutils, installed as `gtimeout` so it doesn't collide with
+# any system tool. Detect what's actually available; every subprocess call
+# below goes through _bt so it degrades to running unguarded rather than
+# failing outright on a platform that doesn't have either.
+_TIMEOUT_BIN=""
+command -v timeout >/dev/null 2>&1 && _TIMEOUT_BIN="timeout"
+[ -z "$_TIMEOUT_BIN" ] && command -v gtimeout >/dev/null 2>&1 && _TIMEOUT_BIN="gtimeout"
+_bt() {
+    local secs="$1"; shift
+    if [ -n "$_TIMEOUT_BIN" ]; then
+        "$_TIMEOUT_BIN" "$secs" "$@"
+    else
+        "$@"
+    fi
+}
+
 # shellcheck source=../scripts/paths.sh
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/substatus.sh"
@@ -69,7 +86,7 @@ SID="$BUDDY_SID"
 # all) from an explicit 0, which means "no achievement pending" and must not
 # render.
 IFS=$'\x1f' read -r MUTED NAME RARITY STARS SHINY ACHIEVEMENT ACHIEVEMENT_AT LEVEL MOOD < <(
-    timeout 3 jq -r '
+    _bt 3 jq -r '
             def clean: gsub("[\n\u001f]"; " ");
             [(.muted // false), ((.name // "") | clean), (.rarity // "common"), ((.stars // "") | clean),
             (.shiny // false), ((.achievement // "") | clean),
@@ -90,7 +107,7 @@ NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
 # ─── Rarity color (theme-aware) ─────────────────────────────────────────────
 _THEME="dark"
 if [ -f "$CONFIG_FILE" ]; then
-    _cfg_theme=$(timeout 3 jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
+    _cfg_theme=$(_bt 3 jq -r '.theme // "auto"' "$CONFIG_FILE" 2>/dev/null)
     [ "$_cfg_theme" = "light" ] && _THEME="light"
 fi
 
@@ -130,7 +147,7 @@ RAINBOW=(
 )
 
 if [ -f "$CONFIG_FILE" ]; then
-    _custom=$(timeout 3 jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
+    _custom=$(_bt 3 jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
     if [ -n "$_custom" ]; then
         RAINBOW=()
         for _hex in $_custom; do
@@ -243,7 +260,7 @@ fi
 # fallback. One process for both dimensions instead of two — each PowerShell
 # spawn is a full host boot (~0.5-1s), not just an ordinary process spawn.
 if [ "${COLS:-0}" -lt 1 ] 2>/dev/null || [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
-    _ps_dims=$(timeout 5 powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
+    _ps_dims=$(_bt 5 powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
     # Pure parameter expansion, not sed -- two more process spawns just to
     # split two lines would undercut the whole point of merging the calls.
     _ps_cols="${_ps_dims%%$'\n'*}"
@@ -276,7 +293,7 @@ if [ -f "$CONFIG_FILE" ]; then
     # One jq process for all five fields instead of five — see the note by the
     # status.json read above on why per-call spawn cost matters here.
     IFS=$'\x1f' read -r _ttl _bw _bm _wa _density < <(
-        timeout 3 jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
+        _bt 3 jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
                 (.statuslineWidthAdjust // 0), (.statuslineDensity // "auto")] | join("")' \
             "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
     )
@@ -329,7 +346,7 @@ _sweep_expired_reactions() {
 
     for file in "$BUDDY_STATE_DIR"/reaction.*.json; do
         [ -f "$file" ] || continue
-        ts=$(timeout 3 jq -r '.timestamp // 0' "$file" 2>/dev/null || echo 0)
+        ts=$(_bt 3 jq -r '.timestamp // 0' "$file" 2>/dev/null || echo 0)
         case "$ts" in
             ''|*[!0-9]*) rm -f "$file" 2>/dev/null ;;
             *) [ "$ts" -le "$cutoff_ms" ] 2>/dev/null && rm -f "$file" 2>/dev/null ;;
@@ -375,7 +392,7 @@ fi
 # One jq process for reaction + timestamp instead of two (see the earlier
 # consolidation notes on why per-call spawn cost matters here).
 IFS=$'\x1f' read -r REACTION TS < <(
-    timeout 3 jq -r '[((.reaction // "") | gsub("[\n\u001f]"; " ")), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
+    _bt 3 jq -r '[((.reaction // "") | gsub("[\n\u001f]"; " ")), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
 )
 TS="${TS:-0}"
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
@@ -402,7 +419,7 @@ fi
 
 # ─── Animation: pick current density frame from server-rendered frames ───────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(timeout 3 jq -r --argjson now "$NOW" --arg tier "$TIER" '
+FRAME_BODY=$(_bt 3 jq -r --argjson now "$NOW" --arg tier "$TIER" '
     .frameSequence[$now % (.frameSequence | length)] as $idx
     | if $tier == "compact" then ((.compactFrames? // .frames) | .[$idx] // .frames[$idx])
       elif $tier == "minimal" then ((.minimalFrames? // .frames) | .[$idx] // .frames[$idx])
