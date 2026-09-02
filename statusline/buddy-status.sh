@@ -47,22 +47,23 @@ SID="$BUDDY_SID"
 
 [ -f "$STATE" ] || exit 0
 
-MUTED=$(jq -r '.muted // false' "$STATE" 2>/dev/null)
+# One jq process for every status.json field instead of nine — each spawn
+# has real cost (antivirus/process-creation overhead on Windows especially),
+# and a slow statusline command risks the host's own watchdog killing it
+# before it produces output, silently freezing the display on stale content.
+# "absent" (for achievementAt) distinguishes a legacy status.json (no field at
+# all) from an explicit 0, which means "no achievement pending" and must not
+# render.
+IFS=$'\x1f' read -r MUTED NAME RARITY STARS SHINY ACHIEVEMENT ACHIEVEMENT_AT LEVEL MOOD < <(
+    jq -r '[(.muted // false), (.name // ""), (.rarity // "common"), (.stars // ""),
+            (.shiny // false), (.achievement // ""),
+            (if has("achievementAt") then (.achievementAt // 0) else "absent" end),
+            (.level // 1), (.mood // "focused")] | join("")' "$STATE" 2>/dev/null | tr -d '\r'
+)
 [ "$MUTED" = "true" ] && exit 0
-
-NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 [ -z "$NAME" ] && exit 0
 
-RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
-STARS=$(jq -r '.stars // ""' "$STATE" 2>/dev/null)
-SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
-ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
-# "absent" distinguishes a legacy status.json (no field at all) from an explicit
-# 0, which means "no achievement pending" and must not render.
-ACHIEVEMENT_AT=$(jq -r 'if has("achievementAt") then (.achievementAt // 0) else "absent" end' "$STATE" 2>/dev/null)
-LEVEL=$(jq -r '.level // 1' "$STATE" 2>/dev/null)
-MOOD=$(jq -r '.mood // "focused"' "$STATE" 2>/dev/null)
 
 BUDDY_STATUSLINE_INPUT=$(cat)
 
@@ -174,7 +175,17 @@ fi
 # If either dimension is still unknown, walk the process tree and read the
 # PTY dimensions once. stty size returns "rows cols"; parse both from the same
 # probe so rows and cols are consistent and no extra detection pass is needed.
-if [ "$ROWS" -lt 1 ] 2>/dev/null || [ "$COLS" -lt 1 ] 2>/dev/null; then
+#
+# This walk is Linux/macOS-only: there is no /proc and no real tty devices on
+# Windows, so it is guaranteed to run all 5 iterations and fail every time,
+# burning real time for nothing on a command that a slow-statusline watchdog
+# can kill outright (see the jq consolidation note above — same concern).
+case "$(uname -s)" in
+  MINGW*|CYGWIN*|MSYS*) _IS_WINDOWS=1 ;;
+  *)                    _IS_WINDOWS=0 ;;
+esac
+
+if [ "$_IS_WINDOWS" -eq 0 ] && { [ "$ROWS" -lt 1 ] 2>/dev/null || [ "$COLS" -lt 1 ] 2>/dev/null; }; then
     PID=$$
     for _ in 1 2 3 4 5; do
         PID=$(ps -o ppid= -p "$PID" 2>/dev/null | tr -d ' ')
@@ -212,16 +223,19 @@ if [ "$ROWS" -lt 1 ] 2>/dev/null || [ "$COLS" -lt 1 ] 2>/dev/null; then
 fi
 
 [ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=0
-# Windows: /proc and TTY device detection don't exist; use PowerShell as fallback
-if [ "${COLS:-0}" -lt 1 ] 2>/dev/null; then
-    _ps_cols=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width" 2>/dev/null | tr -d '\r\n')
-    if _is_positive_int "$_ps_cols"; then
+# Windows: /proc and TTY device detection don't exist; use PowerShell as
+# fallback. One process for both dimensions instead of two — each PowerShell
+# spawn is a full host boot (~0.5-1s), not just an ordinary process spawn.
+if [ "${COLS:-0}" -lt 1 ] 2>/dev/null || [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
+    _ps_dims=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Width; (Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r')
+    _ps_cols=$(printf '%s\n' "$_ps_dims" | sed -n '1p')
+    _ps_rows=$(printf '%s\n' "$_ps_dims" | sed -n '2p')
+    if [ "${COLS:-0}" -lt 1 ] 2>/dev/null && _is_positive_int "$_ps_cols"; then
         [ "$_ps_cols" -gt 40 ] 2>/dev/null && COLS=$((10#$_ps_cols))
     fi
-fi
-if [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
-    _ps_rows=$(powershell.exe -NoProfile -Command "(Get-Host).UI.RawUI.WindowSize.Height" 2>/dev/null | tr -d '\r\n')
-    _is_positive_int "$_ps_rows" && ROWS=$((10#$_ps_rows))
+    if [ "${ROWS:-0}" -lt 1 ] 2>/dev/null; then
+        _is_positive_int "$_ps_rows" && ROWS=$((10#$_ps_rows))
+    fi
 fi
 
 [ "${COLS:-0}" -lt 1 ] 2>/dev/null && COLS=125
@@ -241,13 +255,17 @@ INNER_W=44
 MARGIN=8
 DENSITY="auto"
 if [ -f "$CONFIG_FILE" ]; then
-    _ttl=$(jq -r '.reactionTTL // 900' "$CONFIG_FILE" 2>/dev/null || echo 900)
+    # One jq process for all five fields instead of five — see the note by the
+    # status.json read above on why per-call spawn cost matters here.
+    IFS=$'\x1f' read -r _ttl _bw _bm _wa _density < <(
+        jq -r '[(.reactionTTL // 900), (.bubbleWidth // 44), (.bubbleMargin // 8),
+                (.statuslineWidthAdjust // 0), (.statuslineDensity // "auto")] | join("")' \
+            "$CONFIG_FILE" 2>/dev/null | tr -d '\r'
+    )
+    [ -z "$_ttl" ] && { _ttl=900; _bw=44; _bm=8; _wa=0; _density="auto"; }
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
-    _bw=$(jq -r '.bubbleWidth // 44' "$CONFIG_FILE" 2>/dev/null || echo 44)
     case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
-    _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
     case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
-    _wa=$(jq -r '.statuslineWidthAdjust // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     if printf '%s' "$_wa" | grep -Eq '^[+-]?[0-9]+$'; then
         case "$_wa" in
             +*) STATUSLINE_WIDTH_ADJUST=$((10#${_wa#+})) ;;
@@ -255,7 +273,6 @@ if [ -f "$CONFIG_FILE" ]; then
             *)  STATUSLINE_WIDTH_ADJUST=$((10#$_wa)) ;;
         esac
     fi
-    _density=$(jq -r '.statuslineDensity // "auto"' "$CONFIG_FILE" 2>/dev/null || echo "auto")
     case "$_density" in
         auto|full|compact|minimal) DENSITY="$_density" ;;
         *) DENSITY="auto" ;;
@@ -335,13 +352,17 @@ if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ]; then
     [ "$ACH_FRESH" -eq 1 ] && BUBBLE=$'\xf0\x9f\x8f\x86'" $ACHIEVEMENT"
 fi
 
-REACTION=$(jq -r '.reaction // ""' "$REACTION_FILE" 2>/dev/null)
+# One jq process for reaction + timestamp instead of two (see the earlier
+# consolidation notes on why per-call spawn cost matters here).
+IFS=$'\x1f' read -r REACTION TS < <(
+    jq -r '[(.reaction // ""), (.timestamp // 0)] | join("")' "$REACTION_FILE" 2>/dev/null | tr -d '\r'
+)
+TS="${TS:-0}"
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
     if [ "$REACTION_TTL" -eq 0 ]; then
         FRESH=1
     elif [ -f "$REACTION_FILE" ]; then
-        TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
         if [ "$TS" != "0" ]; then
             NOW=$(date +%s)
             AGE=$(( (NOW * 1000 - TS) / 1000 ))
@@ -450,6 +471,17 @@ EMOJI_TEXT_DATA="$(dirname "${BASH_SOURCE[0]}")/emoji-text.data"
 EMOJI_TEXT="$(grep -v '^#' "$EMOJI_TEXT_DATA" 2>/dev/null | tr -d '\n')"
 
 dwidth() {
+    # Fast path: every ASCII codepoint is width 1 under char_width() below (none
+    # of the wide/CJK/fullwidth/box-drawing ranges are in 0-127), so for ASCII-only
+    # input this is just the byte length. Skipping straight to that avoids the
+    # iconv|od|awk pipeline — three process spawns per call, each costing real
+    # time on Windows — for what is, in practice, most reaction text. Callers
+    # invoke dwidth() once per word during word-wrap, so on a slow spawn platform
+    # this was previously seconds of wall-clock time for one ordinary reaction.
+    case "$1" in
+        *[![:ascii:]]*) ;;
+        *) printf '%s' "${#1}"; return ;;
+    esac
     printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4 | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
     function load_ranges(value, target,    n, i, count, piece, bounds, start, end, cp) {
         n = split(value, ranges, ",")
@@ -490,6 +522,16 @@ dwidth() {
 # Emit one display-width value per UTF-8 codepoint. ANSI-aware truncation uses
 # this profile to make one Unicode-width pass over the complete output row.
 dwidth_profile() {
+    # Same ASCII fast path as dwidth() above, just emitting one "1" per byte
+    # instead of a single summed total (every caller reads this line-by-line).
+    case "$1" in
+        *[![:ascii:]]*) ;;
+        *)
+            local _n=${#1} _i
+            for (( _i = 0; _i < _n; _i++ )); do printf '1\n'; done
+            return
+            ;;
+    esac
     printf '%s' "$1" | iconv -f UTF-8 -t UTF-32LE 2>/dev/null | od -An -tu4 | awk -v pres="$EMOJI_PRES_2600" -v text="$EMOJI_TEXT" '
     function load_ranges(value, target,    n, i, count, piece, bounds, start, end, cp) {
         n = split(value, ranges, ",")
