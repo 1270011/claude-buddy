@@ -1149,6 +1149,15 @@ ansi_truncate() {
 }
 
 statusline_output_line() {
+    # Erase the whole line before drawing it. Observed live in VS Code:
+    # when a row's internal structure changes a lot between ticks (e.g. a
+    # reaction bubble or, with combined-status.sh, rate-limit stats
+    # appearing/disappearing) while its total visible width stays the same,
+    # stale characters from the previous tick's differently-shaped line can
+    # linger instead of being fully overwritten. \033[2K clears the entire
+    # line regardless of cursor position, without moving the cursor, so the
+    # new content always draws onto a blank line.
+    printf '\033[2K'
     ansi_truncate "$1" "$STATUSLINE_BUDGET" "$2"
     printf '\n'
 }
